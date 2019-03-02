@@ -4,7 +4,7 @@
 #include <thread>
 #include "ThreadJoiner.h"
 #include "IThreadPool.h"
-#include "TheadSafeQueue.h"
+#include "Queue.h"
 
 namespace Threading
 {
@@ -12,7 +12,7 @@ class VaryCountThreadPool : public IThreadPool
 {
 public:
     VaryCountThreadPool(unsigned int nThreadCount = 0);
-    virtual void run(Runable* pRuner, int priority = 0) override;
+    virtual void run(Runable* pRuner, unsigned int priority = 0) override;
     virtual void setMaxThreadCount(unsigned int nThreadCount) override;
     virtual unsigned int activeThreadCount() override;
     virtual void shutdown() override;
@@ -25,7 +25,7 @@ private:
     void coptExecuteTasks(Runable* pRuner);
     void coptRunPendingTask();
 
-    TheadSafeQueue<Runable*> _taskQueue;
+    Queue<Runable*> _taskQueue;
     std::vector<std::thread> _pool;
     ThreadJoiner<decltype (_pool)> _threadJoiner;
     std::atomic_uint _maxThreadCount;

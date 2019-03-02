@@ -8,6 +8,7 @@ class Runable
 {
 public:
     virtual void run() = 0;
+    virtual void stop() {}
     bool autoDelete() const { return _autoDeleted; }
     void setAutoDeleted(bool value) { _autoDeleted = value; }
     virtual ~Runable() {}
@@ -18,7 +19,7 @@ private:
 class IThreadPool
 {
 public:
-    virtual void run(Runable* pRuner, int priority = 0) = 0;
+    virtual void run(Runable* pRuner, unsigned int priority = 0) = 0;
     virtual void setMaxThreadCount(unsigned int nThreadCount) = 0;
     virtual unsigned int activeThreadCount() = 0;
     virtual void shutdown() = 0;

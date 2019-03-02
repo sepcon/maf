@@ -8,7 +8,9 @@ SOURCES += \
     Threading/Signal.cpp \
     Threading/StableThreadPool.cpp \
     Threading/Timer.cpp \
-    Threading/VaryCountThreadPool.cpp
+    Threading/VaryCountThreadPool.cpp \
+    Threading/PriorityThreadPool.cpp \
+    Threading/Waiter.cpp
 
 HEADERS += \
     Threading/IThreadPool.h \
@@ -17,4 +19,9 @@ HEADERS += \
     Threading/TheadSafeQueue.h \
     Threading/ThreadJoiner.h \
     Threading/Timer.h \
-    Threading/VaryCountThreadPool.h
+    Threading/VaryCountThreadPool.h \
+    Threading/Queue.h \
+    Threading/PriorityThreadPool.h \
+    Threading/Waiter.h
+
+DISTFILES +=

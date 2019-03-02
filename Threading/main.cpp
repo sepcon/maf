@@ -5,15 +5,19 @@
 #include <chrono>
 #include <sstream>
 #include <future>
+#include <iostream>
+
 
 using namespace std;
 
 #include "Threading/TheadSafeQueue.h"
 #include "Threading/VaryCountThreadPool.h"
 #include "Threading/StableThreadPool.h"
+#include "Threading/PriorityThreadPool.h"
+#include "Threading/Waiter.h"
 
 
-
+static std::mutex m;
 class Sumer : public Threading::Runable
 {
 public:
@@ -27,6 +31,9 @@ public:
     void run() override
     {
         unsigned long long res = 0;
+        m.lock();
+        std::cout << "range = " << *_start << " - " << *_end << std::endl;
+        m.unlock();
         for(auto it = _start; it < _end; ++it)
         {
             res += *it;
@@ -42,9 +49,16 @@ public:
 
 std::vector<std::future<unsigned long long> > Sumer::gSumResults;
 
+using namespace std::chrono;
+void sayHelloWorld()
+{
+    static int i = 1000;
+    std::cout << "Hello world" << i++ << std::endl;
+}
+
 int main()
 {
-    Threading::StableThreadPool pool(0);
+    Threading::PriorityThreadPool pool(0);
     std::vector<unsigned long long> v;
     const unsigned long long max = 100000000;
     const unsigned long long chunkSize = 1000000;
@@ -52,7 +66,6 @@ int main()
     {
         v.push_back(i);
     }
-
 
     auto startTime = std::chrono::system_clock::now();
     unsigned long long numOfTasks = max / chunkSize;
@@ -65,7 +78,7 @@ int main()
     {
         start = end;
         std::advance(end, chunkSize);
-        pool.run(new Sumer(start, end));
+        pool.run(new Sumer(start, end), i);
     }
 
     pool.run(new Sumer(end, v.end()));

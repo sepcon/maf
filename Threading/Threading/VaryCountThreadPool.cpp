@@ -19,7 +19,7 @@ VaryCountThreadPool::VaryCountThreadPool(unsigned int nThreadCount) : _threadJoi
     std::cout << "Pool created with max thread count = " << _maxThreadCount << std::endl;
 }
 
-void VaryCountThreadPool::run(Runable *pRuner, int /*priority*/)
+void VaryCountThreadPool::run(Runable *pRuner, unsigned int /*priority*/)
 {
     if(pRuner)
     {

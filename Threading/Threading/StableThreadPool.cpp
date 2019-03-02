@@ -1,6 +1,6 @@
 #include <thread>
 #include <vector>
-#include "TheadSafeQueue.h"
+#include "Queue.h"
 #include "StableThreadPool.h"
 #include "ThreadJoiner.h"
 
@@ -13,7 +13,7 @@ namespace Threading
 class StableThreadPoolImpl
 {
     std::vector<std::thread> _pool;
-    Threading::TheadSafeQueue<Runable*> _taskQueue;
+    Threading::Queue<Runable*> _taskQueue;
     ThreadJoiner<decltype (_pool)> _threadJoiner;
 public:
     StableThreadPoolImpl(size_t maxCount = 0): _threadJoiner(_pool)
@@ -68,7 +68,7 @@ StableThreadPool::~StableThreadPool()
     delete _pImpl;
 }
 
-void StableThreadPool::run(Runable *pRuner, int /*priority*/)
+void StableThreadPool::run(Runable *pRuner, unsigned int /*priority*/)
 {
     _pImpl->run(pRuner);
 }

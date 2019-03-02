@@ -1,6 +1,8 @@
 #ifndef THREADJOINER_H
 #define THREADJOINER_H
 
+#include <thread>
+
 namespace Threading {
 
 template <class ThreadContainer>
@@ -20,5 +22,18 @@ public:
         }
     }
 };
+
+template<>
+class ThreadJoiner<std::thread>
+{
+    std::thread& _th;
+public:
+    ThreadJoiner(std::thread& th) : _th(th) {}
+    ~ThreadJoiner()
+    {
+        if(_th.joinable()) _th.join();
+    }
+};
+
 }
 #endif // THREADJOINER_H

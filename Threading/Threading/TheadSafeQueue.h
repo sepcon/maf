@@ -14,7 +14,7 @@
 namespace Threading
 {
 
-template<typename T>
+template<typename T, class Queue>
 class TheadSafeQueue
 {
 public:
@@ -85,12 +85,29 @@ public:
     }
 
 private:
-    std::queue<T> _queue;
+    Queue _queue;
     std::mutex _mt;
     std::condition_variable _condVar;
     std::atomic_bool _closed;
 };
 
+}
+
+namespace stdwrap
+{
+template <typename T> using Queue = std::queue<T>;
+template <typename T> class PriorityQueue
+        : public std::priority_queue<T>
+{
+public:
+    using std::priority_queue<T>::priority_queue;
+    using __Base = std::priority_queue<T>;
+
+    typename __Base::const_reference front() const
+    {
+        return __Base::top();
+    }
+};
 }
 
 #undef MT_ALOCK
