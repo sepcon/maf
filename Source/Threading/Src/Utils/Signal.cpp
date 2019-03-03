@@ -1,4 +1,4 @@
-#include "Signal.h"
+#include "Interfaces/Signal.h"
 #include <condition_variable>
 #include <mutex>
 #include <atomic>

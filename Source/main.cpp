@@ -1,42 +1,58 @@
 #include <iostream>
-#include "Threading/TheadSafeQueue.h"
-#include<thread>
+#include <thread>
 #include <numeric>
 #include <chrono>
 #include <sstream>
 #include <future>
 #include <iostream>
+#include <vector>
 
+#include "Interfaces/ThreadPoolFactory.h"
+//#include "Interfaces/IThreadPool.h"
+//#include "Prv/TP/StableThreadPool.h"
+//#include "Prv/TP/PriorityThreadPool.h"
+//#include "Prv/TP/VaryCountThreadPool.h"
 
 using namespace std;
 
-#include "Threading/TheadSafeQueue.h"
-#include "Threading/VaryCountThreadPool.h"
-#include "Threading/StableThreadPool.h"
-#include "Threading/PriorityThreadPool.h"
-#include "Threading/Waiter.h"
+
 
 
 static std::mutex m;
-class Sumer : public Threading::Runable
+class Sumer : public Threading::Runnable
 {
 public:
     Sumer(std::vector<unsigned long long>::iterator start, std::vector<unsigned long long>::iterator end)
-        : _start(start), _end(end)
+        : _start(start), _end(end), _stopped(true)
     {
         setAutoDeleted(true);
         gSumResults.emplace_back(_p.get_future());
     }
-
+    void stop() override
+    {
+        if(!_stopped)
+        {
+            _stopped = true;
+        }
+        else
+        {
+            _p.set_value(0);
+        }
+    }
     void run() override
     {
         unsigned long long res = 0;
         m.lock();
         std::cout << "range = " << *_start << " - " << *_end << std::endl;
         m.unlock();
+        _stopped = false;
         for(auto it = _start; it < _end; ++it)
         {
             res += *it;
+            if(_stopped)
+            {
+                break;
+            }
         }
         _p.set_value(res);
     }
@@ -44,6 +60,7 @@ public:
     std::vector<unsigned long long>::iterator _start;
     std::vector<unsigned long long>::iterator _end;
     std::promise<unsigned long long> _p;
+    std::atomic_bool _stopped;
     static std::vector<std::future<unsigned long long> > gSumResults;
 };
 
@@ -58,7 +75,8 @@ void sayHelloWorld()
 
 int main()
 {
-    Threading::PriorityThreadPool pool(0);
+    Threading::IThreadPool& pool =
+            *Threading::ThreadPoolFactory::createPool(Threading::ThreadPoolFactory::DynamicCount);
     std::vector<unsigned long long> v;
     const unsigned long long max = 100000000;
     const unsigned long long chunkSize = 1000000;
@@ -83,6 +101,8 @@ int main()
 
     pool.run(new Sumer(end, v.end()));
 
+//    std::this_thread::sleep_for(std::chrono::microseconds(1000));
+//    pool.shutdown();
     std::cout << "pool size now: = " << pool.activeThreadCount() << std::endl;
     unsigned long long sum = 0;
     for(auto& f : Sumer::gSumResults)
@@ -94,5 +114,6 @@ int main()
 
     std::cout << "Sum of 1 to " << max << " = " << sum << std::endl;
     std::cout << "Total execution time = " << (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime)).count() << std::endl;
+    delete &pool;
     return 0;
 }

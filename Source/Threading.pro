@@ -1,27 +1,33 @@
 TEMPLATE = app
-CONFIG += console c++11
+CONFIG += c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
+    Threading/Src/ThreadPool/ThreadPoolFactory.cpp \
         main.cpp \
-    Threading/Signal.cpp \
-    Threading/StableThreadPool.cpp \
-    Threading/Timer.cpp \
-    Threading/VaryCountThreadPool.cpp \
-    Threading/PriorityThreadPool.cpp \
-    Threading/Waiter.cpp
+    Threading/Src/ThreadPool/PriorityThreadPool.cpp \
+    Threading/Src/ThreadPool/StableThreadPool.cpp \
+    Threading/Src/ThreadPool/VaryCountThreadPool.cpp \
+    Threading/Src/Time/Timer.cpp \
+    Threading/Src/Time/Waiter.cpp \
+    Threading/Src/Utils/Signal.cpp
+
+INCLUDEPATH += ./Threading/Headers/
 
 HEADERS += \
-    Threading/IThreadPool.h \
-    Threading/Signal.h \
-    Threading/StableThreadPool.h \
-    Threading/TheadSafeQueue.h \
-    Threading/ThreadJoiner.h \
-    Threading/Timer.h \
-    Threading/VaryCountThreadPool.h \
-    Threading/Queue.h \
-    Threading/PriorityThreadPool.h \
-    Threading/Waiter.h
+    Threading/Headers/Interfaces/IThreadPool.h \
+    Threading/Headers/Interfaces/Queue.h \
+    Threading/Headers/Interfaces/Runnable.h \
+    Threading/Headers/Interfaces/Signal.h \
+    Threading/Headers/Interfaces/ThreadJoiner.h \
+    Threading/Headers/Interfaces/ThreadPoolFactory.h \
+    Threading/Headers/Interfaces/ThreadSafeQueue.h \
+    Threading/Headers/Interfaces/Timer.h \
+    Threading/Headers/Interfaces/Waiter.h \
+    Threading/Headers/Prv/TP/PriorityThreadPool.h \
+    Threading/Headers/Prv/TP/StableThreadPool.h \
+    Threading/Headers/Prv/TP/ThreadPoolImplBase.h \
+    Threading/Headers/Prv/TP/VaryCountThreadPool.h
 
-DISTFILES +=
+LIBS += -lpthread

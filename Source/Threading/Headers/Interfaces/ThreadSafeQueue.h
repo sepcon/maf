@@ -15,13 +15,13 @@ namespace Threading
 {
 
 template<typename T, class Queue>
-class TheadSafeQueue
+class ThreadSafeQueue
 {
 public:
-    TheadSafeQueue() : _closed(false)
+    ThreadSafeQueue() : _closed(false)
     {
     }
-    ~TheadSafeQueue()
+    ~ThreadSafeQueue()
     {
         close();
     }
@@ -78,6 +78,11 @@ public:
 
     bool isClosed() const { return _closed.load(); }
 
+    Queue&& takeAndClearQueue()
+    {
+        return std::move(_queue);
+    }
+
     size_t size()
     {
         MT_ALOCK(_mt);
@@ -100,9 +105,8 @@ template <typename T> class PriorityQueue
         : public std::priority_queue<T>
 {
 public:
-    using std::priority_queue<T>::priority_queue;
     using __Base = std::priority_queue<T>;
-
+    using __Base::priority_queue;
     typename __Base::const_reference front() const
     {
         return __Base::top();

@@ -1,4 +1,4 @@
-#include "VaryCountThreadPool.h"
+#include "Prv/TP/VaryCountThreadPool.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -19,7 +19,7 @@ VaryCountThreadPool::VaryCountThreadPool(unsigned int nThreadCount) : _threadJoi
     std::cout << "Pool created with max thread count = " << _maxThreadCount << std::endl;
 }
 
-void VaryCountThreadPool::run(Runable *pRuner, unsigned int /*priority*/)
+void VaryCountThreadPool::run(Runnable *pRuner, unsigned int /*priority*/)
 {
     if(pRuner)
     {
@@ -57,7 +57,7 @@ VaryCountThreadPool::~VaryCountThreadPool()
     shutdown();
 }
 
-void VaryCountThreadPool::coptExecuteTasks(Runable *pRuner)
+void VaryCountThreadPool::coptExecuteTasks(Runnable *pRuner)
 {
     if(pRuner)
     {
@@ -68,7 +68,7 @@ void VaryCountThreadPool::coptExecuteTasks(Runable *pRuner)
 
 void VaryCountThreadPool::coptRunPendingTask()
 {
-    Runable* pRuner;
+    Runnable* pRuner;
     while(_taskQueue.wait(pRuner))
     {
         pRuner->run();

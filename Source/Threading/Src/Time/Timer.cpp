@@ -1,5 +1,5 @@
-#include "Timer.h"
-#include "ThreadJoiner.h"
+#include "Interfaces/Timer.h"
+#include "Interfaces/ThreadJoiner.h"
 #include <condition_variable>
 #include <thread>
 #include <mutex>
