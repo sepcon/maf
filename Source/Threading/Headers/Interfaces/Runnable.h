@@ -8,7 +8,7 @@ class Runnable
 {
 public:
     virtual void run() = 0;
-    virtual void stop() {}
+    virtual void stop() { }
     bool autoDelete() const { return _autoDeleted; }
     void setAutoDeleted(bool value) { _autoDeleted = value; }
     virtual ~Runnable() {}

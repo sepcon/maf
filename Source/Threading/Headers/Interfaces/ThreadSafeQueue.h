@@ -5,6 +5,7 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 
 // mutex auto lock
 #define MT_ALOCK_NUM_SUB(mt, line) std::lock_guard<std::mutex> lock##line(mt)
@@ -14,10 +15,15 @@
 namespace Threading
 {
 
-template<typename T, class Queue>
+template<class Impl>
 class ThreadSafeQueue
 {
 public:
+    using reference = typename Impl::reference;
+    using const_reference = typename Impl::const_reference;
+    using value_type = typename Impl::value_type;
+    using ApplyAction = std::function<void(value_type&)>;
+
     ThreadSafeQueue() : _closed(false)
     {
     }
@@ -30,7 +36,7 @@ public:
         MT_ALOCK(_mt);
         return _queue.empty();
     }
-    void push(const T& data)
+    void push(const value_type& data)
     {
         if(!isClosed())
         {
@@ -39,7 +45,7 @@ public:
             _condVar.notify_all();
         }
     }
-    void push(T&& data)
+    void push(value_type&& data)
     {
         if(!isClosed())
         {
@@ -49,7 +55,7 @@ public:
         }
     }
 
-    bool wait(T& value)
+    bool wait(value_type& value)
     {
         std::unique_lock<std::mutex> lock(_mt);
         while(!isClosed() && _queue.empty())
@@ -73,14 +79,19 @@ public:
         MT_ALOCK(_mt);
         _closed.store(true, std::memory_order_relaxed);
         _condVar.notify_all();
-        _queue = {};
     }
 
     bool isClosed() const { return _closed.load(); }
 
-    Queue&& takeAndClearQueue()
+    void clear(ApplyAction onClearCallback = nullptr)
     {
-        return std::move(_queue);
+        MT_ALOCK(_mt);
+        while(!_queue.empty())
+        {
+            value_type v = _queue.front();
+            onClearCallback(v);
+            _queue.pop();
+        }
     }
 
     size_t size()
@@ -90,7 +101,7 @@ public:
     }
 
 private:
-    Queue _queue;
+    Impl _queue;
     std::mutex _mt;
     std::condition_variable _condVar;
     std::atomic_bool _closed;
@@ -101,13 +112,17 @@ private:
 namespace stdwrap
 {
 template <typename T> using Queue = std::queue<T>;
-template <typename T> class PriorityQueue
-        : public std::priority_queue<T>
+template <typename T, typename Comp> class PriorityQueue
+        : public std::priority_queue<T, std::vector<T>, Comp>
 {
 public:
-    using __Base = std::priority_queue<T>;
+    using __Base = std::priority_queue<T, std::vector<T>, Comp>;
     using __Base::priority_queue;
-    typename __Base::const_reference front() const
+    using reference = typename __Base::reference;
+    using const_reference = typename __Base::const_reference;
+    using value_type = typename __Base::value_type;
+
+    const_reference front() const
     {
         return __Base::top();
     }

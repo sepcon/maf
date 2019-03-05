@@ -6,8 +6,8 @@
 namespace Threading
 {
 
-template<typename T> using Queue = ThreadSafeQueue<T, stdwrap::Queue<T>>;
-template<typename T> using PriorityQueue = ThreadSafeQueue<T, stdwrap::PriorityQueue<T>>;
+template<typename T> using Queue = ThreadSafeQueue<stdwrap::Queue<T>>;
+template<typename T, typename Comp = std::less<T> > using PriorityQueue = ThreadSafeQueue<stdwrap::PriorityQueue<T, Comp>>;
 
 }
 #endif // QUEUE_H

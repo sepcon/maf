@@ -4,13 +4,39 @@
 #include "Prv/TP/StableThreadPool.h"
 
 
-
-
-
 namespace Threading
 {
 
-StableThreadPool::StableThreadPool(unsigned int threadCount) : _impl{threadCount}
+namespace Internal {
+
+
+void run(Runnable* runner)
+{
+    if(runner)
+    {
+        runner->run();
+    }
+}
+
+void stop(Runnable* runner)
+{
+    if(runner)
+    {
+        runner->stop();
+    }
+}
+
+void done(Runnable* runner)
+{
+    if(runner && runner->autoDelete())
+    {
+        delete runner;
+    }
+}
+}
+
+StableThreadPool::StableThreadPool(unsigned int threadCount) :
+    _impl{threadCount, &Internal::run, &Internal::stop, &Internal::done}
 {
 }
 

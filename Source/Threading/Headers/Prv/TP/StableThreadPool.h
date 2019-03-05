@@ -18,16 +18,7 @@ public:
     virtual void shutdown() override;
 
 private:
-    struct RunnerRef
-    {
-        Runnable* _pRunner;
-        RunnerRef(Runnable* pRunner = nullptr) : _pRunner(pRunner)
-        {
-        }
-        void run() { if(_pRunner) _pRunner->run(); }
-        void stop() { if(_pRunner) _pRunner->stop(); }
-    };
-    ThreadPoolImplBase<Queue, RunnerRef> _impl;
+    ThreadPoolImplBase<Threading::Queue<Runnable*> > _impl;
 };
 
 }

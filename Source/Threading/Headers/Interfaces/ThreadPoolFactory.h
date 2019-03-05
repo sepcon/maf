@@ -5,16 +5,16 @@
 
 namespace Threading
 {
+enum PoolType
+{
+    DynamicCount,
+    StableCount,
+    Priority
+};
+
 class ThreadPoolFactory
 {
-public:
-    enum PoolType
-    {
-        DynamicCount,
-        StableCount,
-        Priority
-    };
-
+public:    
     static IThreadPool* createPool(PoolType type, unsigned int poolSize = 0);
 };
 }

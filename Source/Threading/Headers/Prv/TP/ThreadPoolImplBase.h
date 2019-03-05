@@ -8,6 +8,8 @@
 #include <vector>
 #include <list>
 #include <mutex>
+#include <atomic>
+#include <functional>
 
 namespace Threading {
 
@@ -16,34 +18,39 @@ namespace Threading {
  *
  */
 
-
-
-template< template<class> class QueueType, typename RunnerType>
+template< class TaskQueue>
 class ThreadPoolImplBase
 {
+    typedef typename TaskQueue::value_type Task;
+    typedef typename TaskQueue::reference TaskRef;
+    typedef typename TaskQueue::const_reference TaskCRef;
+    typedef std::function<void (TaskRef)> TaskExc;
+
     std::vector<std::thread> _pool;
-    QueueType<RunnerType>  _taskQueue;
-    ThreadJoiner<decltype (_pool)> _threadJoiner;
+    TaskQueue _taskQueue;
+    std::once_flag _shutdowned;
+    TaskExc _fRun;
+    TaskExc _fStop;
+    TaskExc _fDone;
+
     struct ActiveRunners
     {
-        std::list<RunnerType> _runnings;
+        std::list<Task> _runnings;
         std::mutex _mutex;
-        void add(RunnerType pRunner)
-        {
-            if(pRunner)
-            {
-                std::lock_guard<std::mutex> lock(_mutex);
-                _runnings.push_back(pRunner);
-            }
-        }
-        void remove(RunnerType pRunner)
+        TaskExc _fStop;
+        void add(Task task)
         {
             std::lock_guard<std::mutex> lock(_mutex);
-            for(auto iRunner = _runnings.begin(); iRunner != _runnings.end(); ++iRunner)
+            _runnings.push_back(task);
+        }
+        void remove(Task task)
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            for(auto iTask = _runnings.begin(); iTask != _runnings.end(); ++iTask)
             {
-                if(*iRunner == pRunner)
+                if(*iTask == task)
                 {
-                    _runnings.erase(pRunner);
+                    _runnings.erase(iTask);
                     break;
                 }
             }
@@ -51,16 +58,27 @@ class ThreadPoolImplBase
         void stopAll()
         {
             std::lock_guard<std::mutex> lock(_mutex);
-            for(auto& pRunner : _runnings)
+            for(auto& task : _runnings)
             {
-                pRunner.stop();
+                _fStop(task);
             }
         }
     } _activeRunners;
 
-public:
-    ThreadPoolImplBase(size_t maxCount = 0): _threadJoiner(_pool)
+    void waitForThreadsExited()
     {
+        for(auto& th : _pool)
+        {
+            if(th.joinable()) { th.join(); }
+        }
+    }
+public:
+    ThreadPoolImplBase(size_t maxCount, TaskExc fRun, TaskExc fStop, TaskExc fDone):
+        _fRun(fRun),
+        _fStop(fStop),
+        _fDone(fDone)
+    {
+        _activeRunners._fStop = _fStop;
         if(maxCount == 0)
         {
             maxCount = std::thread::hardware_concurrency();
@@ -72,11 +90,12 @@ public:
     }
     ~ThreadPoolImplBase()
     {
-        _taskQueue.close();
+        shutdown();
     }
-    void run(RunnerType pRuner)
+
+    void run(Task task)
     {
-        _taskQueue.push(pRuner);
+        _taskQueue.push(task);
     }
 
     unsigned int activeThreadCount()
@@ -86,26 +105,31 @@ public:
 
     void shutdown()
     {
+        std::call_once(_shutdowned, &ThreadPoolImplBase::stopThePool, this);
+    }
+
+    void stopThePool()
+    {
         _taskQueue.close();
         _activeRunners.stopAll();
+        _taskQueue.clear(_fDone);
+        waitForThreadsExited();
     }
 
 private:
-    void coptRun(RunnerType pRuner)
+    void coptRun(Task task)
     {
-        if(pRuner)
-        {
-            _activeRunners.add(pRuner);
-            pRuner.run();
-            _activeRunners.remove(pRuner);
-        }
+        _activeRunners.add(task);
+        _fRun(task);
+        _activeRunners.remove(task);
     }
     void coptRunPendingTask()
     {
-        RunnerType pRuner;
-        while(_taskQueue.wait(pRuner))
+        Task task;
+        while(_taskQueue.wait(task))
         {
-            pRuner.run();
+            coptRun(task);
+            _fDone(task);
         }
     }
 
