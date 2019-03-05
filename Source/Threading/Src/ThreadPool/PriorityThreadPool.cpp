@@ -22,19 +22,18 @@ public:
     }
 };
 
-
-namespace Internal {
-static void run(PrioritizableRunner& runner)  ;
-static void stop(PrioritizableRunner& runner) ;
-static void done(PrioritizableRunner& runner) ;
-}
+#define prAct(func) [](PrioritizableRunner& runner) { Threading::func(runner._pRunner); }
 
 struct TheImpl
 {
-    TheImpl(unsigned int threadCount = 0)
-        : thePool { threadCount, &Internal::run, &Internal::stop, &Internal::done }
+    TheImpl(unsigned int threadCount = 0) : thePool { threadCount, prAct(run), prAct(stop), prAct(done)}
     {
+        for(unsigned int i = 0; i < thePool.maxThreadCount(); ++i)
+        {
+            thePool.tryLaunchNewThread();
+        }
     }
+
     ThreadPoolImplBase<PriorityQueue<PrioritizableRunner>> thePool;
 };
 
@@ -65,36 +64,4 @@ void PriorityThreadPool::shutdown()
     _pImpl->thePool.shutdown();
 }
 
-
-namespace Internal
-{
-
-static void run(PrioritizableRunner& runner)
-{
-    auto pRunner = runner._pRunner;
-    if(pRunner)
-    {
-        pRunner->run();
-    }
-}
-
-static void stop(PrioritizableRunner& runner)
-{
-    auto pRunner = runner._pRunner;
-    if(pRunner)
-    {
-        pRunner->stop();
-    }
-}
-
-static void done(PrioritizableRunner& runner)
-{
-    auto pRunner = runner._pRunner;
-    if(pRunner && pRunner->autoDelete())
-    {
-        delete pRunner;
-    }
-}
-
-}
 }

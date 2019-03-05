@@ -1,24 +1,24 @@
 #include "Interfaces/ThreadPoolFactory.h"
 #include "Prv/TP/PriorityThreadPool.h"
 #include "Prv/TP/StableThreadPool.h"
-#include "Prv/TP/VaryCountThreadPool.h"
+#include "Prv/TP/DynamicCountThreadPool.h"
 
 namespace Threading
 {
 
-IThreadPool *ThreadPoolFactory::createPool(PoolType type, unsigned int poolSize)
+std::shared_ptr<IThreadPool> ThreadPoolFactory::createPool(PoolType type, unsigned int poolSize)
 {
-    IThreadPool* pPool = nullptr;
+    std::shared_ptr<IThreadPool> pPool;
     switch (type)
     {
     case PoolType::Priority:
-        pPool = new PriorityThreadPool(poolSize);
+        pPool.reset(new PriorityThreadPool(poolSize));
         break;
     case StableCount:
-        pPool = new StableThreadPool(poolSize);
+        pPool.reset(new StableThreadPool(poolSize));
         break;
     case DynamicCount:
-        pPool = new VaryCountThreadPool(poolSize);
+        pPool.reset(new VaryCountThreadPool(poolSize));
         break;
     }
     return pPool;

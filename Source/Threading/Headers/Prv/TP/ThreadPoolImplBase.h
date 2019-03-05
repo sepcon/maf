@@ -10,6 +10,7 @@
 #include <mutex>
 #include <atomic>
 #include <functional>
+#include <iostream>
 
 namespace Threading {
 
@@ -27,43 +28,41 @@ class ThreadPoolImplBase
     typedef std::function<void (TaskRef)> TaskExc;
 
     std::vector<std::thread> _pool;
-    TaskQueue _taskQueue;
     std::once_flag _shutdowned;
+    TaskQueue _taskQueue;
+    std::list<Task> _runningTasks;
+    std::mutex _runningTaskMutex;
+    unsigned int _maxThreadCount;
     TaskExc _fRun;
     TaskExc _fStop;
     TaskExc _fDone;
 
-    struct ActiveRunners
+
+    void addToRunningTasks(Task task)
     {
-        std::list<Task> _runnings;
-        std::mutex _mutex;
-        TaskExc _fStop;
-        void add(Task task)
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        _runningTasks.push_back(task);
+    }
+    void removeFromRunningTasks(Task task)
+    {
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        for(auto iTask = _runningTasks.begin(); iTask != _runningTasks.end(); ++iTask)
         {
-            std::lock_guard<std::mutex> lock(_mutex);
-            _runnings.push_back(task);
-        }
-        void remove(Task task)
-        {
-            std::lock_guard<std::mutex> lock(_mutex);
-            for(auto iTask = _runnings.begin(); iTask != _runnings.end(); ++iTask)
+            if(*iTask == task)
             {
-                if(*iTask == task)
-                {
-                    _runnings.erase(iTask);
-                    break;
-                }
+                _runningTasks.erase(iTask);
+                break;
             }
         }
-        void stopAll()
+    }
+    void stopRunningTasks()
+    {
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        for(auto& task : _runningTasks)
         {
-            std::lock_guard<std::mutex> lock(_mutex);
-            for(auto& task : _runnings)
-            {
-                _fStop(task);
-            }
+            _fStop(task);
         }
-    } _activeRunners;
+    }
 
     void waitForThreadsExited()
     {
@@ -78,19 +77,27 @@ public:
         _fStop(fStop),
         _fDone(fDone)
     {
-        _activeRunners._fStop = _fStop;
         if(maxCount == 0)
         {
-            maxCount = std::thread::hardware_concurrency();
-        }
-        for(size_t i = 0; i < maxCount; ++i)
-        {
-            _pool.emplace_back(std::thread{&ThreadPoolImplBase::coptRunPendingTask, this});
+            _maxThreadCount = std::thread::hardware_concurrency();
         }
     }
+
     ~ThreadPoolImplBase()
     {
         shutdown();
+    }
+
+    void tryLaunchNewThread()
+    {
+        try
+        {
+            _pool.emplace_back(std::thread{&ThreadPoolImplBase::coptRunPendingTask, this});
+        }
+        catch(const std::system_error& err)
+        {
+            std::cout << "Cannot launch new thread due to: " << err.what() << std::endl;
+        }
     }
 
     void run(Task task)
@@ -98,9 +105,26 @@ public:
         _taskQueue.push(task);
     }
 
+    unsigned int maxThreadCount() const
+    {
+        return _maxThreadCount;
+    }
+
     unsigned int activeThreadCount()
     {
         return static_cast<unsigned int>(_pool.size());
+    }
+
+    void setMaxThreadCount(unsigned int nThreadCount)
+    {
+        if(nThreadCount == 0)
+        {
+            _maxThreadCount = std::thread::hardware_concurrency();
+        }
+        else
+        {
+            _maxThreadCount = nThreadCount;
+        }
     }
 
     void shutdown()
@@ -111,17 +135,19 @@ public:
     void stopThePool()
     {
         _taskQueue.close();
-        _activeRunners.stopAll();
+        stopRunningTasks();
         _taskQueue.clear(_fDone);
         waitForThreadsExited();
     }
 
 private:
+    //copt = Called On Pool Threads
     void coptRun(Task task)
     {
-        _activeRunners.add(task);
+        addToRunningTasks(task);
         _fRun(task);
-        _activeRunners.remove(task);
+        removeFromRunningTasks(task);
+        _fDone(task);
     }
     void coptRunPendingTask()
     {
@@ -129,7 +155,6 @@ private:
         while(_taskQueue.wait(task))
         {
             coptRun(task);
-            _fDone(task);
         }
     }
 

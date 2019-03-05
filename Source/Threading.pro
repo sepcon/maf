@@ -4,11 +4,11 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
+    Threading/Src/ThreadPool/DynamicCountThreadPool.cpp \
     Threading/Src/ThreadPool/ThreadPoolFactory.cpp \
         main.cpp \
     Threading/Src/ThreadPool/PriorityThreadPool.cpp \
     Threading/Src/ThreadPool/StableThreadPool.cpp \
-    Threading/Src/ThreadPool/VaryCountThreadPool.cpp \
     Threading/Src/Time/Timer.cpp \
     Threading/Src/Time/Waiter.cpp \
     Threading/Src/Utils/Signal.cpp
@@ -25,9 +25,9 @@ HEADERS += \
     Threading/Headers/Interfaces/ThreadSafeQueue.h \
     Threading/Headers/Interfaces/Timer.h \
     Threading/Headers/Interfaces/Waiter.h \
+    Threading/Headers/Prv/TP/DynamicCountThreadPool.h \
     Threading/Headers/Prv/TP/PriorityThreadPool.h \
     Threading/Headers/Prv/TP/StableThreadPool.h \
-    Threading/Headers/Prv/TP/ThreadPoolImplBase.h \
-    Threading/Headers/Prv/TP/VaryCountThreadPool.h
+    Threading/Headers/Prv/TP/ThreadPoolImplBase.h
 
 LIBS += -lpthread

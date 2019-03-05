@@ -4,6 +4,7 @@
 namespace Threading
 {
 
+
 class Runnable
 {
 public:
@@ -15,6 +16,30 @@ public:
 private:
     bool _autoDeleted;
 };
+
+inline void run(Runnable* runner)
+{
+    if(runner)
+    {
+        runner->run();
+    }
+}
+
+inline void stop(Runnable* runner)
+{
+    if(runner)
+    {
+        runner->stop();
+    }
+}
+
+inline void done(Runnable* runner)
+{
+    if(runner && runner->autoDelete())
+    {
+        delete runner;
+    }
+}
 
 }
 

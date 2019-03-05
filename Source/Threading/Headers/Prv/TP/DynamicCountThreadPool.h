@@ -1,8 +1,9 @@
-#ifndef VARYCOUNTHREADPOOL_H
-#define VARYCOUNTHREADPOOL_H
+#ifndef DYNAMICCOUNTHREADPOOL_H
+#define DYNAMICCOUNTHREADPOOL_H
 
 #include "Interfaces/ThreadJoiner.h"
 #include "Interfaces/IThreadPool.h"
+#include "ThreadPoolImplBase.h"
 #include "Interfaces/Queue.h"
 #include <thread>
 
@@ -19,18 +20,9 @@ public:
     ~VaryCountThreadPool() override;
 
 private:
-    /**
-      * copt: call on pool's threads
-      */
-    void coptExecuteTasks(Runnable* pRuner);
-    void coptRunPendingTask();
-
-    Queue<Runnable*> _taskQueue;
-    std::vector<std::thread> _pool;
-    ThreadJoiner<decltype (_pool)> _threadJoiner;
-    std::atomic_uint _maxThreadCount;
+    ThreadPoolImplBase<Queue<Runnable*>> _impl;
 };
 }
 
 
-#endif // VARYCOUNTHREADPOOL_H
+#endif // DYNAMICCOUNTHREADPOOL_H

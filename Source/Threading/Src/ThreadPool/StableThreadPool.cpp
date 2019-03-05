@@ -7,37 +7,13 @@
 namespace Threading
 {
 
-namespace Internal {
-
-
-void run(Runnable* runner)
-{
-    if(runner)
-    {
-        runner->run();
-    }
-}
-
-void stop(Runnable* runner)
-{
-    if(runner)
-    {
-        runner->stop();
-    }
-}
-
-void done(Runnable* runner)
-{
-    if(runner && runner->autoDelete())
-    {
-        delete runner;
-    }
-}
-}
-
 StableThreadPool::StableThreadPool(unsigned int threadCount) :
-    _impl{threadCount, &Internal::run, &Internal::stop, &Internal::done}
+    _impl{ threadCount, &Threading::run, &Threading::stop, &Threading::done }
 {
+    for(unsigned int i = 0; i < _impl.maxThreadCount(); ++i)
+    {
+        _impl.tryLaunchNewThread();
+    }
 }
 
 StableThreadPool::~StableThreadPool()
@@ -48,6 +24,11 @@ StableThreadPool::~StableThreadPool()
 void StableThreadPool::run(Runnable *pRuner, unsigned int /*priority*/)
 {
     _impl.run(pRuner);
+}
+
+void StableThreadPool::setMaxThreadCount(unsigned int /*nThreadCount*/)
+{
+
 }
 
 unsigned int StableThreadPool::activeThreadCount()
