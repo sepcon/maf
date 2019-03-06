@@ -8,6 +8,7 @@
 
 using namespace std;
 using namespace Threading;
+using namespace std::chrono;
 
 static std::mutex _coutmt;
 #define LOGG(exp) \
@@ -63,7 +64,7 @@ public:
         }
         gDone++;
 
-        LOGG("Calculator " << _sum << " stopped!");
+        LOGG("Calculator from = " << _from << " to = " << _to << " sum = " << _sum << " stopped!");
     }
 
     void stop() override
@@ -89,13 +90,14 @@ std::atomic_int Calculator::gDone(1);
 
 int main()
 {
-    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::Priority);
+    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::StableCount);
     pool->setMaxThreadCount(10);
-    const Calculator::ValueType MAX = 1000000000;
-    unsigned int chunkSize = 100000000;
+    const Calculator::ValueType MAX = 100000000;
+    unsigned int chunkSize = 10000000;
     unsigned int chunkCount = MAX/chunkSize;
     std::vector<Calculator::ValueType> output;
     output.resize(chunkCount + 1);
+    auto startTime = system_clock::now();
     for(unsigned int i = 0; i < chunkCount; ++i)
     {
         auto from = chunkSize * i;
@@ -105,7 +107,7 @@ int main()
 
     while (Calculator::gDone <= output.size())
     {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     Calculator::ValueType sum = 0;
     for(auto val : output)
@@ -113,6 +115,6 @@ int main()
         sum += val;
     }
     LOGG("Sum = " << sum);
-    LOGG("DONE")
+    LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
     return 0;
 }
