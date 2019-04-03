@@ -22,57 +22,14 @@ namespace Threading {
 template< class TaskQueue>
 class ThreadPoolImplBase
 {
+	
+public:
     typedef typename TaskQueue::value_type Task;
     typedef typename TaskQueue::reference TaskRef;
     typedef typename TaskQueue::const_reference TaskCRef;
     typedef std::function<void (TaskRef)> TaskExc;
-
-    std::vector<std::thread> _pool;
-    std::once_flag _shutdowned;
-    TaskQueue _taskQueue;
-    std::list<Task> _runningTasks;
-    std::mutex _runningTaskMutex;
-    unsigned int _maxThreadCount;
-    TaskExc _fRun;
-    TaskExc _fStop;
-    TaskExc _fDone;
-
-
-    void addToRunningTasks(Task task)
-    {
-        std::lock_guard<std::mutex> lock(_runningTaskMutex);
-        _runningTasks.push_back(task);
-    }
-    void removeFromRunningTasks(Task task)
-    {
-        std::lock_guard<std::mutex> lock(_runningTaskMutex);
-        for(auto iTask = _runningTasks.begin(); iTask != _runningTasks.end(); ++iTask)
-        {
-            if(*iTask == task)
-            {
-                _runningTasks.erase(iTask);
-                break;
-            }
-        }
-    }
-    void stopRunningTasks()
-    {
-        std::lock_guard<std::mutex> lock(_runningTaskMutex);
-        for(auto& task : _runningTasks)
-        {
-            _fStop(task);
-        }
-    }
-
-    void waitForThreadsExited()
-    {
-        for(auto& th : _pool)
-        {
-            if(th.joinable()) { th.join(); }
-        }
-    }
-public:
-    ThreadPoolImplBase(size_t maxCount, TaskExc fRun, TaskExc fStop, TaskExc fDone):
+	static inline void fDoNothing(TaskRef) {}
+    ThreadPoolImplBase(size_t maxCount, TaskExc fRun, TaskExc fStop = &fDoNothing, TaskExc fDone = &fDoNothing):
         _fRun(fRun),
         _fStop(fStop),
         _fDone(fDone)
@@ -80,6 +37,10 @@ public:
         if(maxCount == 0)
         {
             _maxThreadCount = std::thread::hardware_concurrency();
+        }
+        else
+        {
+            _maxThreadCount = maxCount;
         }
     }
 
@@ -158,6 +119,53 @@ private:
         }
     }
 
+    std::vector<std::thread> _pool;
+    std::once_flag _shutdowned;
+    TaskQueue _taskQueue;
+    std::list<Task> _runningTasks;
+    std::mutex _runningTaskMutex;
+    unsigned int _maxThreadCount;
+    TaskExc _fRun;
+    TaskExc _fStop;
+    TaskExc _fDone;
+
+
+    void addToRunningTasks(Task task)
+    {
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        _runningTasks.push_back(task);
+    }
+    void removeFromRunningTasks(Task task)
+    {
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        for(auto iTask = _runningTasks.begin(); iTask != _runningTasks.end(); ++iTask)
+        {
+            if(*iTask == task)
+            {
+                _runningTasks.erase(iTask);
+                break;
+            }
+        }
+    }
+    void stopRunningTasks()
+    {
+        std::lock_guard<std::mutex> lock(_runningTaskMutex);
+        for(auto& task : _runningTasks)
+        {
+            _fStop(task);
+        }
+    }
+
+    void waitForThreadsExited()
+    {
+        for(auto& th : _pool)
+        {
+            if(th.joinable())
+            {
+                th.join();
+            }
+        }
+    }
 };
 }
 

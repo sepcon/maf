@@ -21,7 +21,7 @@ class WaiterImpl
         while(!_stopped.load())
         {
             std::unique_lock<std::mutex> _lock(_mutex);
-            if(_when < system_clock::now())
+            if(_when > system_clock::now())
             {
                 _condVar.wait_until(_lock, _when);
             }

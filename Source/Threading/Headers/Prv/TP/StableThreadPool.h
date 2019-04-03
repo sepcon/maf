@@ -3,7 +3,6 @@
 
 #include "Interfaces/IThreadPool.h"
 #include "Interfaces/Queue.h"
-#include "ThreadPoolImplBase.h"
 
 namespace Threading
 {
@@ -18,7 +17,7 @@ public:
     virtual void shutdown() override;
 
 private:
-    ThreadPoolImplBase<Threading::Queue<Runnable*> > _impl;
+    struct __I* _pI;
 };
 
 }

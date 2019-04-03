@@ -88,9 +88,10 @@ public:
 
 std::atomic_int Calculator::gDone(1);
 
-int main()
+#include "Prv/TP/StableThreadPool.h"
+void testPool()
 {
-    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::StableCount);
+    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::StableCount, 10);
     pool->setMaxThreadCount(10);
     const Calculator::ValueType MAX = 100000000;
     unsigned int chunkSize = 10000000;
@@ -105,10 +106,10 @@ int main()
     }
     pool->run(new Calculator(chunkCount * chunkSize, MAX + 1, output.back()));
 
-    while (Calculator::gDone <= output.size())
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
+//    while (Calculator::gDone <= output.size())
+//    {
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//    }
     Calculator::ValueType sum = 0;
     for(auto val : output)
     {
@@ -116,5 +117,11 @@ int main()
     }
     LOGG("Sum = " << sum);
     LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
+    pool->shutdown();
+}
+
+int main()
+{
+    testPool();
     return 0;
 }

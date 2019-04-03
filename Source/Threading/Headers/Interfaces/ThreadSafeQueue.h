@@ -77,7 +77,7 @@ public:
     void close()
     {
         MT_ALOCK(_mt);
-        _closed.store(true, std::memory_order_relaxed);
+        _closed.store(true);
         _condVar.notify_all();
     }
 

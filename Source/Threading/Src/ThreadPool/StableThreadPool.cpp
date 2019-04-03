@@ -2,28 +2,45 @@
 #include <vector>
 #include "Interfaces/Queue.h"
 #include "Prv/TP/StableThreadPool.h"
-
+#include "Prv/TP/ThreadPoolImplBase.h"
 
 namespace Threading
 {
 
-StableThreadPool::StableThreadPool(unsigned int threadCount) :
-    _impl{ threadCount, &Threading::run, &Threading::stop, &Threading::done }
+struct __I
 {
-    for(unsigned int i = 0; i < _impl.maxThreadCount(); ++i)
+    using TaskExcFunc = typename ThreadPoolImplBase<Threading::Queue<Runnable*> >::TaskExc;
+    __I(unsigned int threadCount,  TaskExcFunc runFunc, TaskExcFunc stopFunc, TaskExcFunc doneFunc) :
+        thepool(threadCount, runFunc, stopFunc)
     {
-        _impl.tryLaunchNewThread();
+    }
+    ThreadPoolImplBase<Threading::Queue<Runnable*> >*  operator->()
+    {
+        return &thepool;
+    }
+
+    ThreadPoolImplBase<Threading::Queue<Runnable*> > thepool;
+};
+
+StableThreadPool::StableThreadPool(unsigned int threadCount) :
+    _pI(new __I{threadCount, &Threading::run, &Threading::stop, &Threading::done})
+{
+
+    for(unsigned int i = 0; i < (*_pI)->maxThreadCount(); ++i)
+    {
+        (*_pI)->tryLaunchNewThread();
     }
 }
 
 StableThreadPool::~StableThreadPool()
 {
-    _impl.shutdown();
+    shutdown();
+    delete _pI;
 }
 
 void StableThreadPool::run(Runnable *pRuner, unsigned int /*priority*/)
 {
-    _impl.run(pRuner);
+    (*_pI)->run(pRuner);
 }
 
 void StableThreadPool::setMaxThreadCount(unsigned int /*nThreadCount*/)
@@ -33,12 +50,12 @@ void StableThreadPool::setMaxThreadCount(unsigned int /*nThreadCount*/)
 
 unsigned int StableThreadPool::activeThreadCount()
 {
-    return _impl.activeThreadCount();
+    return (*_pI)->activeThreadCount();
 }
 
 void StableThreadPool::shutdown()
 {
-    _impl.shutdown();
+    (*_pI)->shutdown();
 }
 
 }
