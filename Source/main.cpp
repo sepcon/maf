@@ -91,37 +91,51 @@ std::atomic_int Calculator::gDone(1);
 #include "Prv/TP/StableThreadPool.h"
 void testPool()
 {
-    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::StableCount, 10);
-    pool->setMaxThreadCount(10);
-    const Calculator::ValueType MAX = 100000000;
-    unsigned int chunkSize = 10000000;
-    unsigned int chunkCount = MAX/chunkSize;
-    std::vector<Calculator::ValueType> output;
-    output.resize(chunkCount + 1);
-    auto startTime = system_clock::now();
-    for(unsigned int i = 0; i < chunkCount; ++i)
-    {
-        auto from = chunkSize * i;
-        pool->run(new Calculator(from, from + chunkSize, output[i]), i);
-    }
-    pool->run(new Calculator(chunkCount * chunkSize, MAX + 1, output.back()));
+	char c;
+	do {
+		auto pool = ThreadPoolFactory::createPool(Threading::PoolType::Priority);
+		pool->setMaxThreadCount(10);
+		const Calculator::ValueType MAX = 100000000;
+		unsigned int chunkSize = 10000000;
+		unsigned int chunkCount = MAX / chunkSize;
+		std::vector<Calculator::ValueType> output;
+		output.resize(chunkCount + 1);
+		auto startTime = system_clock::now();
+		for (unsigned int i = 0; i < chunkCount; ++i)
+		{
+			auto from = chunkSize * i;
+			pool->run(new Calculator(from, from + chunkSize, output[i]), i);
+		}
+		pool->run(new Calculator(chunkCount * chunkSize, MAX + 1, output.back()));
 
-//    while (Calculator::gDone <= output.size())
-//    {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-//    }
-    Calculator::ValueType sum = 0;
-    for(auto val : output)
-    {
-        sum += val;
-    }
-    LOGG("Sum = " << sum);
-    LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
-    pool->shutdown();
+		//    while (Calculator::gDone <= output.size())
+		//    {
+		//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		//    }
+		c = getchar();
+		Calculator::ValueType sum = 0;
+		for (auto val : output)
+		{
+			sum += val;
+		}
+		LOGG("Sum = " << sum);
+		LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
+		//pool->shutdown();
+	} while (c != 'q');
 }
 
 int main()
 {
-    testPool();
+    //testPool();
+	int* p = nullptr;
+	try
+	{
+		int i = *p;
+	}
+	catch (...)
+	{
+		std::cout << "Hello world" << std::endl;
+	}
+	getchar();
     return 0;
 }
