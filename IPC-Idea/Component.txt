@@ -1,0 +1,81 @@
+
+Component:
+	+ Service1  |
+	+ Service2  | 
+	+ ...       | ===> Need to know about the Containing Component
+	--> Timer   |
+	--> Timer   | 
+	| ...
+	`--> Message queue
+	`--> Actions 
+	`--> Properties
+		
+ServiceRequester:
+	+ startConnection(PortNumber port):
+		requester = createRequester()
+		thread(
+			1. Monitoring connection to Provider ( )
+				requester->getConnectionStatus()
+				--> Forward Messages of connection status to RequestHandler for handling it 
+														GetComponent -> post(message)
+			2. Monitoring Messages to request: 
+				if(needsResponse && listener is null)
+					listerner = createListener()
+					listerner->openPort(makeRandomPort())
+					listerner->registerCallback( onNewByteStreamCallback )
+					createThread(listerner->startListening())
+					
+				haveNewMessage: requester->sendByteStream(message->toStream())
+		)
+	+ submitRequest(RequestMessage):
+		insertMessageToTheQueue
+		
+	
+ServiceProvider:
+	+ startListening(Port):
+		waitForNewMessage:
+			listener = createListener();
+			listener->open(port)
+			listener->registerCallback( onNewByteStreamCallback )
+			createThread(listerner->startListening())
+			
+		+ onNewByteStreamCallback()
+			1. Store the addesses of clients to respond the results of requests
+				1. Store address of clients:
+					- ActionRequest
+					- PropertyStatusGetRequest
+					- PropertyStatusRegisterRequest
+					Don't need to store:
+						- PropertiesStatusSet
+					--> How to store: (store <FunctionID - ClientAddress> )
+			
+			2. Forward Messages to RequestHandler for handling it 
+				GetComponent -> post(message)
+		
+		* 3. Filter out the right clients --> do this later for security reasons.
+		
+	+ sendResponseToClient(Message):
+		1. GetClient(Message.Destination, SERVICE_ID, FUNCTION_ID, FUNCTION_TYPE) -> sendBytes(Message.serialize())
+		2. Remove stored Client Addresses:
+				A. Removed after response: 
+					- ActionRequest
+					- PropertyStatusGetRequest
+				B. Removed after client request UNREG
+					- PropertyStatusRegisterRequest
+					- 
+	
+	
+	+ 
+RequestHandler:
+	+ Identified By: SERVICE_ID + FUNCTION_ID + FUNCTION_TYPE
+	
+Action(RequestHandler):
+	+ actionStart
+	+ respond 
+
+Property(RequestHandler):
+	+ onStatusSet(status): store the client's set status -> don't need to store client's address
+	+ onStatusGet(): update latest status to client -> this is similar to actionRequest
+	+ onReg/UnReg(): update latest status to client (client wants to be stored until it sends PropertyUnReg)
+
+

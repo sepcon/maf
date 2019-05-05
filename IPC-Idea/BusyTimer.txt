@@ -1,0 +1,45 @@
+Done!!!
+
+BusyTimer:
+	+ thread {
+        
+        elapsedTime = 0
+        do
+        {
+            start = now;
+            if elapsedTime > 0:
+                reevaluateJobs(elapsedTime)
+                
+            duration = getSmallestDuration()
+            if duration <= 0:
+                doCallback()
+            else:
+                wait_for(duration, shutdowned);
+                
+                if(now - start >= duration)
+                {
+                    doCallback()
+                }
+                else 
+                {
+                    elapsedTime = now - start
+                }
+            
+        } while( stillHaveJob() ) ;
+	}
+	
+	+ function stillHaveJob():
+        lock durationSet
+        return durationSet is not empty
+        
+	+ function getSmallestDuration():
+        lock durationSet
+        return durationSet.begin()
+        
+	+ function reevaluateJobs( elapsedTime ):
+        lock durationSet
+        for duration in durationSet:
+            duration -= elapsedTime
+        
+	
+	

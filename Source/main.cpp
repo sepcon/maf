@@ -117,11 +117,47 @@ void testPool()
     }
     LOGG("Sum = " << sum);
     LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
-    pool->shutdown();
+//    pool->shutdown();
+}
+
+#include "Interfaces/BusyTimer.h"
+#include <sstream>
+
+void launchNewTimer(BusyTimer& timer, BusyTimer::MS duration)
+{
+    static std::atomic<BusyTimer::TimerID> id(1);
+    std::thread{
+        [&timer, duration]{
+            auto timerId = id++;
+            std::stringstream ss;
+            ss << "echo Timer id " << timerId << " will time out in " << duration << "ms";
+            system(ss.str().c_str());
+            timer.start(timerId, duration, [](BusyTimer::TimerID id){
+                std::stringstream ss;
+                ss << "echo Timer id " << id << " expired ";
+                system(ss.str().c_str());
+            });
+            timer.stop(id - 1);
+        }
+    }.detach();
 }
 
 int main()
 {
-    testPool();
+    BusyTimer timer;
+
+
+    launchNewTimer(timer, 11110);
+    launchNewTimer(timer, 10000);/*
+    launchNewTimer(timer, 1512);
+    launchNewTimer(timer, 2000);*/
+
+//    timer.stop(1);
+
+
+//    timer.stop(1);
+    cin.get();
+    std::cout << "Done!" << std::endl;
+//    testPool();
     return 0;
 }

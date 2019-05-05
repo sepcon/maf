@@ -6,6 +6,8 @@ CONFIG -= qt
 SOURCES += \
     Threading/Src/ThreadPool/DynamicCountThreadPool.cpp \
     Threading/Src/ThreadPool/ThreadPoolFactory.cpp \
+    Threading/Src/Time/BusyTimer.cpp \
+    Threading/Src/Time/BusyTimerImpl.cpp \
         main.cpp \
     Threading/Src/ThreadPool/PriorityThreadPool.cpp \
     Threading/Src/ThreadPool/StableThreadPool.cpp \
@@ -16,6 +18,7 @@ SOURCES += \
 INCLUDEPATH += ./Threading/Headers/
 
 HEADERS += \
+    Threading/Headers/Interfaces/BusyTimer.h \
     Threading/Headers/Interfaces/IThreadPool.h \
     Threading/Headers/Interfaces/Queue.h \
     Threading/Headers/Interfaces/Runnable.h \
@@ -28,6 +31,9 @@ HEADERS += \
     Threading/Headers/Prv/TP/DynamicCountThreadPool.h \
     Threading/Headers/Prv/TP/PriorityThreadPool.h \
     Threading/Headers/Prv/TP/StableThreadPool.h \
-    Threading/Headers/Prv/TP/ThreadPoolImplBase.h
+    Threading/Headers/Prv/TP/ThreadPoolImplBase.h \
+    Threading/Headers/Prv/Time/BusyTimerImpl.h
 
 LIBS += -lpthread
+
+DISTFILES +=
