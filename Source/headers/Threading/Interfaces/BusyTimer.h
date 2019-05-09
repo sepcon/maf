@@ -9,14 +9,15 @@ namespace Threading
 class BusyTimer
 {
 public:
-    typedef unsigned long long TimerID;
-    typedef long MS;
-    typedef std::function<void(TimerID)> TimeOutCallback;
+    typedef unsigned long long JobID;
+    typedef long long Duration;
+    typedef std::function<void(JobID)> TimeOutCallback;
     BusyTimer();
     ~BusyTimer();
-    void start(TimerID tid, MS ms, TimeOutCallback callback);
-    void stop(TimerID tid);
-    bool isRunning(TimerID tid);
+    void start(JobID tid, Duration milliseconds, TimeOutCallback callback);
+    void restart(JobID tid);
+    void stop(JobID tid);
+    bool isRunning(JobID tid);
 
 private:
     struct BusyTimerImpl* _pImpl;
