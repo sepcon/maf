@@ -4,35 +4,37 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
-    Threading/Src/ThreadPool/DynamicCountThreadPool.cpp \
-    Threading/Src/ThreadPool/ThreadPoolFactory.cpp \
-    Threading/Src/Time/BusyTimer.cpp \
-    Threading/Src/Time/BusyTimerImpl.cpp \
+    src/Application/Framework/Component.cpp \
+    src/Threading/ThreadPool/DynamicCountThreadPool.cpp \
+    src/Threading/ThreadPool/ThreadPoolFactory.cpp \
+    src/Threading/Time/BusyTimer.cpp \
+    src/Threading/Time/BusyTimerImpl.cpp \
         main.cpp \
-    Threading/Src/ThreadPool/PriorityThreadPool.cpp \
-    Threading/Src/ThreadPool/StableThreadPool.cpp \
-    Threading/Src/Time/Timer.cpp \
-    Threading/Src/Time/Waiter.cpp \
-    Threading/Src/Utils/Signal.cpp
+    src/Threading/ThreadPool/PriorityThreadPool.cpp \
+    src/Threading/ThreadPool/StableThreadPool.cpp \
+    src/Threading/Time/Timer.cpp \
+    src/Threading/Time/Waiter.cpp \
+    src/Threading/Utils/Signal.cpp
 
-INCLUDEPATH += ./Threading/Headers/
+INCLUDEPATH += ./headers/Threading/
 
 HEADERS += \
-    Threading/Headers/Interfaces/BusyTimer.h \
-    Threading/Headers/Interfaces/IThreadPool.h \
-    Threading/Headers/Interfaces/Queue.h \
-    Threading/Headers/Interfaces/Runnable.h \
-    Threading/Headers/Interfaces/Signal.h \
-    Threading/Headers/Interfaces/ThreadJoiner.h \
-    Threading/Headers/Interfaces/ThreadPoolFactory.h \
-    Threading/Headers/Interfaces/ThreadSafeQueue.h \
-    Threading/Headers/Interfaces/Timer.h \
-    Threading/Headers/Interfaces/Waiter.h \
-    Threading/Headers/Prv/TP/DynamicCountThreadPool.h \
-    Threading/Headers/Prv/TP/PriorityThreadPool.h \
-    Threading/Headers/Prv/TP/StableThreadPool.h \
-    Threading/Headers/Prv/TP/ThreadPoolImplBase.h \
-    Threading/Headers/Prv/Time/BusyTimerImpl.h
+    headers/Application/Framework/Component.h \
+    headers/Threading/Interfaces/BusyTimer.h \
+    headers/Threading/Interfaces/IThreadPool.h \
+    headers/Threading/Interfaces/Queue.h \
+    headers/Threading/Interfaces/Runnable.h \
+    headers/Threading/Interfaces/Signal.h \
+    headers/Threading/Interfaces/ThreadJoiner.h \
+    headers/Threading/Interfaces/ThreadPoolFactory.h \
+    headers/Threading/Interfaces/ThreadSafeQueue.h \
+    headers/Threading/Interfaces/Timer.h \
+    headers/Threading/Interfaces/Waiter.h \
+    headers/Threading/Prv/TP/DynamicCountThreadPool.h \
+    headers/Threading/Prv/TP/PriorityThreadPool.h \
+    headers/Threading/Prv/TP/StableThreadPool.h \
+    headers/Threading/Prv/TP/ThreadPoolImplBase.h \
+    headers/Threading/Prv/Time/BusyTimerImpl.h
 
 LIBS += -lpthread
 

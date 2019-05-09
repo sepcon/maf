@@ -123,41 +123,51 @@ void testPool()
 #include "Interfaces/BusyTimer.h"
 #include <sstream>
 
-void launchNewTimer(BusyTimer& timer, BusyTimer::MS duration)
+namespace cr = std::chrono;
+
+void scheduleJob(BusyTimer& timer, BusyTimer::JobID id, BusyTimer::Duration duration)
 {
-    static std::atomic<BusyTimer::TimerID> id(1);
-    std::thread{
-        [&timer, duration]{
-            auto timerId = id++;
-            std::stringstream ss;
-            ss << "echo Timer id " << timerId << " will time out in " << duration << "ms";
-            system(ss.str().c_str());
-            timer.start(timerId, duration, [](BusyTimer::TimerID id){
-                std::stringstream ss;
-                ss << "echo Timer id " << id << " expired ";
-                system(ss.str().c_str());
-            });
-            timer.stop(id - 1);
-        }
-    }.detach();
+    std::cout << id << " starts waiting" << std::endl;
+    std::thread{ [&timer, id, duration] {
+        auto startTime = cr::system_clock::now();
+    timer.start(id, duration, [startTime, duration](BusyTimer::JobID job) {
+        std::cout << job << " (" << duration << ") executed after " << cr::duration_cast<cr::milliseconds>(cr::system_clock::now() - startTime).count() << "\n";
+    });
+    } }.detach();
 }
 
 int main()
 {
-    BusyTimer timer;
+    Threading::BusyTimer timer;
+    /*scheduleJob(timer, 1, 5000);
+    scheduleJob(timer, 2, 200);
+    scheduleJob(timer, 3, 100);
+    scheduleJob(timer, 4, 50);
+    */
+    //start = std::chrono::system_clock::now();
 
+    scheduleJob(timer, 1, 2);
+    scheduleJob(timer, 2, 2);
+    scheduleJob(timer, 3, 2);
+    scheduleJob(timer, 4, 2);
+    scheduleJob(timer, 5, 2);
+    scheduleJob(timer, 6, 2);
+    scheduleJob(timer, 7, 2);
+    scheduleJob(timer, 8, 2);
+    scheduleJob(timer, 9, 2);
 
-    launchNewTimer(timer, 11110);
-    launchNewTimer(timer, 10000);/*
-    launchNewTimer(timer, 1512);
-    launchNewTimer(timer, 2000);*/
+    //scheduleJob(timer, 2, 1000);
+    //scheduleJob(timer, 3, 2);
+    //scheduleJob(timer, 4, 1500);
+    //scheduleJob(timer, 5, 1000);
+    //scheduleJob(timer, 6, 2);
+    //scheduleJob(timer, 7, 1500);
+    //scheduleJob(timer, 8, 1000);
+    //scheduleJob(timer, 9, 2);
+    //scheduleJob(timer, 10, 1500);
+    //scheduleJob(timer, 11, 1000);
+    //scheduleJob(timer, 12, 2);
 
-//    timer.stop(1);
-
-
-//    timer.stop(1);
-    cin.get();
-    std::cout << "Done!" << std::endl;
-//    testPool();
+    std::cin.get();
     return 0;
 }
