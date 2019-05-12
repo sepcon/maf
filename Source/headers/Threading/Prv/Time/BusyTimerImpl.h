@@ -2,6 +2,7 @@
 #define BUSY_TIMER_IMPL_H
 
 #include "Interfaces/BusyTimer.h"
+#include <chrono>
 #include <set>
 #include <vector>
 #include <memory>
@@ -31,26 +32,21 @@ private:
     struct JobDesc
     {
         JobDesc(JobID id_, Duration duration_, TimeOutCallback callback_)
-            : id(id_), duration(duration_), remainer(duration_), callback(callback_){}
+            : id(id_), startTime(std::chrono::system_clock::now()), duration(duration_), remainer(duration_), callback(callback_){}
         void reset() { remainer = duration; }
         JobID id;
+		std::chrono::system_clock::time_point startTime;
         Duration duration;
         Duration remainer;
         TimeOutCallback callback;
     };
-
-    struct JobComp
-    {
-        bool operator()(const JobDesc& lhs,
-            const JobDesc& rhs) {
-            return lhs.remainer < rhs.remainer;
-        }
-    };
+    friend struct JobComp;
 
     using JobDescRef = std::shared_ptr<JobDesc>;
     using JobsContainer = std::vector<JobDescRef>;
     void run();
     void startJob(JobID tid, Duration ms, TimeOutCallback callback);
+	void reorderRunningJobs();
     void startPendingJobs();
     void storePendingJob(JobID tid, Duration ms, TimeOutCallback callback);
     void storePendingJob(JobDescRef job);
@@ -58,6 +54,7 @@ private:
     JobDescRef getShorttestDurationJob();
     void reEvaluateJobs(Duration elapsed);
     void doJob(JobDescRef job);
+    JobDescRef popOutShottestJob();
     void cleanup();
 
     static void addOrReplace(JobsContainer& jobs, JobDescRef newJob);

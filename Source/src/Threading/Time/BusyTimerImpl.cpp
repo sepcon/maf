@@ -14,6 +14,14 @@ using namespace std::chrono;
 namespace Threading
 {
 
+struct JobComp
+{
+    bool operator()(const BusyTimerImpl::JobDescRef& lhs,
+        const BusyTimerImpl::JobDescRef& rhs) {
+        return lhs->remainer > rhs->remainer;
+    }
+};
+
 BusyTimerImpl::~BusyTimerImpl()
 {
     if(_future.valid())
@@ -69,6 +77,7 @@ void BusyTimerImpl::restart(BusyTimerImpl::JobID tid)
 void BusyTimerImpl::stop(BusyTimerImpl::JobID tid)
 {
     std::lock_guard<std::mutex> lock(_jmt);
+
     for(auto& job : _runningJobs)
     {
         LOG("id " << job->id);
@@ -76,6 +85,7 @@ void BusyTimerImpl::stop(BusyTimerImpl::JobID tid)
 	if (removeJob(_runningJobs, tid))
 	{
 		LOG("Job " << tid << " is canceled");
+		reorderRunningJobs();
 		_condvar.notify_one();
 	}
 	else if(removeJob(_pendingJobs, tid))
@@ -115,6 +125,12 @@ void BusyTimerImpl::shutdown()
 void BusyTimerImpl::startJob(BusyTimerImpl::JobID tid, BusyTimerImpl::Duration ms, BusyTimerImpl::TimeOutCallback callback)
 {
     addOrReplace(_runningJobs, std::make_shared<JobDesc>(tid, ms, callback));
+	reorderRunningJobs();
+}
+
+void BusyTimerImpl::reorderRunningJobs()
+{
+	std::push_heap(_runningJobs.begin(), _runningJobs.end());
 }
 
 
@@ -127,6 +143,7 @@ void BusyTimerImpl::startPendingJobs()
 			addOrReplace(_runningJobs, std::move(job));
 		}
         _pendingJobs.clear();
+		reorderRunningJobs();
     }
 }
 
@@ -148,8 +165,7 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::removeJob(BusyTimerImpl::JobsContainer&
     {
 		job = *itJob;
 		std::swap(*itJob, jobs.back());
-		//itJob = std::remove(jobs.begin(), jobs.end(), itJob);
-		jobs.erase(jobs.begin() + jobs.size() - 1);
+		jobs.pop_back();
     }
 	return job;
 }
@@ -176,9 +192,11 @@ void BusyTimerImpl::run()
 				this->cleanup();
 				break;
 			}
+
             if(job->remainer <= 0)
             {
                 this->doJob(job);
+                this->popOutShottestJob();
             }
             else
             {
@@ -188,7 +206,6 @@ void BusyTimerImpl::run()
 					break; 
 				}
 
-				job->remainer -= static_cast<Duration>(_pendingJobs.size()) * 2;
 				job->remainer = job->remainer < 0 ? 0 : job->remainer;
                 _condvar.wait_for(lock, milliseconds(job->remainer));
 				
@@ -201,6 +218,7 @@ void BusyTimerImpl::run()
 				else if(duration_cast<milliseconds>(system_clock::now() - startTime).count() >= job->remainer)
                 {
                     this->doJob(job);
+                    this->popOutShottestJob();
                 }
                 elapsedMS = duration_cast<milliseconds>(system_clock::now() - startTime).count();
                 if(elapsedMS > 0)
@@ -228,15 +246,7 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::getShorttestDurationJob()
     }
     else
     {
-        JobDescRef shorttest = _runningJobs[0];
-        for(size_t i = 1; i < _runningJobs.size(); ++i)
-        {
-            if(_runningJobs[i]->remainer < shorttest->remainer)
-            {
-                shorttest = _runningJobs[i];
-            }
-        }
-        return shorttest;
+        return _runningJobs.front();
     }
 }
 
@@ -251,7 +261,14 @@ void BusyTimerImpl::reEvaluateJobs(Duration elapsed)
 void BusyTimerImpl::doJob(BusyTimerImpl::JobDescRef job)
 {
     job->callback(job->id);
-	removeJob(_runningJobs, job->id);
+}
+
+BusyTimerImpl::JobDescRef BusyTimerImpl::popOutShottestJob()
+{
+    std::pop_heap(_runningJobs.begin(), _runningJobs.end(), JobComp());
+    auto job = std::move(_runningJobs.back());
+    _runningJobs.pop_back();
+    return job;
 }
 
 void BusyTimerImpl::cleanup()
