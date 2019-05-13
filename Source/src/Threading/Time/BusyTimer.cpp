@@ -30,25 +30,30 @@ BusyTimer::~BusyTimer()
     }
 }
 
-void BusyTimer::restart(JobID tid)
+void BusyTimer::restart(JobID jid)
 {
-    _pImpl->restart(tid);
+    _pImpl->restart(jid);
 }
 
-void BusyTimer::start(BusyTimer::JobID tid, Duration milliseconds, std::function<void (BusyTimer::JobID)> callback)
+void BusyTimer::start(BusyTimer::JobID jid, Duration milliseconds, std::function<void (BusyTimer::JobID)> callback, bool cyclic)
 {
-    _pImpl->start(tid, milliseconds, callback);
+    _pImpl->start(jid, milliseconds, callback, cyclic);
 }
 
-void BusyTimer::stop(BusyTimer::JobID tid)
+void BusyTimer::stop(BusyTimer::JobID jid)
 {
-    std::cout << "Trying to stop this timer " << tid << std::endl;
-    _pImpl->stop(tid);
+    std::cout << "Trying to stop this timer " << jid << std::endl;
+    _pImpl->stop(jid);
 }
 
-bool BusyTimer::isRunning(BusyTimer::JobID tid)
+bool BusyTimer::isRunning(BusyTimer::JobID jid)
 {
-    return _pImpl->isRunning(tid);
+    return _pImpl->isRunning(jid);
+}
+
+void BusyTimer::setCyclic(BusyTimer::JobID jid, bool cyclic)
+{
+    _pImpl->setRecyclic(jid, cyclic);
 }
 
 }

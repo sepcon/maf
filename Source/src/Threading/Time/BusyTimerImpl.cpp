@@ -14,11 +14,40 @@ using namespace std::chrono;
 namespace Threading
 {
 
+struct JobDesc
+{
+    JobDesc(BusyTimerImpl::JobID id_, BusyTimerImpl::Duration duration_, BusyTimerImpl::TimeOutCallback callback_, bool isCyclic_ = false)
+        : id(id_), startTime(system_clock::now()), duration(duration_), callback(callback_), isCyclic(isCyclic_)
+    {}
+    BusyTimerImpl::Duration remainTime()
+    {
+        return duration - elapseTime();
+    }
+    BusyTimerImpl::Duration elapseTime()
+    {
+        return duration_cast<milliseconds>(system_clock::now()- startTime).count();
+    }
+    void reset()
+    {
+        startTime = system_clock::now();
+    }
+    bool expired()
+    {
+        return elapseTime() >= duration;
+    }
+
+    BusyTimerImpl::JobID id;
+    system_clock::time_point startTime;
+    BusyTimerImpl::Duration duration;
+    BusyTimerImpl::TimeOutCallback callback;
+    bool isCyclic;
+};
+
 struct JobComp
 {
     bool operator()(const BusyTimerImpl::JobDescRef& lhs,
         const BusyTimerImpl::JobDescRef& rhs) {
-        return lhs->remainer > rhs->remainer;
+        return lhs->remainTime() > rhs->remainTime();
     }
 };
 
@@ -30,26 +59,26 @@ BusyTimerImpl::~BusyTimerImpl()
     }
 }
 
-bool BusyTimerImpl::start(BusyTimerImpl::JobID tid, Duration ms, TimeOutCallback callback)
+bool BusyTimerImpl::start(BusyTimerImpl::JobID jid, Duration ms, TimeOutCallback callback, bool cyclic)
 {
     bool success = true;
 
 	if (!_workerThreadIsRunning.load(std::memory_order_acquire))
 	{
 		std::lock_guard<std::mutex> lock(_jmt);
-		startJob(tid, ms, callback);
+        startJob(jid, ms, callback, cyclic);
 	}
     else
     {
         std::lock_guard<std::mutex> lock(_jmt);
         if(_pendingJobs.size() + _runningJobs.size() < MAX_JOBS_COUNT)
         {
-            storePendingJob(tid, ms, callback);
+            storePendingJob(jid, ms, callback, cyclic);
             _condvar.notify_one();
         }
         else
         {
-			LOG("Cannot start timer for job " << tid << " Due to number of jobs exceeds the permited amount(" << MAX_JOBS_COUNT << "), please try with other BusyTimer");
+            LOG("Cannot start timer for job " << jid << " Due to number of jobs exceeds the permited amount(" << MAX_JOBS_COUNT << "), please try with other BusyTimer");
             success = false;
         }
     }
@@ -62,43 +91,38 @@ bool BusyTimerImpl::start(BusyTimerImpl::JobID tid, Duration ms, TimeOutCallback
     return success;
 }
 
-void BusyTimerImpl::restart(BusyTimerImpl::JobID tid)
+void BusyTimerImpl::restart(BusyTimerImpl::JobID jid)
 {
     std::unique_lock<std::mutex> lock(_jmt);
-    auto itJob = findJob(_runningJobs, tid);
-    if(itJob != _runningJobs.end())
+    auto job = getJob(_runningJobs, jid);
+    if(job)
     {
-        LOG("Timer " << tid << " is restarted with duration = " << (*itJob)->duration);
-        (*itJob)->reset();
+        LOG("Timer " << jid << " is restarted with duration = " << (*itJob)->duration);
+        job->reset();
         _condvar.notify_one();
     }
 }
 
-void BusyTimerImpl::stop(BusyTimerImpl::JobID tid)
+void BusyTimerImpl::stop(BusyTimerImpl::JobID jid)
 {
     std::lock_guard<std::mutex> lock(_jmt);
-
-    for(auto& job : _runningJobs)
-    {
-        LOG("id " << job->id);
-    }
-	if (removeJob(_runningJobs, tid))
+    if (removeJob(_runningJobs, jid))
 	{
-		LOG("Job " << tid << " is canceled");
-		reorderRunningJobs();
+        LOG("Job " << jid << " is canceled");
+        reorderRunningJobs();
 		_condvar.notify_one();
 	}
-	else if(removeJob(_pendingJobs, tid))
+    else if(removeJob(_pendingJobs, jid))
 	{
-		LOG("Job " << tid << " is canceled");
+        LOG("Job " << jid << " is canceled");
 	}
 	else
 	{
-		LOG("Job " << tid << " does not exist or is already canceled");
+        LOG("Job " << jid << " does not exist or is already canceled");
 	}
 }
 
-bool BusyTimerImpl::isRunning(BusyTimerImpl::JobID tid)
+bool BusyTimerImpl::isRunning(BusyTimerImpl::JobID jid)
 {
     std::lock_guard<std::mutex> lock(_jmt);
     bool running = false;
@@ -106,7 +130,7 @@ bool BusyTimerImpl::isRunning(BusyTimerImpl::JobID tid)
     {
         for(auto& job : _runningJobs)
         {
-            if(job->id == tid)
+            if(job->id == jid)
             {
                 running = true;
                 break;
@@ -116,21 +140,39 @@ bool BusyTimerImpl::isRunning(BusyTimerImpl::JobID tid)
     return running;
 }
 
+void BusyTimerImpl::setRecyclic(BusyTimerImpl::JobID jid, bool cyclic)
+{
+    std::lock_guard<std::mutex> lock(_jmt);
+    auto itJob = getJob(_runningJobs, jid);
+    if(itJob)
+    {
+        itJob->isCyclic = cyclic;
+    }
+    else
+    {
+        itJob = getJob(_pendingJobs, jid);
+        if(itJob)
+        {
+            itJob->isCyclic = cyclic;
+        }
+    }
+}
+
 void BusyTimerImpl::shutdown()
 {
     _shutdowned.store(true, std::memory_order_relaxed);
     _condvar.notify_one();
 }
 
-void BusyTimerImpl::startJob(BusyTimerImpl::JobID tid, BusyTimerImpl::Duration ms, BusyTimerImpl::TimeOutCallback callback)
+void BusyTimerImpl::startJob(BusyTimerImpl::JobID jid, BusyTimerImpl::Duration ms, BusyTimerImpl::TimeOutCallback callback, bool cyclic)
 {
-    addOrReplace(_runningJobs, std::make_shared<JobDesc>(tid, ms, callback));
-	reorderRunningJobs();
+    addOrReplace(_runningJobs, std::make_shared<JobDesc>(jid, ms, callback, cyclic));
+    reorderRunningJobs();
 }
 
 void BusyTimerImpl::reorderRunningJobs()
 {
-	std::push_heap(_runningJobs.begin(), _runningJobs.end());
+    std::make_heap(_runningJobs.begin(), _runningJobs.end(), JobComp());
 }
 
 
@@ -140,16 +182,15 @@ void BusyTimerImpl::startPendingJobs()
     {
 		for (auto& job : _pendingJobs)
 		{
-			addOrReplace(_runningJobs, std::move(job));
+            addOrReplace(_runningJobs, std::move(job));
 		}
         _pendingJobs.clear();
-		reorderRunningJobs();
     }
 }
 
-void BusyTimerImpl::storePendingJob(JobID tid, Duration ms, TimeOutCallback callback)
+void BusyTimerImpl::storePendingJob(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic)
 {
-    storePendingJob(std::make_shared<JobDesc>(tid, ms, callback));
+    storePendingJob(std::make_shared<JobDesc>(jid, ms, callback, cyclic));
 }
 
 void BusyTimerImpl::storePendingJob(BusyTimerImpl::JobDescRef job)
@@ -163,7 +204,7 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::removeJob(BusyTimerImpl::JobsContainer&
 	JobDescRef job;
     if (itJob != jobs.end())
     {
-		job = *itJob;
+        job = *itJob;
 		std::swap(*itJob, jobs.back());
 		jobs.pop_back();
     }
@@ -176,67 +217,68 @@ BusyTimerImpl::JobsContainer::iterator BusyTimerImpl::findJob(BusyTimerImpl::Job
                         [jid](const JobDescRef& job) { return job->id == jid; });
 }
 
+BusyTimerImpl::JobDescRef BusyTimerImpl::getJob(BusyTimerImpl::JobsContainer &jobs, BusyTimerImpl::JobID jid)
+{
+    auto itJob = findJob(jobs, jid);
+    if(itJob != jobs.end())
+    {
+        return *itJob;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 void BusyTimerImpl::run()
 {
     _future = std::async(std::launch::async, [this] {
 		_workerThreadIsRunning.store(true, std::memory_order_release);
         do
         {
-			Duration elapsedMS = 0;
-            auto startTime = system_clock::now();
             std::unique_lock<std::mutex> lock(_jmt);
             auto job = getShorttestDurationJob();
 
 			if (!job)
 			{
-				this->cleanup();
+                this->cleanup();
 				break;
 			}
 
-            if(job->remainer <= 0)
+            if(job->expired())
             {
                 this->doJob(job);
-                this->popOutShottestJob();
+                this->rescheduleShorttestJob();
             }
             else
             {
 				if (_shutdowned.load(std::memory_order_acquire)) 
 				{
-					this->cleanup();
+                    this->cleanup();
 					break; 
 				}
 
-				job->remainer = job->remainer < 0 ? 0 : job->remainer;
-                _condvar.wait_for(lock, milliseconds(job->remainer));
+
+                _condvar.wait_for(lock, milliseconds(job->remainTime()));
 				
 				if(_shutdowned.load(std::memory_order_acquire)) 
 				{ 
-					this->cleanup();
+                    this->cleanup();
 					break; 
 				}
                 
-				else if(duration_cast<milliseconds>(system_clock::now() - startTime).count() >= job->remainer)
+				else if(job->expired())
                 {
                     this->doJob(job);
-                    this->popOutShottestJob();
-                }
-                elapsedMS = duration_cast<milliseconds>(system_clock::now() - startTime).count();
-                if(elapsedMS > 0)
-                {
-                    this->reEvaluateJobs(elapsedMS);
-                    elapsedMS = 0;
+                    this->rescheduleShorttestJob();
                 }
             }
             startPendingJobs();
+            reorderRunningJobs();
         } while(true);
     });
 }
 
-bool BusyTimerImpl::jobRemained()
-{
-    std::lock_guard<std::mutex> lock(_jmt);
-    return not _runningJobs.empty();
-}
 
 BusyTimerImpl::JobDescRef BusyTimerImpl::getShorttestDurationJob()
 {
@@ -250,24 +292,29 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::getShorttestDurationJob()
     }
 }
 
-void BusyTimerImpl::reEvaluateJobs(Duration elapsed)
-{
-    for(auto& job : _runningJobs)
-    {
-        job->remainer -= elapsed;
-    }
-}
-
 void BusyTimerImpl::doJob(BusyTimerImpl::JobDescRef job)
 {
     job->callback(job->id);
 }
 
-BusyTimerImpl::JobDescRef BusyTimerImpl::popOutShottestJob()
+BusyTimerImpl::JobDescRef BusyTimerImpl::rescheduleShorttestJob()
 {
-    std::pop_heap(_runningJobs.begin(), _runningJobs.end(), JobComp());
-    auto job = std::move(_runningJobs.back());
-    _runningJobs.pop_back();
+    JobDescRef job;
+    if(!_runningJobs.empty())
+    {
+        std::pop_heap(_runningJobs.begin(), _runningJobs.end(), JobComp());
+
+        if(_runningJobs.front()->isCyclic)
+        {
+            _runningJobs.back()->reset();
+            job = _runningJobs.back();
+            std::push_heap(_runningJobs.begin(), _runningJobs.end());
+        }
+        else {
+            job = std::move(_runningJobs.back());
+            _runningJobs.pop_back();
+        }
+    }
     return job;
 }
 
@@ -275,8 +322,6 @@ void BusyTimerImpl::cleanup()
 {
 	_shutdowned.store(true, std::memory_order_relaxed);
 	_workerThreadIsRunning.store(false, std::memory_order_release);
-
-	std::lock_guard<std::mutex> lock(_jmt);
 	_pendingJobs.clear();
     _runningJobs.clear(); //for shutting down case
 }

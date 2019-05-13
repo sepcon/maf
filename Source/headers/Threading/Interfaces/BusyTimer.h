@@ -14,10 +14,11 @@ public:
     typedef std::function<void(JobID)> TimeOutCallback;
     BusyTimer();
     ~BusyTimer();
-    void start(JobID tid, Duration milliseconds, TimeOutCallback callback);
-    void restart(JobID tid);
-    void stop(JobID tid);
-    bool isRunning(JobID tid);
+    void start(JobID jid, Duration milliseconds, TimeOutCallback callback, bool cyclic = false);
+    void restart(JobID jid);
+    void stop(JobID jid);
+    bool isRunning(JobID jid);
+    void setCyclic(JobID jid, bool cyclic = true);
 
 private:
     struct BusyTimerImpl* _pImpl;

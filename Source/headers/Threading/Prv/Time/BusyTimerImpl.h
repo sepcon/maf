@@ -10,8 +10,10 @@
 #include <mutex>
 #include <future>
 
+
 namespace Threading {
 
+struct JobDesc;
 struct BusyTimerImpl
 {
     using JobID = BusyTimer::JobID;
@@ -21,45 +23,35 @@ struct BusyTimerImpl
 
     BusyTimerImpl() : _shutdowned(true), _workerThreadIsRunning(false) {}
 	~BusyTimerImpl();
-    bool start(JobID tid, Duration ms, TimeOutCallback callback);
-    void restart(JobID tid);
-    void stop(JobID tid);
-    bool isRunning(JobID tid);
+    bool start(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
+    void restart(JobID jid);
+    void stop(JobID jid);
+    bool isRunning(JobID jid);
+    void setRecyclic(JobID jid, bool cyclic);
     void shutdown();
 
 private:
-
-    struct JobDesc
-    {
-        JobDesc(JobID id_, Duration duration_, TimeOutCallback callback_)
-            : id(id_), startTime(std::chrono::system_clock::now()), duration(duration_), remainer(duration_), callback(callback_){}
-        void reset() { remainer = duration; }
-        JobID id;
-		std::chrono::system_clock::time_point startTime;
-        Duration duration;
-        Duration remainer;
-        TimeOutCallback callback;
-    };
-    friend struct JobComp;
-
     using JobDescRef = std::shared_ptr<JobDesc>;
     using JobsContainer = std::vector<JobDescRef>;
+
+    friend struct JobComp;
+    friend struct JobDesc;
+
     void run();
-    void startJob(JobID tid, Duration ms, TimeOutCallback callback);
-	void reorderRunningJobs();
+    void startJob(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
+    void reorderRunningJobs();
     void startPendingJobs();
-    void storePendingJob(JobID tid, Duration ms, TimeOutCallback callback);
+    void storePendingJob(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
     void storePendingJob(JobDescRef job);
-    bool jobRemained();
     JobDescRef getShorttestDurationJob();
-    void reEvaluateJobs(Duration elapsed);
     void doJob(JobDescRef job);
-    JobDescRef popOutShottestJob();
+    JobDescRef rescheduleShorttestJob();
     void cleanup();
 
     static void addOrReplace(JobsContainer& jobs, JobDescRef newJob);
-	static JobDescRef removeJob(JobsContainer &jobs, JobID jid);
-	static JobsContainer::iterator findJob(JobsContainer &jobs, JobID jid);
+    static JobDescRef removeJob(JobsContainer &jobs, JobID jid);
+    static JobsContainer::iterator findJob(JobsContainer &jobs, JobID jid);
+    static JobDescRef getJob(JobsContainer& jobs, JobID jid);
 
     std::future<void> _future;
     JobsContainer _runningJobs;

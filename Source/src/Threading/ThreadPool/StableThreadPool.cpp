@@ -11,7 +11,7 @@ struct __I
 {
     using TaskExcFunc = typename ThreadPoolImplBase<Threading::Queue<Runnable*> >::TaskExc;
     __I(unsigned int threadCount,  TaskExcFunc runFunc, TaskExcFunc stopFunc, TaskExcFunc doneFunc) :
-        thepool(threadCount, runFunc, stopFunc)
+        thepool(threadCount, runFunc, stopFunc, doneFunc)
     {
     }
     ThreadPoolImplBase<Threading::Queue<Runnable*> >*  operator->()
