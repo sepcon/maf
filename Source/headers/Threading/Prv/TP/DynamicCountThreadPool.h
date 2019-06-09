@@ -1,12 +1,13 @@
 #ifndef DYNAMICCOUNTHREADPOOL_H
 #define DYNAMICCOUNTHREADPOOL_H
 
-#include "Interfaces/ThreadJoiner.h"
-#include "Interfaces/IThreadPool.h"
-#include "ThreadPoolImplBase.h"
-#include "Interfaces/Queue.h"
+#include "headers/Threading/Interfaces/ThreadJoiner.h"
+#include "headers/Threading/Interfaces/IThreadPool.h"
+#include "headers/Threading/Prv/TP/ThreadPoolImplBase.h"
+#include "headers/Threading/Interfaces/Queue.h"
 #include <thread>
 
+namespace thaf {
 namespace Threading
 {
 class VaryCountThreadPool : public IThreadPool
@@ -23,6 +24,6 @@ private:
     ThreadPoolImplBase<Queue<Runnable*>> _impl;
 };
 }
-
+}
 
 #endif // DYNAMICCOUNTHREADPOOL_H

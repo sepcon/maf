@@ -12,8 +12,8 @@
 #define MT_ALOCK_NUM(mt, line) MT_ALOCK_NUM_SUB(mt, line)
 #define MT_ALOCK(mt) MT_ALOCK_NUM(mt, __LINE__)
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 template<class Impl>
 class ThreadSafeQueue
@@ -76,9 +76,11 @@ public:
 
     void close()
     {
-        MT_ALOCK(_mt);
-        _closed.store(true);
-        _condVar.notify_all();
+        if(!_closed)
+        {
+            _closed = true;
+            _condVar.notify_all();
+        }
     }
 
     bool isClosed() const { return _closed.load(); }
@@ -89,7 +91,7 @@ public:
         while(!_queue.empty())
         {
             value_type v = _queue.front();
-            onClearCallback(v);
+            if( onClearCallback ) onClearCallback(v);
             _queue.pop();
         }
     }
@@ -127,6 +129,7 @@ public:
         return __Base::top();
     }
 };
+}
 }
 
 #undef MT_ALOCK

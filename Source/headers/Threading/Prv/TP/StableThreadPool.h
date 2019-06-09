@@ -1,11 +1,11 @@
 #ifndef STABLETHREADPOOL_H
 #define STABLETHREADPOOL_H
 
-#include "Interfaces/IThreadPool.h"
-#include "Interfaces/Queue.h"
+#include "headers/Threading/Interfaces/IThreadPool.h"
+#include "headers/Threading/Interfaces/Queue.h"
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 class StableThreadPool : public IThreadPool
 {
 public:
@@ -21,7 +21,5 @@ private:
 };
 
 }
-
-
-
+}
 #endif // STABLETHREADPOOL_H

@@ -1,20 +1,21 @@
 #ifndef BUSYTIMER_H
 #define BUSYTIMER_H
 
+#include "headers/Utils/IDManager.h"
 #include <functional>
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 class BusyTimer
 {
 public:
-    typedef unsigned long long JobID;
+    using JobID = thaf::IDManager::IDType;
     typedef long long Duration;
-    typedef std::function<void(JobID)> TimeOutCallback;
+    typedef std::function<void()> TimeOutCallback;
     BusyTimer();
     ~BusyTimer();
-    void start(JobID jid, Duration milliseconds, TimeOutCallback callback, bool cyclic = false);
+    JobID start(Duration milliseconds, TimeOutCallback callback, bool cyclic = false);
     void restart(JobID jid);
     void stop(JobID jid);
     bool isRunning(JobID jid);
@@ -22,11 +23,13 @@ public:
 
 private:
     struct BusyTimerImpl* _pImpl;
+    thaf::IDManager _idManager;
     BusyTimer(const BusyTimer&) = delete;
     BusyTimer(BusyTimer&&) = delete;
     BusyTimer& operator=(const BusyTimer&) = delete ;
     BusyTimer& operator=(BusyTimer&&) = delete ;
 };
 
+}
 }
 #endif // BUSYTIMER_H

@@ -1,4 +1,4 @@
-#include "Interfaces/Waiter.h"
+#include "headers/Threading/Interfaces/Waiter.h"
 #include <thread>
 #include <condition_variable>
 #include <mutex>
@@ -6,6 +6,7 @@
 
 using namespace std::chrono;
 
+namespace thaf {
 namespace Threading {
 
 class WaiterImpl
@@ -133,4 +134,5 @@ bool Waiter::isRunning()
     return _pImpl->isRunning();
 }
 
+}
 }

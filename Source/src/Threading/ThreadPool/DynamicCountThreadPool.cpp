@@ -1,10 +1,10 @@
-#include "Prv/TP/DynamicCountThreadPool.h"
+#include "headers/Threading/Prv/TP/DynamicCountThreadPool.h"
 #include <iostream>
 #include <string>
 #include <sstream>
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 VaryCountThreadPool::VaryCountThreadPool(unsigned int nThreadCount):
     _impl{ nThreadCount, &Threading::run, &Threading::stop, &Threading::done}
@@ -44,4 +44,5 @@ VaryCountThreadPool::~VaryCountThreadPool()
 {
 }
 
+}
 }

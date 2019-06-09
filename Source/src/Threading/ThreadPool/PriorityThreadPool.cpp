@@ -1,6 +1,7 @@
-#include "Prv/TP/PriorityThreadPool.h"
-namespace Threading
-{
+#include "headers/Threading/Prv/TP/PriorityThreadPool.h"
+
+namespace thaf {
+namespace Threading {
 
 struct PrioritizableRunner
 {
@@ -64,4 +65,5 @@ void PriorityThreadPool::shutdown()
     _pImpl->thePool.shutdown();
 }
 
+}
 }

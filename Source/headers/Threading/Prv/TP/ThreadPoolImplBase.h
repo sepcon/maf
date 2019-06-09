@@ -1,9 +1,9 @@
 #ifndef THREADPOOLIMPLBASE_H
 #define THREADPOOLIMPLBASE_H
 
-#include "Interfaces/IThreadPool.h"
-#include "Interfaces/ThreadJoiner.h"
-#include "Interfaces/Runnable.h"
+#include "headers/Threading/Interfaces/IThreadPool.h"
+#include "headers/Threading/Interfaces/ThreadJoiner.h"
+#include "headers/Threading/Interfaces/Runnable.h"
 #include <thread>
 #include <vector>
 #include <list>
@@ -12,6 +12,7 @@
 #include <functional>
 #include <iostream>
 
+namespace thaf {
 namespace Threading {
 
 /*! \brief The base class used for implement the variants of threadpool
@@ -30,18 +31,11 @@ public:
     typedef std::function<void (TaskRef)> TaskExc;
 	static inline void fDoNothing(TaskRef) {}
     ThreadPoolImplBase(size_t maxCount, TaskExc fRun, TaskExc fStop = &fDoNothing, TaskExc fDone = &fDoNothing):
+        _maxThreadCount(maxCount != 0 ? maxCount : std::thread::hardware_concurrency()),
         _fRun(fRun),
         _fStop(fStop),
         _fDone(fDone)
     {
-        if(maxCount == 0)
-        {
-            _maxThreadCount = std::thread::hardware_concurrency();
-        }
-        else
-        {
-            _maxThreadCount = maxCount;
-        }
     }
 
     ~ThreadPoolImplBase()
@@ -51,13 +45,16 @@ public:
 
     void tryLaunchNewThread()
     {
-        try
+        if(_pool.size() < _maxThreadCount)
         {
-            _pool.emplace_back(std::thread{&ThreadPoolImplBase::coptRunPendingTask, this});
-        }
-        catch(const std::system_error& err)
-        {
-            std::cout << "Cannot launch new thread due to: " << err.what() << std::endl;
+            try
+            {
+                _pool.emplace_back(std::thread{&ThreadPoolImplBase::coptRunPendingTask, this});
+            }
+            catch(const std::system_error& err)
+            {
+                std::cout << "Cannot launch new thread due to: " << err.what() << std::endl;
+            }
         }
     }
 
@@ -168,5 +165,5 @@ private:
     }
 };
 }
-
+}
 #endif // THREADPOOLIMPLBASE_H

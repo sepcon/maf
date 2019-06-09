@@ -3,11 +3,11 @@
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <string>
 
-#include "Interfaces/ThreadPoolFactory.h"
+#include "headers/Application/Framework/AppComponent.h"
+#include "headers/Application/Framework/Timer.h"
 
-using namespace std;
-using namespace Threading;
 using namespace std::chrono;
 
 static std::mutex _coutmt;
@@ -17,157 +17,108 @@ std::lock_guard<std::mutex> lock(_coutmt); \
 std::cout << exp << std::endl; \
 }
 
-class Runner : public Runnable
-{
-public:
-    Runner()
-    {
-        LOGG( "Thread id: " << std::this_thread::get_id() << " created!" )
-        _stopped = true;
-    }
-    void run() override
-    {
-        _stopped = false;
-        while(!_stopped)
-        {
-            LOGG( "hello " << std::this_thread::get_id() )
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-        LOGG("Thread " << std::this_thread::get_id() << " stopped!")
-    }
-    void stop() override
-    {
-        _stopped = true;
-    }
 
-    std::atomic_bool _stopped;
+
+using namespace thaf::app;
+using namespace thaf::Messaging;
+
+
+class PrintLogMessage : public InternalMessage
+{
 };
 
-class Calculator : public Threading::Runnable
+class ThreatDetector : public thaf::app::AppComponent
 {
 public:
-    typedef unsigned long long ValueType;
-    Calculator(ValueType from, ValueType to, ValueType& sum)
-        : _from(from), _to(to), _sum(sum), _stopped(true)
-    {
-        _sum = 0;
-        setAutoDeleted(true);
-    }
+    class ScanThreatRequestMsg : public InternalMessage {
+	public:
+		AppComponent* _app;
+		ScanThreatRequestMsg(AppComponent* app) : _app(app)
+		{
 
-    void run() override
-    {
-        _stopped = false;
-        for(ValueType i = _from; i < _to; ++i)
+		}
+	};
+    class ServerRequestScanThreatMsg : public InternalMessage {
+    public:
+        ServerRequestScanThreatMsg(const std::string& command) : Command(command)
         {
-            _sum += i;
-            if(_stopped) break;
         }
-        gDone++;
+        std::string Command;
+    };
 
-        LOGG("Calculator from = " << _from << " to = " << _to << " sum = " << _sum << " stopped!");
+    ThreatDetector()
+    {
+        match<ScanThreatRequestMsg>([this](CMessagePtr msg){ 
+			this->scanThreat();
+			if (++count == 3)
+			{
+				std::static_pointer_cast<ScanThreatRequestMsg>(msg)->_app->shutdown();
+			}
+			});
+        match<ServerRequestScanThreatMsg>([this](CMessagePtr msg){
+            this->scanThreat(std::static_pointer_cast<ServerRequestScanThreatMsg>(msg)->Command);
+            if(_t.isRunning())
+            {
+                LOGG( "Timer _t of threat detector is still running!" );
+            }
+            else {
+                _t.start(5000, []{
+                    LOGG( "Timer expired!" );
+                }, true);
+            }
+        });
     }
 
-    void stop() override
+private:
+	int count = 0;
+    void scanThreat()
     {
-        _stopped = true;
-    }
-
-    ~Calculator() override
-    {
-        if(_sum == 0)
+        LOGG(std::this_thread::get_id() << "Do scan threat!" );
+        if(Component::getMainComponent())
         {
-            LOGG("No chance for calculation");
+            Component::getMainComponent()->postMessage<PrintLogMessage>();
         }
     }
-    ValueType _from;
-    ValueType _to;
-    ValueType& _sum;
-    std::atomic_bool _stopped;
-    static atomic_int gDone;
+    void scanThreat(const std::string& command)
+    {
+        LOGG( "Do scan threat with command " << command );
+    }
+    thaf::app::Timer _t;
 };
 
-std::atomic_int Calculator::gDone(1);
-
-#include "Prv/TP/StableThreadPool.h"
-void testPool()
+class Application : AppComponent
 {
-    auto pool = ThreadPoolFactory::createPool(Threading::PoolType::StableCount, 10);
-    pool->setMaxThreadCount(10);
-    const Calculator::ValueType MAX = 100000000;
-    unsigned int chunkSize = 10000000;
-    unsigned int chunkCount = MAX/chunkSize;
-    std::vector<Calculator::ValueType> output;
-    output.resize(chunkCount + 1);
-    auto startTime = system_clock::now();
-    for(unsigned int i = 0; i < chunkCount; ++i)
-    {
-        auto from = chunkSize * i;
-        pool->run(new Calculator(from, from + chunkSize, output[i]), i);
-    }
-    pool->run(new Calculator(chunkCount * chunkSize, MAX + 1, output.back()));
+public:
+	Application() : AppComponent(false, true)
+	{
+		match<PrintLogMessage>([](CMessagePtr) { LOGG("Logging new message!"); });
+	}
+	void start()
+	{
+		_threatDetector.start();
+		AppComponent::start([this](CMessagePtr) {
+			Timer timer;
+			timer.start(100, [this] {_threatDetector.postMessage<ThreatDetector::ScanThreatRequestMsg>(static_cast<AppComponent*>(this)); }, true);
+			});
+	}
 
-//    while (Calculator::gDone <= output.size())
-//    {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-//    }
-    Calculator::ValueType sum = 0;
-    for(auto val : output)
-    {
-        sum += val;
-    }
-    LOGG("Sum = " << sum);
-    LOGG("DONE, total time: " << duration_cast<microseconds>(system_clock::now() - startTime).count());
-//    pool->shutdown();
-}
-
-#include "Interfaces/BusyTimer.h"
-#include <sstream>
-
-namespace cr = std::chrono;
-
-void scheduleJob(BusyTimer& timer, BusyTimer::JobID id, BusyTimer::Duration duration)
-{
-    std::cout << id << " starts waiting" << std::endl;
-    std::thread{ [&timer, id, duration] {
-        auto startTime = cr::system_clock::now();
-    timer.start(id, duration, [startTime, duration](BusyTimer::JobID job) {
-        std::cout << job << " (" << duration << ") executed after " << cr::duration_cast<cr::milliseconds>(cr::system_clock::now() - startTime).count() << "\n";
-    });
-    } }.detach();
-}
+private:
+	ThreatDetector _threatDetector;
+};
 
 int main()
 {
-    Threading::BusyTimer timer;
-    /*scheduleJob(timer, 1, 5000);
-    scheduleJob(timer, 2, 200);
-    scheduleJob(timer, 3, 100);
-    scheduleJob(timer, 4, 50);
-    */
-    //start = std::chrono::system_clock::now();
-
-    scheduleJob(timer, 1, 2);
-    scheduleJob(timer, 2, 2);
-    scheduleJob(timer, 3, 2);
-    scheduleJob(timer, 4, 2);
-    scheduleJob(timer, 5, 2);
-    scheduleJob(timer, 6, 2);
-    scheduleJob(timer, 7, 2);
-    scheduleJob(timer, 8, 2);
-    scheduleJob(timer, 9, 2);
-
-    //scheduleJob(timer, 2, 1000);
-    //scheduleJob(timer, 3, 2);
-    //scheduleJob(timer, 4, 1500);
-    //scheduleJob(timer, 5, 1000);
-    //scheduleJob(timer, 6, 2);
-    //scheduleJob(timer, 7, 1500);
-    //scheduleJob(timer, 8, 1000);
-    //scheduleJob(timer, 9, 2);
-    //scheduleJob(timer, 10, 1500);
-    //scheduleJob(timer, 11, 1000);
-    //scheduleJob(timer, 12, 2);
-
-    std::cin.get();
+	std::vector<Application*> apps;
+	for (int i = 0; i < 10; ++i)
+	{
+		apps.emplace_back(new Application());
+	}
+	for (auto& app : apps)
+	{
+		app->start();
+	}
+	AppComponent app(true, true);
+	app.start();
+	std::cin.get();
     return 0;
 }

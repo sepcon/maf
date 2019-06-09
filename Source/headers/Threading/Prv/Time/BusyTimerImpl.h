@@ -1,7 +1,7 @@
 #ifndef BUSY_TIMER_IMPL_H
 #define BUSY_TIMER_IMPL_H
 
-#include "Interfaces/BusyTimer.h"
+#include "headers/Threading/Interfaces/BusyTimer.h"
 #include <chrono>
 #include <set>
 #include <vector>
@@ -11,6 +11,7 @@
 #include <future>
 
 
+namespace thaf {
 namespace Threading {
 
 struct JobDesc;
@@ -18,12 +19,12 @@ struct BusyTimerImpl
 {
     using JobID = BusyTimer::JobID;
     using Duration = BusyTimer::Duration;
-    using TimeOutCallback = BusyTimer::TimeOutCallback;
+    using TimeOutCallback = std::function<void(JobID, bool)>;
     const size_t MAX_JOBS_COUNT = 1000;
 
     BusyTimerImpl() : _shutdowned(true), _workerThreadIsRunning(false) {}
 	~BusyTimerImpl();
-    bool start(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
+    bool start(BusyTimerImpl::JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
     void restart(JobID jid);
     void stop(JobID jid);
     bool isRunning(JobID jid);
@@ -62,5 +63,5 @@ private:
     std::atomic_bool _workerThreadIsRunning;
 };
 }
-
+}
 #endif

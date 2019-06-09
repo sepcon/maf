@@ -1,4 +1,4 @@
-#include "Prv/Time/BusyTimerImpl.h"
+#include "headers/Threading/Prv/Time/BusyTimerImpl.h"
 #include <iostream>
 #include <algorithm>
 #include <sstream>
@@ -11,8 +11,8 @@ using namespace std::chrono;
 //	std::cout << singleStringMaker.str() << std::endl; \
 //}
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 struct JobDesc
 {
@@ -56,18 +56,18 @@ BusyTimerImpl::~BusyTimerImpl()
     if(_future.valid())
     {
         _future.wait();
-    }
+    } 
 }
 
 bool BusyTimerImpl::start(BusyTimerImpl::JobID jid, Duration ms, TimeOutCallback callback, bool cyclic)
 {
     bool success = true;
 
-	if (!_workerThreadIsRunning.load(std::memory_order_acquire))
-	{
-		std::lock_guard<std::mutex> lock(_jmt);
+    if (!_workerThreadIsRunning.load(std::memory_order_acquire))
+    {
+        std::lock_guard<std::mutex> lock(_jmt);
         startJob(jid, ms, callback, cyclic);
-	}
+    }
     else
     {
         std::lock_guard<std::mutex> lock(_jmt);
@@ -106,20 +106,20 @@ void BusyTimerImpl::restart(BusyTimerImpl::JobID jid)
 void BusyTimerImpl::stop(BusyTimerImpl::JobID jid)
 {
     std::lock_guard<std::mutex> lock(_jmt);
-    if (removeJob(_runningJobs, jid))
-	{
+    if (auto removedJob = removeJob(_runningJobs, jid))
+    {
         LOG("Job " << jid << " is canceled");
         reorderRunningJobs();
-		_condvar.notify_one();
-	}
+        _condvar.notify_one();
+    }
     else if(removeJob(_pendingJobs, jid))
-	{
+    {
         LOG("Job " << jid << " is canceled");
-	}
-	else
-	{
+    }
+    else
+    {
         LOG("Job " << jid << " does not exist or is already canceled");
-	}
+    }
 }
 
 bool BusyTimerImpl::isRunning(BusyTimerImpl::JobID jid)
@@ -180,10 +180,10 @@ void BusyTimerImpl::startPendingJobs()
 {
     if(!_pendingJobs.empty())
     {
-		for (auto& job : _pendingJobs)
-		{
+        for (auto& job : _pendingJobs)
+        {
             addOrReplace(_runningJobs, std::move(job));
-		}
+        }
         _pendingJobs.clear();
     }
 }
@@ -201,14 +201,14 @@ void BusyTimerImpl::storePendingJob(BusyTimerImpl::JobDescRef job)
 BusyTimerImpl::JobDescRef BusyTimerImpl::removeJob(BusyTimerImpl::JobsContainer& jobs, BusyTimerImpl::JobID jid)
 {
     auto itJob = findJob(jobs, jid);
-	JobDescRef job;
+    JobDescRef job;
     if (itJob != jobs.end())
     {
         job = *itJob;
-		std::swap(*itJob, jobs.back());
-		jobs.pop_back();
+        std::swap(*itJob, jobs.back());
+        jobs.pop_back();
     }
-	return job;
+    return job;
 }
 
 BusyTimerImpl::JobsContainer::iterator BusyTimerImpl::findJob(BusyTimerImpl::JobsContainer &jobs, BusyTimerImpl::JobID jid)
@@ -233,17 +233,17 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::getJob(BusyTimerImpl::JobsContainer &jo
 void BusyTimerImpl::run()
 {
     _future = std::async(std::launch::async, [this] {
-		_workerThreadIsRunning.store(true, std::memory_order_release);
+        _workerThreadIsRunning.store(true, std::memory_order_release);
         do
         {
             std::unique_lock<std::mutex> lock(_jmt);
             auto job = getShorttestDurationJob();
 
-			if (!job)
-			{
+            if (!job)
+            {
                 this->cleanup();
-				break;
-			}
+                break;
+            }
 
             if(job->expired())
             {
@@ -252,22 +252,22 @@ void BusyTimerImpl::run()
             }
             else
             {
-				if (_shutdowned.load(std::memory_order_acquire)) 
-				{
+                if (_shutdowned.load(std::memory_order_acquire))
+                {
                     this->cleanup();
-					break; 
-				}
+                    break;
+                }
 
 
                 _condvar.wait_for(lock, milliseconds(job->remainTime()));
-				
-				if(_shutdowned.load(std::memory_order_acquire)) 
-				{ 
+
+                if(_shutdowned.load(std::memory_order_acquire))
+                {
                     this->cleanup();
-					break; 
-				}
+                    break;
+                }
                 
-				else if(job->expired())
+                else if(job->expired())
                 {
                     this->doJob(job);
                     this->rescheduleShorttestJob();
@@ -294,7 +294,7 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::getShorttestDurationJob()
 
 void BusyTimerImpl::doJob(BusyTimerImpl::JobDescRef job)
 {
-    job->callback(job->id);
+    job->callback(job->id, job->isCyclic);
 }
 
 BusyTimerImpl::JobDescRef BusyTimerImpl::rescheduleShorttestJob()
@@ -310,7 +310,8 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::rescheduleShorttestJob()
             job = _runningJobs.back();
             std::push_heap(_runningJobs.begin(), _runningJobs.end());
         }
-        else {
+        else
+        {
             job = std::move(_runningJobs.back());
             _runningJobs.pop_back();
         }
@@ -320,9 +321,9 @@ BusyTimerImpl::JobDescRef BusyTimerImpl::rescheduleShorttestJob()
 
 void BusyTimerImpl::cleanup()
 {
-	_shutdowned.store(true, std::memory_order_relaxed);
-	_workerThreadIsRunning.store(false, std::memory_order_release);
-	_pendingJobs.clear();
+    _shutdowned.store(true, std::memory_order_release);
+    _workerThreadIsRunning.store(false, std::memory_order_release);
+    _pendingJobs.clear();
     _runningJobs.clear(); //for shutting down case
 }
 
@@ -333,15 +334,16 @@ void BusyTimerImpl::addOrReplace(BusyTimerImpl::JobsContainer &jobs, BusyTimerIm
         auto itJob = findJob(jobs, newJob->id);
         if (itJob != jobs.end())
         {
-			LOG("Job " << newJob->id << " already existed in jobs store");
+            LOG("Job " << newJob->id << " already existed in jobs store");
             (*itJob) = std::move(newJob);
         }
         else
         {
-			LOG("New job added, id = " << newJob->id);
+            LOG("New job added, id = " << newJob->id);
             jobs.push_back(std::move(newJob));
         }
     }
 }
 
+}
 }

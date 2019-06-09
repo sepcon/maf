@@ -1,11 +1,11 @@
 #include <thread>
 #include <vector>
-#include "Interfaces/Queue.h"
-#include "Prv/TP/StableThreadPool.h"
-#include "Prv/TP/ThreadPoolImplBase.h"
+#include "headers/Threading/Interfaces/Queue.h"
+#include "headers/Threading/Prv/TP/StableThreadPool.h"
+#include "headers/Threading/Prv/TP/ThreadPoolImplBase.h"
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 struct __I
 {
@@ -58,4 +58,5 @@ void StableThreadPool::shutdown()
     (*_pI)->shutdown();
 }
 
+}
 }

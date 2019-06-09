@@ -3,8 +3,8 @@
 
 #include "Runnable.h"
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 class IThreadPool
 {
@@ -16,6 +16,7 @@ public:
     virtual ~IThreadPool() {}
 };
 
+}
 }
 
 

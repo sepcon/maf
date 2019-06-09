@@ -4,8 +4,9 @@
 #include "IThreadPool.h"
 #include <memory>
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
+
 enum PoolType
 {
     DynamicCount,
@@ -18,5 +19,6 @@ class ThreadPoolFactory
 public:    
     static std::shared_ptr<IThreadPool> createPool(PoolType type, unsigned int poolSize = 0);
 };
+}
 }
 #endif // THREADPOOLFACTORY_H

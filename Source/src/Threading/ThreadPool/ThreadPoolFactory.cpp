@@ -1,10 +1,10 @@
-#include "Interfaces/ThreadPoolFactory.h"
-#include "Prv/TP/PriorityThreadPool.h"
-#include "Prv/TP/StableThreadPool.h"
-#include "Prv/TP/DynamicCountThreadPool.h"
+#include "headers/Threading/Interfaces/ThreadPoolFactory.h"
+#include "headers/Threading/Prv/TP/PriorityThreadPool.h"
+#include "headers/Threading/Prv/TP/StableThreadPool.h"
+#include "headers/Threading/Prv/TP/DynamicCountThreadPool.h"
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 std::shared_ptr<IThreadPool> ThreadPoolFactory::createPool(PoolType type, unsigned int poolSize)
 {
@@ -24,4 +24,5 @@ std::shared_ptr<IThreadPool> ThreadPoolFactory::createPool(PoolType type, unsign
     return pPool;
 }
 
+}
 }

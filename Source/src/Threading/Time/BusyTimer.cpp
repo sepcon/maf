@@ -1,9 +1,9 @@
-#include "Interfaces/BusyTimer.h"
-#include "Prv/Time/BusyTimerImpl.h"
+#include "headers/Threading/Interfaces/BusyTimer.h"
+#include "headers/Threading/Prv/Time/BusyTimerImpl.h"
 #include <iostream>
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 BusyTimer::BusyTimer()
 {
@@ -14,19 +14,19 @@ BusyTimer::~BusyTimer()
 {
     if(_pImpl)
     {
-		try
-		{
-			_pImpl->shutdown();
-			delete _pImpl;
-		}
-		catch (const std::exception& e)
-		{
-			std::cout << "Caught exception: " << e.what() << std::endl;
-		}
-		catch (...)
-		{
-			std::cout << "Uncaught exception!" << std::endl;
-		}
+        try
+        {
+            _pImpl->shutdown();
+            delete _pImpl;
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "Caught exception: " << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            std::cout << "Uncaught exception!" << std::endl;
+        }
     }
 }
 
@@ -35,14 +35,31 @@ void BusyTimer::restart(JobID jid)
     _pImpl->restart(jid);
 }
 
-void BusyTimer::start(BusyTimer::JobID jid, Duration milliseconds, std::function<void (BusyTimer::JobID)> callback, bool cyclic)
+BusyTimer::JobID BusyTimer::start(Duration milliseconds, TimeOutCallback callback, bool cyclic)
 {
-    _pImpl->start(jid, milliseconds, callback, cyclic);
+    auto jid = _idManager.allocateNewID();
+    if(jid != thaf::IDManager::INVALID_ID)
+    {
+        auto jobDoneCallback = [callback, this](JobID jid, bool isCyclic)
+        {
+            if(!isCyclic)
+            {
+                _idManager.reclaimUsedID(jid);
+            }
+            if(callback) { callback(); }
+        };
+
+        if(!_pImpl->start(jid, milliseconds, jobDoneCallback, cyclic))
+        {
+            _idManager.reclaimUsedID(jid);
+        }
+    }
+    return jid;
 }
 
 void BusyTimer::stop(BusyTimer::JobID jid)
 {
-    std::cout << "Trying to stop this timer " << jid << std::endl;
+    _idManager.reclaimUsedID(jid);
     _pImpl->stop(jid);
 }
 
@@ -56,4 +73,5 @@ void BusyTimer::setCyclic(BusyTimer::JobID jid, bool cyclic)
     _pImpl->setRecyclic(jid, cyclic);
 }
 
+}
 }

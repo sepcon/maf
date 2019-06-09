@@ -1,12 +1,12 @@
 #ifndef PRIORITYTHREADPOOL_H
 #define PRIORITYTHREADPOOL_H
 
-#include "Interfaces/IThreadPool.h"
-#include "Interfaces/Queue.h"
-#include "Prv/TP/ThreadPoolImplBase.h"
+#include "headers/Threading/Interfaces/IThreadPool.h"
+#include "headers/Threading/Interfaces/Queue.h"
+#include "headers/Threading/Prv/TP/ThreadPoolImplBase.h"
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 
 class PriorityThreadPool : public IThreadPool
 {
@@ -22,5 +22,6 @@ private:
     struct TheImpl* _pImpl;
 };
 
+}
 }
 #endif // PRIORITYTHREADPOOL_H

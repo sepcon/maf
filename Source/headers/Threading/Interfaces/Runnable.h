@@ -1,9 +1,8 @@
 #ifndef RUNNABLE_H
 #define RUNNABLE_H
 
-namespace Threading
-{
-
+namespace thaf {
+namespace Threading {
 
 class Runnable
 {
@@ -42,5 +41,5 @@ inline void done(Runnable* runner)
 }
 
 }
-
+}
 #endif // RUNNABLE_H

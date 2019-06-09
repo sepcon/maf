@@ -4,8 +4,8 @@
 #include <chrono>
 #include <functional>
 
-namespace Threading
-{
+namespace thaf {
+namespace Threading {
 class Waiter
 {
     class WaiterImpl* _pImpl;
@@ -18,6 +18,7 @@ public:
     void stop();
     bool isRunning();
 };
+}
 }
 
 

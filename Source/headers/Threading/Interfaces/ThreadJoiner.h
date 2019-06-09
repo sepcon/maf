@@ -3,6 +3,7 @@
 
 #include <thread>
 
+namespace thaf {
 namespace Threading {
 
 template <class ThreadContainer>
@@ -35,5 +36,6 @@ public:
     }
 };
 
+}
 }
 #endif // THREADJOINER_H
