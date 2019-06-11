@@ -1,3 +1,13 @@
+Address:
+	1. name 
+	2. port
+
+Requester:
+	
+Provider:
+	
+
+
 Messaging
 	IPC
 		Communication
@@ -13,3 +23,6 @@ Messaging
 				
 
 Bytes --> must be bytesArray
+ListeningOnBytes:
+
+	
