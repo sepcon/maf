@@ -57,19 +57,44 @@ inline void makeSureDeserializable(const char** startp, const char** lastp, Size
     }
 }
 
-
+/**
+ * Basic utility for serialization framework, that provide 3 main functionalities:
+ * 1. Calculating size of object to be serialized
+ * 2. Serialize the object in to byte_array
+ * 3. Deserialize to re-structure the object from byte_array
+ */
 template<typename NonDeterminedType>
 struct Serialization
 {
+    /**
+     * @brief serializeSizeOf: Calculating size of object to be serialized
+     * @param value: the const reference to object tobe serialized
+     * @return number of contiguous bytes needed to serialize the provided object
+     */
     inline static SizeType serializeSizeOf(const NonDeterminedType& value) noexcept
     {
         return prv::template serializeSizeOf<NonDeterminedType>(value);
     }
 
+    /**
+     * @brief serialize: Serialize the object in to byte_array
+     * @param startp: the pointer to first character in byte_array to store the serialized object
+     * @param value: the const reference to object tobe serialized
+     * @return number of contiguous bytes used to store the object == serializeSizeOf(value)
+     */
     inline static SizeType serialize(char* startp, const NonDeterminedType& value) noexcept
     {
         return prv::template serialize<NonDeterminedType>(startp, value);
     }
+    /**
+     * @brief deserialize: re-structure the object from byte_array, thows the std::length_error if not enough bytes for re-constructing object
+     * @param startp: pointer to first character to start read the bytes, the value of this pointer will be changed to point
+     * to next byte after the last byte used for deserializing the object
+     * @param lastp: pointer to last character available in byte_array
+     * @param requestMoreBytes: the callback function to request more bytes if the size of serialized object is
+     * greater than size ofprovided byte_array
+     * @return the deseralized object
+     */
     inline static NonDeterminedType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
     {
         return prv::template deserialize<NonDeterminedType>(startp, lastp, requestMoreBytes);
@@ -120,6 +145,75 @@ struct Serialization
             auto value = *(reinterpret_cast<const PURE_TYPE_OF_TYPE(NumberType)*>(*startp));
             *startp += serializeSizeOf(value);
             return value;
+        }
+
+        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+        inline static SizeType serializeSizeOf(PointerType value) noexcept
+        {
+            SizeType size = 1;
+            if(value)
+            {
+                using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
+                size += Serialization<NormalTypeOfPointerType>::serializeSizeOf(*value);
+            }
+            return size;
+        }
+
+        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+        inline static SizeType serialize(char* startp, PointerType value) noexcept
+        {
+            SizeType bytesUsed = 1;
+            if(value)
+            {
+                using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
+                *startp = 1;
+                bytesUsed += Serialization<NormalTypeOfPointerType>::serialize(startp + 1, *value);
+            }
+            else
+            {
+                *startp = 0;
+            }
+            return bytesUsed;
+        }
+
+        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType> &&
+                                                        std::is_default_constructible_v<std::remove_pointer_t<PointerType>>, bool> = true>
+        inline static PointerType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        {
+            using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
+
+            makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
+            bool isNotNull = static_cast<bool>(**startp);
+            *startp += 1;
+            NormalTypeOfPointerType* value = nullptr;
+            if(isNotNull)
+            {
+                value = new NormalTypeOfPointerType;
+                *value = Serialization<NormalTypeOfPointerType>::deserialize(startp, lastp, requestMoreBytes);
+            }
+            return value;
+        }
+
+        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+        inline static SizeType serializeSizeOf(const SmartPtrType& value) noexcept
+        {
+            using PtrType = typename SmartPtrType::element_type*;
+            return Serialization<PtrType>::serializeSizeOf(value.get());
+        }
+
+        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+        inline static SizeType serialize(char* startp, const SmartPtrType& value) noexcept
+        {
+            using PtrType = typename SmartPtrType::element_type*;
+            return Serialization<PtrType>::serialize(startp, value.get());
+        }
+
+        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType> &&
+                                                        std::is_default_constructible_v<std::remove_pointer_t<SmartPtrType>>, bool> = true>
+        inline static SmartPtrType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        {
+            using PtrType = typename SmartPtrType::element_type*;
+            return SmartPtrType(Serialization<PtrType>::deserialize(startp, lastp, requestMoreBytes));
         }
     };
 

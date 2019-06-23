@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <fstream>
 
 #include "headers/Framework/Application/AppComponent.h"
 #include "headers/Framework/Application/Timer.h"
@@ -113,51 +114,58 @@ enum FunctionID
 
 
 SERIALIZABLE_OBJECT(SubOject)
-    HAS_PROPERTIES(Properties)
-    WITH_RESPECTIVE_TYPES(std::wstring)
-    DEFINE_GET_SET_METHODS(std::wstring, Properties)
+PROPERTIES_MAP
+(
+    (std::wstring, Properties),
+    (int, Index)
+)
 SERIALIZABLE_OBJECT_END(SubOject)
 
 SERIALIZABLE_OBJECT(TheObject)
-    HAS_PROPERTIES(Name, FuncID, Action, Address, Sub)
-    WITH_RESPECTIVE_TYPES(std::wstring, FunctionID, std::wstring, std::wstring, SubOject)
-    DEFINE_GET_SET_METHODS(std::wstring, Name)
-    DEFINE_GET_SET_METHODS(FunctionID, FuncID)
-    DEFINE_GET_SET_METHODS(std::wstring, Action)
-    DEFINE_GET_SET_METHODS(std::wstring, Address)
-    DEFINE_GET_SET_METHODS(SubOject, Sub)
+PROPERTIES_MAP
+(
+    ( std::wstring, Name ),
+    ( FunctionID, FuncID ),
+    ( std::shared_ptr<std::wstring>, Action ),
+    ( std::wstring,Address ),
+    ( SubOject, Sub )
+)
 SERIALIZABLE_OBJECT_END(TheObject)
-
-
-#include <fstream>
-
 
 int main()
 {
     const std::string dest = "/home/sepcon/Desktop/binary.dat"; //"D:\\binary.dat"; //
-    auto startTime = std::chrono::system_clock::now();
-    try
-    {
-//        std::ofstream writer(dest, std::ios::binary);
-//        StreamSerializer sr(writer);
-//        for(int i = 0; i < 1000; ++i)
-//        {
-//            TheObject obj;
-//            obj.setName(L"Hello world");
-//            obj.setAction(L"The action");
-//            obj.setFuncID(SayHello);
-//            obj.setAddress(L"Vietname quoc oai");
-//            obj.setSub(SubOject(L"hallu world"));
+    auto startTime = system_clock::now();
+//    try
+//    {
 
-//            std::wstring newString = L"Nguyen van con from ha noi";
-//            sr << newString << obj;
-//        }
-//        sr.close();
-//        writer.close();
+        std::ofstream writer(dest, std::ios::binary);
+//        std::ostringstream writer(std::ios_base::binary);
+        StreamSerializer sr(writer);
+        for(int i = 0; i < 100; ++i)
+        {
+            SubOject sub{L"Helo", 10};
+            TheObject obj{L"sdfsdf", SayHello, nullptr, L"sdfafqer", SubOject{L"Helo", 10}};
+//            obj.getName() = L"Hello world";
+//            obj.getAction() = std::make_shared<std::wstring>(L"The action");
+//            obj.getFuncID() = SayHello;
+//            obj.getAddress() = L"Vietname quoc oai";
+//            obj.getSub().getProperties() = L"hallu world";
 
-        std::ifstream reader(dest, std::ios::binary);
+            std::wstring newString = L"Nguyen van con from ha noi";
+            sr << newString << obj;
+        }
+
+        sr.flush();
+
+        std::wstring wstr = L"sdfdsf";
+        SubOject h(wstr, 10);
+
+        std::ifstream reader(dest, std::ios_base::binary);
+//        std::istringstream reader(writer.str(), std::ios_base::binary);
         StreamDeserializer dsrz(reader, 500);
         int i = 0;
+        std::istringstream s;
 
         while(!dsrz.exhaust())
         {
@@ -165,22 +173,23 @@ int main()
             TheObject to1;
             std::wstring newString1;
             dsrz >> newString1 >> to1;
-//            std::cout << i << ". name = " << to1.getName()
-//                      << " type = " << to1.getFuncID()
-//                      << " action = " << to1.getAction()
-//                      << " address = " << to1.getAddress()
-//                      << " sub = " << to1.getSub().getProperties()
-//                      << " New String1 = " << newString1 << std::endl;
+            std::wcout << i << ". name = " << to1.getName()
+                      << " type = " << to1.getFuncID()
+                      << " action = " << (to1.getAction() ? *to1.getAction() : L"null")
+                      << " address = " << to1.getAddress()
+                      << " sub = " << to1.getSub().getProperties()
+                      << " New String1 = " << newString1 << std::endl;
 
         }
-    }
-    catch (const std::exception& e)
-    {
-        std::cout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
-    }
+//    }
+//    catch (const std::exception& e)
+//    {
+//        std::wcout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
+//    }
 
-    std::cout << "total time: " << std::chrono::duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;
-//    thaf::app::Timer t;
+    std::wcout << "total time: " << std::chrono::duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;
+
+    //    thaf::app::Timer t;
 //    t.setCyclic(true);
 //    t.start(1000, [] { LOGG("hELLO---------------"); });
 //    startApplication();

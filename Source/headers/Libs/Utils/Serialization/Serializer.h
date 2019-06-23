@@ -2,17 +2,19 @@
 
 #include <utility>
 #include <memory>
+#include <ostream>
+#include <istream>
 #include "Serialization.h"
 #include "ByteArray.h"
 
 namespace thaf {
 namespace srz {
 
-class Serializer
+class BASerializer
 {
 public:
     template <typename SerializableObject, std::enable_if_t<std::is_class_v<Serialization<SerializableObject>>, bool> = true>
-    Serializer& operator<<(const SerializableObject& obj)
+    BASerializer& operator<<(const SerializableObject& obj)
     {
             using ObjectSerialization = Serialization<SerializableObject>;
             auto valueSize = ObjectSerialization::serializeSizeOf(obj);
@@ -26,8 +28,9 @@ public:
                     _ba.reserve(newSize * 2);
                 }
             }
+            auto occupiedCount = _ba.size();
             _ba.resize(newSize);
-            ObjectSerialization::serialize(_ba.lastpos(), obj);
+            ObjectSerialization::serialize(_ba.firstpos() + occupiedCount, obj);
             return *this;
     }
     const ByteArray& bytes() const
@@ -44,14 +47,14 @@ private:
 };
 
 
-class Deserializer
+class BADeserializer
 {
 public:
-    Deserializer() : _curPos(ByteArray::InvalidPos), _cpByteArray(nullptr) {}
-    Deserializer(const ByteArray& stream) : _curPos(stream.firstpos()), _cpByteArray(&stream) {}
+    BADeserializer() : _curPos(ByteArray::InvalidPos), _cpByteArray(nullptr) {}
+    BADeserializer(const ByteArray& stream) : _curPos(stream.firstpos()), _cpByteArray(&stream) {}
 
     template <typename DeserializableObject, std::enable_if_t<std::is_class_v<Serialization<DeserializableObject>>, bool> = true>
-    Deserializer& operator>>(DeserializableObject& value)
+    BADeserializer& operator>>(DeserializableObject& value)
     {
         if(_cpByteArray)
         {
@@ -77,17 +80,17 @@ private:
 };
 
 
-template <class OStream>
+
 class StreamSerializer
 {
 public:
-    StreamSerializer(OStream& stream) : _ostream(stream), _totalWrite(0)
+    StreamSerializer(std::ostream& stream) : _ostream(stream), _totalWrite(0)
     {
         writeSum(); //preserve first "sizeof(_totalWrite)" bytes for SUM
     }
     ~StreamSerializer()
     {
-        close();
+        flush();
     }
 
     template<typename T, std::enable_if_t<std::is_class_v<Serialization<T>>, bool> = true>
@@ -105,17 +108,17 @@ public:
         }
         return *this;
     }
-    void close()
+    void flush()
     {
         if(_totalWrite > 0)
         {
             writeSum();
-            _totalWrite = 0;
+            _ostream.flush();
         }
     }
 
 private:
-    void write(char* pstart, SizeType length)
+    void write(char* pstart, std::streamsize length)
     {
         _ostream.write(pstart, length);
         _totalWrite += length;
@@ -126,16 +129,16 @@ private:
         _ostream.write(reinterpret_cast<char*>(&_totalWrite), sizeof(_totalWrite));
     }
 
-    OStream& _ostream;
-    SizeType _totalWrite;
+    std::ostream& _ostream;
+    std::streamsize _totalWrite;
 };
 
-template <typename IStream>
+
 class StreamDeserializer
 {
     inline static constexpr long long DEFAULT_BUFFER_SIZE = 500;
 public:
-    StreamDeserializer(IStream& stream, long long buffSize = DEFAULT_BUFFER_SIZE)
+    StreamDeserializer(std::istream& stream, SizeType buffSize = DEFAULT_BUFFER_SIZE)
         : _istream(stream), _totalAvailableBytes(0), _totalRead(0)
     {
         resizeBuffer(buffSize);
@@ -153,7 +156,7 @@ public:
         return *this;
     }
 
-    void resizeBuffer(const long long size)
+    void resizeBuffer(SizeType size)
     {
         _buffer.resize(size);
     }
@@ -189,7 +192,8 @@ private:
             resizeBuffer(neededBytes);
         }
         std::streamoff seekOffset{0};
-        int remainerBytes = 0;
+        std::streamsize remainerBytes = 0;
+
         if((*startp == *lastp) && (_totalRead > 0)) // all the buffer is consumed
         {
             remainerBytes = 1;
@@ -202,17 +206,17 @@ private:
 
         _totalRead -= static_cast<SizeType>(remainerBytes);
         _istream.seekg(_istream.tellg() + seekOffset);
-        auto read = fillbuffer(_buffer.firstpos(), _buffer.size());
+        auto read = fillbuffer(_buffer.firstpos(), static_cast<std::streamsize>(_buffer.size()));
         *startp = _buffer.firstpos();
         *lastp = (*startp) + read - 1;
     }
 
     ByteArray _buffer;
-    IStream& _istream;
+    std::istream& _istream;
     ByteArray::RBytePos _curpos;
     ByteArray::RBytePos _lastpos;
-    SizeType _totalAvailableBytes;
-    SizeType _totalRead;
+    std::streamsize _totalAvailableBytes;
+    std::streamsize _totalRead;
 };
 }// srz
 }// thaf
