@@ -1,0 +1,66 @@
+#ifndef MACROS_H
+#define MACROS_H
+
+#define MSVC_EXPAND_VA_ARGS(X) X
+
+#define Args_(...) __VA_ARGS__
+#define STRIP_PARENTHESES_(X) X
+#define STRIP_PARENTHESES(X) STRIP_PARENTHESES_(Args_ X)
+//EXPAND((A, B)) -> STRIP_PARENS(Args_(a,b)) -> 
+
+// Make a FOREACH macro
+#define FE_1(WHAT, X)		WHAT(X)
+#define FE_2(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_1(WHAT, __VA_ARGS__) )
+#define FE_3(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_2(WHAT, __VA_ARGS__) )
+#define FE_4(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_3(WHAT, __VA_ARGS__) )
+#define FE_5(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_4(WHAT, __VA_ARGS__) )
+#define FE_6(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_5(WHAT, __VA_ARGS__) )
+#define FE_7(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_6(WHAT, __VA_ARGS__) )
+#define FE_8(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_7(WHAT, __VA_ARGS__) )
+#define FE_9(WHAT, X, ...)	WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_8(WHAT, __VA_ARGS__) )
+#define FE_10(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_9(WHAT, __VA_ARGS__) )
+#define FE_11(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_10(WHAT, __VA_ARGS__))
+#define FE_12(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_11(WHAT, __VA_ARGS__))
+#define FE_13(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_12(WHAT, __VA_ARGS__))
+#define FE_14(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_13(WHAT, __VA_ARGS__))
+#define FE_15(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_14(WHAT, __VA_ARGS__))
+#define FE_16(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_15(WHAT, __VA_ARGS__))
+#define FE_17(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_16(WHAT, __VA_ARGS__))
+#define FE_18(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_17(WHAT, __VA_ARGS__))
+#define FE_19(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_18(WHAT, __VA_ARGS__))
+#define FE_20(WHAT, X, ...) WHAT(X)	MSVC_EXPAND_VA_ARGS( FE_19(WHAT, __VA_ARGS__))
+//... repeat as needed
+
+// Make a FOREACH macro
+#define FEI_1(WHAT, X) WHAT(X, 1)
+#define FEI_2(WHAT, X, ...) WHAT(X, 2)		MSVC_EXPAND_VA_ARGS( FEI_1(WHAT, __VA_ARGS__) )
+#define FEI_3(WHAT, X, ...) WHAT(X, 3)		MSVC_EXPAND_VA_ARGS( FEI_2(WHAT, __VA_ARGS__) )
+#define FEI_4(WHAT, X, ...) WHAT(X, 4)		MSVC_EXPAND_VA_ARGS( FEI_3(WHAT, __VA_ARGS__) )
+#define FEI_5(WHAT, X, ...) WHAT(X, 5)		MSVC_EXPAND_VA_ARGS( FEI_4(WHAT, __VA_ARGS__) )
+#define FEI_6(WHAT, X, ...) WHAT(X, 6)		MSVC_EXPAND_VA_ARGS( FEI_5(WHAT, __VA_ARGS__) )
+#define FEI_7(WHAT, X, ...) WHAT(X, 7)		MSVC_EXPAND_VA_ARGS( FEI_6(WHAT, __VA_ARGS__) )
+#define FEI_8(WHAT, X, ...) WHAT(X, 8)		MSVC_EXPAND_VA_ARGS( FEI_7(WHAT, __VA_ARGS__) )
+#define FEI_9(WHAT, X, ...) WHAT(X, 9)		MSVC_EXPAND_VA_ARGS( FEI_8(WHAT, __VA_ARGS__) )
+#define FEI_10(WHAT, X, ...) WHAT(X, 10)	MSVC_EXPAND_VA_ARGS( FEI_9(WHAT, __VA_ARGS__) )
+#define FEI_11(WHAT, X, ...) WHAT(X, 11)	MSVC_EXPAND_VA_ARGS( FEI_10(WHAT, __VA_ARGS__))
+#define FEI_12(WHAT, X, ...) WHAT(X, 12)	MSVC_EXPAND_VA_ARGS( FEI_11(WHAT, __VA_ARGS__))
+#define FEI_13(WHAT, X, ...) WHAT(X, 13)	MSVC_EXPAND_VA_ARGS( FEI_12(WHAT, __VA_ARGS__))
+#define FEI_14(WHAT, X, ...) WHAT(X, 14)	MSVC_EXPAND_VA_ARGS( FEI_13(WHAT, __VA_ARGS__))
+#define FEI_15(WHAT, X, ...) WHAT(X, 15)	MSVC_EXPAND_VA_ARGS( FEI_14(WHAT, __VA_ARGS__))
+#define FEI_16(WHAT, X, ...) WHAT(X, 16)	MSVC_EXPAND_VA_ARGS( FEI_15(WHAT, __VA_ARGS__))
+#define FEI_17(WHAT, X, ...) WHAT(X, 17)	MSVC_EXPAND_VA_ARGS( FEI_16(WHAT, __VA_ARGS__))
+#define FEI_18(WHAT, X, ...) WHAT(X, 18)	MSVC_EXPAND_VA_ARGS( FEI_17(WHAT, __VA_ARGS__))
+#define FEI_19(WHAT, X, ...) WHAT(X, 19)	MSVC_EXPAND_VA_ARGS( FEI_18(WHAT, __VA_ARGS__))
+#define FEI_20(WHAT, X, ...) WHAT(X, 20)	MSVC_EXPAND_VA_ARGS( FEI_19(WHAT, __VA_ARGS__))
+
+//... repeat as needed
+
+#define GET_MACRO(_1,_2,_3,_4,_5,_6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, NAME, ...) NAME
+#define MC_FOR_EACH(action,...) \
+  MSVC_EXPAND_VA_ARGS( GET_MACRO(__VA_ARGS__, FE_20, FE_19, FE_18, FE_17, FE_16, FE_15, FE_14, FE_13, FE_12, FE_11, FE_10, FE_9, FE_8, FE_7, FE_6, FE_5, FE_4, FE_3, FE_2, FE_1)(action, __VA_ARGS__) )
+
+#define MC_FOR_EACH_WITH_INDEX(action, ...) \
+  MSVC_EXPAND_VA_ARGS( GET_MACRO(__VA_ARGS__, FEI_20, FEI_19, FEI_18, FEI_17, FEI_16, FEI_15, FEI_14, FEI_13, FEI_12, FEI_11, FEI_10, FEI_9, FEI_8, FEI_7, FEI_6, FEI_5, FEI_4, FEI_3, FEI_2, FEI_1)(action, __VA_ARGS__) )
+ 
+ 
+#endif // MACROS_H

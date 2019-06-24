@@ -67,8 +67,9 @@ HEADERS += \
     headers/Libs/Threading/Prv/Time/BusyTimerImpl.h \
     headers/Libs/Utils/IDManager.h \
     headers/Libs/Patterns/Patterns.h \
-    headers/Libs/Utils/STLExtension/TupleManip.h \
-    headers/Libs/Utils/STLExtension/TypeTraits.h \
+    headers/Libs/Utils/CppExtension/Macros.h \
+    headers/Libs/Utils/CppExtension/TupleManip.h \
+    headers/Libs/Utils/CppExtension/TypeTraits.h \
     headers/Libs/Utils/Serialization/ByteArray.h \
     headers/Libs/Utils/Serialization/SerializableObjMacros.h \
     headers/Libs/Utils/Serialization/SerializableObject.h \

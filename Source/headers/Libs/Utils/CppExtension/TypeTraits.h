@@ -113,7 +113,7 @@ template<typename... Args, int... Is>
 typename revert_type_seq<Args...>::type
 revert_tuple(std::tuple<Args...>&& t, index_list<Is...>)
 {
-    using reverted_tuple = typename revert_type_seq<Args...>::type;
+//    using reverted_tuple = typename revert_type_seq<Args...>::type;
 
     // Forwarding machinery that handles both lvalues and rvalues...
 //    auto rt = std::forward_as_tuple(

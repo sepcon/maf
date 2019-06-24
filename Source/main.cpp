@@ -106,63 +106,54 @@ void startApplication()
 
 using namespace thaf::srz;
 
-enum FunctionID
+enum class FunctionID : uint32_t
 {
     SayHello = 1,
     SayGoodBye = 100
 };
 
-
 SERIALIZABLE_OBJECT(SubOject)
-PROPERTIES_MAP
-(
-    (std::wstring, Properties),
-    (int, Index)
-)
+    PROPERTIES_MAP
+    (
+        (std::string, Properties),
+        (uint32_t, Index)
+    )
 SERIALIZABLE_OBJECT_END(SubOject)
 
 SERIALIZABLE_OBJECT(TheObject)
-PROPERTIES_MAP
-(
-    ( std::wstring, Name ),
-    ( FunctionID, FuncID ),
-    ( std::shared_ptr<std::wstring>, Action ),
-    ( std::wstring,Address ),
-    ( SubOject, Sub )
-)
+    PROPERTIES_MAP
+    (
+        ( std::string, Name ),
+        ( FunctionID, FuncID ),
+        ( std::shared_ptr<std::string>, Action ),
+        ( std::string, Address ),
+        ( SubOject, Sub ),
+        ( std::vector<uint32_t>, ListOfIndex )
+    )
 SERIALIZABLE_OBJECT_END(TheObject)
 
 int main()
 {
-    const std::string dest = "/home/sepcon/Desktop/binary.dat"; //"D:\\binary.dat"; //
+    const std::string dest = "D:\\binary.dat"; //"/home/sepcon/Desktop/binary.dat"; //
     auto startTime = system_clock::now();
 //    try
 //    {
 
         std::ofstream writer(dest, std::ios::binary);
-//        std::ostringstream writer(std::ios_base::binary);
         StreamSerializer sr(writer);
         for(int i = 0; i < 100; ++i)
         {
-            SubOject sub{L"Helo", 10};
-            TheObject obj{L"sdfsdf", SayHello, nullptr, L"sdfafqer", SubOject{L"Helo", 10}};
-//            obj.getName() = L"Hello world";
-//            obj.getAction() = std::make_shared<std::wstring>(L"The action");
-//            obj.getFuncID() = SayHello;
-//            obj.getAddress() = L"Vietname quoc oai";
-//            obj.getSub().getProperties() = L"hallu world";
-
-            std::wstring newString = L"Nguyen van con from ha noi";
-            sr << newString << obj;
+            SubOject sub{"Helo", 10};
+            TheObject obj; //{ "sdfsdf", FunctionID::SayHello, nullptr, "sdfafqer", SubOject{"Helo", 10} , std::vector<uint32_t>{} };
+            obj.setName("Hello");
+            obj.setListOfIndex({1, 2, 3});
+            std::string nestring = "Nguyen van con from ha noi";
+            sr << nestring << obj;
         }
 
         sr.flush();
 
-        std::wstring wstr = L"sdfdsf";
-        SubOject h(wstr, 10);
-
         std::ifstream reader(dest, std::ios_base::binary);
-//        std::istringstream reader(writer.str(), std::ios_base::binary);
         StreamDeserializer dsrz(reader, 500);
         int i = 0;
         std::istringstream s;
@@ -171,23 +162,27 @@ int main()
         {
             ++i;
             TheObject to1;
-            std::wstring newString1;
-            dsrz >> newString1 >> to1;
-            std::wcout << i << ". name = " << to1.getName()
-                      << " type = " << to1.getFuncID()
-                      << " action = " << (to1.getAction() ? *to1.getAction() : L"null")
+            std::string nestring1;
+            dsrz >> nestring1 >> to1;
+            std::cout << i << ". name = " << to1.getName()
+                      << " type = " << static_cast<uint32_t>(to1.getFuncID())
+                      << " action = " << (to1.getAction() ? *to1.getAction() : "nul")
                       << " address = " << to1.getAddress()
                       << " sub = " << to1.getSub().getProperties()
-                      << " New String1 = " << newString1 << std::endl;
-
+                      << " New String1 = " << nestring1;
+            for(const auto& i : to1.getListOfIndex())
+            {
+                std::cout << i << ", ";
+            }
+            std::cout << std::endl;
         }
 //    }
 //    catch (const std::exception& e)
 //    {
-//        std::wcout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
+//        std::cout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
 //    }
 
-    std::wcout << "total time: " << std::chrono::duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;
+    std::cout << "total time: " << std::chrono::duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;
 
     //    thaf::app::Timer t;
 //    t.setCyclic(true);
