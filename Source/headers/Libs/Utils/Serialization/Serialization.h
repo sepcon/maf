@@ -17,7 +17,13 @@
 namespace thaf {
 namespace srz {
 
-using SizeType = size_t;
+/**
+ * @brief SizeType represent container's size type:
+ * In the effort to make compatible between 32 and 64 bit applications, the size of container types
+ * is always declared as size_t with the widths(4byte/32bit - 8byte/64bit) differ on different
+ * application types.
+ */
+using SizeType = unsigned long long;
 using RequestMoreBytesCallback = std::function<void(const char** startp, const char** lastp, SizeType neededBytes)>;
 
 #define PURE_TYPE(value) typename std::decay<decltype(value)>::type

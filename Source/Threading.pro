@@ -27,7 +27,9 @@ SOURCES += \
     src/Libs/Threading/ThreadPool/StableThreadPool.cpp \
     src/Libs/Threading/Time/Waiter.cpp \
     src/Libs/Utils/IDManager.cpp \
-    main.cpp
+    main.cpp \
+    src/Test/FrameworkAppTest.cpp \
+    src/Test/SerializationTest.cpp
 
 INCLUDEPATH += ./headers/Libs/Threading/
 
