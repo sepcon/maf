@@ -1,3 +1,4 @@
+//#define SERIALIZATION_NUMBER_USING_STRING
 #include "headers/Libs/Utils/Serialization/SerializableObject.h"
 #include <chrono>
 #include <iostream>
@@ -6,90 +7,99 @@
 using namespace thaf::srz;
 using namespace std::chrono;
 
-enum class FunctionID : uint32_t
+enum FunctionID
 {
     SayHello = 1,
     SayGoodBye = 100
 };
 
-SB_OBJECT_S(TheObject)
-    SB_OBJECT_S(SubOject)
-        SB_PROPERTIES
-        (
-            (std::string, Properties),
-            (uint32_t, Index)
-        )
-    SB_OBJECT_E(SubOject)
-    SB_PROPERTIES
+tfmc_serializable_object(SubOject)
+tfmc_properties
     (
-        ( std::string, Name ),
-        ( FunctionID, FuncID ),
-        ( std::shared_ptr<std::string>, Action ),
-        ( float, Address ),
-        ( SubOject, Sub ),
-        ( std::vector<uint32_t>, ListOfIndex )
-    )
-SB_OBJECT_E(TheObject)
+        (std::wstring, Properties),
+        (uint32_t, Index)
+        )
+tfmc_serializable_object_end(SubOject)
 
-SB_OBJECT_S(SA)
-SB_PROPERTIES
-(
-        ( std::string, Name ),
+tfmc_serializable_object(TheObject)
+using TEntryMap = std::map<int, std::string>;
+    tfmc_properties
+    (
+        ( std::wstring, Name ),
         ( FunctionID, FuncID ),
-        ( std::shared_ptr<std::string>, Action ),
-        ( float, Address ),
-        ( std::vector<uint32_t>, ListOfIndex ),
-        ( std::shared_ptr<int>, SharedPtr )
-)
-SB_OBJECT_E(SA)
+        ( std::shared_ptr<std::wstring>, Action ),
+        ( double, Address ),
+        ( SubOject, Sub ),
+        ( std::vector<TEntryMap>, ListOfIndex ),
+        ( TEntryMap, EntryMap )
+    )
+tfmc_serializable_object_end(TheObject)
+
 
 void thaf_srz_runTest()
 {
-    const std::string dest = "/home/sepcon/Desktop/binary.dat"; //"D:\\binary.dat"; //
+    const std::string dest = "D:\\binary.dat"; //"/home/sepcon/Desktop/binary.dat"; //
     auto startTime = system_clock::now();
     try
     {
+//        std::ofstream writer(dest, std::ios::binary);
+//        StreamSerializer sr(writer);
+//        for(int i = 0; i < 20000; ++i)
+//        {
+//            TheObject obj = {
+//                L"Hello world",
+//                SayHello,
+//                std::make_shared<std::wstring>(L"shared pointer"),
+//                1000.0,
+//                SubOject {
+//                    L"This is sub object",
+//                    0
+//                },
+//                std::vector<TheObject::TEntryMap>{
+//                    TheObject::TEntryMap {
+//                        { 1, "Hello"},
+//                        { 2, "Hallu"},
+//                        { 3, "World"}
+//                    },
+//                    TheObject::TEntryMap {
+//                        { 1, "Hello"},
+//                        { 2, "Hallu"},
+//                        { 3, "World"}
+//                    },
+//                    TheObject::TEntryMap {
+//                        { 1, "Hello"},
+//                        { 2, "Hallu"},
+//                        { 3, "World"}
+//                    }
+//                },
+//                TheObject::TEntryMap {
+//                    { 1, "Hello"},
+//                    { 2, "Hallu"},
+//                    { 3, "World"}
+//                }
+//            };
+//            std::cout  << " Written " << i + 1 << std::endl;
+//            sr << obj;
+//        }
 
-        std::ofstream writer(dest, std::ios::binary);
-        StreamSerializer sr(writer);
-        for(int i = 0; i < 100000; ++i)
-        {
-            TheObject::SubOject sub{"Helo", 10};
-            TheObject obj; //{ "sdfsdf", FunctionID::SayHello, nullptr, "sdfafqer", SubOject{"Helo", 10} , std::vector<uint32_t>{} };
-            obj.setName("Hello");
-            obj.setListOfIndex({1, 2, 3});
-            obj.setAddress(1000);
-            std::string nestring = "Nguyen van con from ha noi";
-            sr << nestring << obj;
-        }
-
-        sr.flush();
+//        sr.flush();
 
         std::ifstream reader(dest, std::ios_base::binary);
         StreamDeserializer dsrz(reader, 500);
         int i = 0;
 
-        while(!dsrz.exhaust())
+        while(!dsrz.exhausted())
         {
             ++i;
             TheObject to1;
-            std::string nestring1;
-            dsrz >> nestring1 >> to1;
-            std::cout << i << ". name = " << to1.getName()
-                      << " type = " << static_cast<uint32_t>(to1.getFuncID())
-                      << " action = " << (to1.getAction() ? *to1.getAction() : "nul")
-                      << " address = " << to1.getAddress()
-                      << " sub = " << to1.getSub().getProperties();
-            for(const auto& i : to1.getListOfIndex())
-            {
-                std::cout << ", " << i ;
-            }
-            std::cout << std::endl;
+            dsrz >> to1;
+//            std::cout << i << ".   " <<  to1.name() << to1.dump(2) << std::endl;
         }
+        std::cout << std::endl;
     }
-    catch (const std::exception& e)
+    catch (std::string s)
     {
-        std::cout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
+        std::cout << "Dammaged Serializtion data with exception: " << s << std::endl;
     }
 
     std::cout << "total time: " << duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;

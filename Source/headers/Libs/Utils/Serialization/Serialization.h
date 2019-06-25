@@ -21,15 +21,17 @@ namespace srz {
  * @brief SizeType represent container's size type:
  * In the effort to make compatible between 32 and 64 bit applications, the size of container types
  * is always declared as size_t with the widths(4byte/32bit - 8byte/64bit) differ on different
- * application types.
+ * application types then it makes data serialized by 32bit apps cannot be read by 64bit apps.
+ * Then by force use of SizeType as uint32_t the issue can be overcome by declaring variables to be serialized as specific type like
+ * uint8_t, int8_t, uint16_t, uint32_t...
  */
-using SizeType = unsigned long long;
+using SizeType = uint32_t;
+inline constexpr SizeType SIZETYPE_WIDE = sizeof(SizeType);
+
 using RequestMoreBytesCallback = std::function<void(const char** startp, const char** lastp, SizeType neededBytes)>;
 
 #define PURE_TYPE(value) typename std::decay<decltype(value)>::type
 #define PURE_TYPE_OF_TYPE(Type) typename std::decay<Type>::type
-
-inline constexpr SizeType SIZETYPE_WIDE = sizeof(SizeType);
 
 inline SizeType byteCountInRangeOf(const char* const first, const char* const last)
 {
@@ -108,52 +110,56 @@ struct Serialization
 
     struct prv
     {
-        template<typename TupleWrap, std::enable_if_t<stl::is_tuple_v<typename TupleWrap::value_type>, bool> = true>
-        inline static SizeType serializeSizeOf(const TupleWrap& value) noexcept
+
+#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<stl::is_tuple_v<typename TypeName::value_type>, bool> = true>
+#define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
+#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+#define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+#define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
+
+        mc_enable_if_is_tuplewrap_(TupleWrap)
+            inline static SizeType serializeSizeOf(const TupleWrap& value) noexcept
         {
             return Serialization<typename TupleWrap::value_type>::serializeSizeOf(value._data);
         }
 
-        template<typename TupleWrap, std::enable_if_t<stl::is_tuple_v<typename TupleWrap::value_type>, bool> = true>
-        inline static SizeType serialize(char* startp, const TupleWrap& value) noexcept
+        mc_enable_if_is_tuplewrap_(TupleWrap)
+            inline static SizeType serialize(char* startp, const TupleWrap& value) noexcept
         {
             return Serialization<typename TupleWrap::value_type>::serialize(startp, value._data);
         }
 
-        template<typename TupleWrap, std::enable_if_t<stl::is_tuple_v<typename TupleWrap::value_type>, bool> = true>
-        inline static TupleWrap deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        mc_enable_if_is_tuplewrap_(TupleWrap)
+            inline static TupleWrap deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             TupleWrap value;
             value._data = Serialization<typename TupleWrap::value_type>::deserialize(startp, lastp, requestMoreBytes);
             return value;
         }
 
-        template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value, bool> = true>
+        mc_enable_if_is_number_or_enum_(NumberType)
         inline static SizeType serializeSizeOf(const NumberType& /*value*/) noexcept
         {
-            static_assert (stl::is_number_type<NumberType>::value, "Not a number type");
             return sizeof(NumberType);
         }
 
-        template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value, bool> = true>
+        mc_enable_if_is_number_or_enum_(NumberType)
         inline static SizeType serialize(char* startp, const NumberType& value) noexcept
         {
-            static_assert (stl::is_number_type<NumberType>::value, "Not a number type");
             auto serializedCount = serializeSizeOf(value);
             *reinterpret_cast<PURE_TYPE_OF_TYPE(NumberType)*>(startp) = value;
             return serializedCount;
         }
-        template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value, bool> = true>
-        inline static NumberType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        mc_enable_if_is_number_or_enum_(NumberType)
+            inline static NumberType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
-            static_assert (stl::is_number_type<NumberType>::value, "Not a number type");
             makeSureDeserializable(startp, lastp, sizeof(NumberType), requestMoreBytes);
             auto value = *(reinterpret_cast<const PURE_TYPE_OF_TYPE(NumberType)*>(*startp));
             *startp += serializeSizeOf(value);
             return value;
         }
 
-        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+        mc_enable_if_is_ptr_(PointerType)
         inline static SizeType serializeSizeOf(PointerType value) noexcept
         {
             SizeType size = 1;
@@ -165,9 +171,11 @@ struct Serialization
             return size;
         }
 
-        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+        mc_enable_if_is_ptr_(PointerType)
         inline static SizeType serialize(char* startp, PointerType value) noexcept
         {
+            //Won't serialize type that is not default_constructible because later won't be able to create object of that types to deserialize
+            mc_must_default_constructible(PointerType)
             SizeType bytesUsed = 1;
             if(value)
             {
@@ -182,10 +190,10 @@ struct Serialization
             return bytesUsed;
         }
 
-        template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType> &&
-                                                        std::is_default_constructible_v<std::remove_pointer_t<PointerType>>, bool> = true>
+        mc_enable_if_is_ptr_(PointerType)
         inline static PointerType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
+            mc_must_default_constructible(PointerType);
             using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
 
             makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
@@ -200,22 +208,21 @@ struct Serialization
             return value;
         }
 
-        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
-        inline static SizeType serializeSizeOf(const SmartPtrType& value) noexcept
+        mc_enable_if_is_smartptr_(SmartPtrType)
+            inline static SizeType serializeSizeOf(const SmartPtrType& value) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
             return Serialization<PtrType>::serializeSizeOf(value.get());
         }
 
-        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
-        inline static SizeType serialize(char* startp, const SmartPtrType& value) noexcept
+        mc_enable_if_is_smartptr_(SmartPtrType)
+            inline static SizeType serialize(char* startp, const SmartPtrType& value) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
             return Serialization<PtrType>::serialize(startp, value.get());
         }
 
-        template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType> &&
-                                                        std::is_default_constructible_v<std::remove_pointer_t<SmartPtrType>>, bool> = true>
+        mc_enable_if_is_smartptr_(SmartPtrType)
         inline static SmartPtrType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             using PtrType = typename SmartPtrType::element_type*;
@@ -223,9 +230,13 @@ struct Serialization
         }
     };
 
+#undef mc_enable_if_is_tuplewrap_
+#undef mc_enable_if_is_number_or_enum_
+#undef mc_enable_if_is_smartptr_
+#undef mc_enable_if_is_ptr_
+#undef mc_must_default_constructible_
+
 };
-
-
 
 template <typename T1, typename T2>
 struct Serialization<std::pair<T1, T2>>
@@ -293,7 +304,7 @@ struct Serialization<std::basic_string<CharT>>
         return s.size() * sizeof (CharT);
     }
     inline static SizeType serializeSizeOf(const ValueType& value) noexcept {
-        return sizeof(typename ValueType::size_type) + static_cast<SizeType>(contentSizeOf(value));
+        return SIZETYPE_WIDE + static_cast<SizeType>(contentSizeOf(value));
     }
     inline static SizeType serialize(char* startp, const ValueType& value) noexcept {
         auto bytesInString = contentSizeOf(value);
@@ -324,7 +335,7 @@ struct SequenceSC
         for (const auto& e : c) {
             contentSize += Serialization<typename Sequence::value_type>::serializeSizeOf(e);
         }
-        return sizeof(typename Sequence::size_type) + contentSize;
+        return SIZETYPE_WIDE + contentSize;
     }
 };
 template <class Sequence>
@@ -333,8 +344,8 @@ struct SequenceSz
     inline static SizeType serialize(char* startp, const Sequence& c) noexcept
     {
         SizeType serializedCount = 0;
-        auto numberOfElems = c.size();
-        serializedCount += Serialization<typename Sequence::size_type>::serialize(startp, numberOfElems);
+        SizeType numberOfElems = static_cast<SizeType>(c.size());
+        serializedCount += Serialization<SizeType>::serialize(startp, numberOfElems);
         for (const auto& elem : c) {
             serializedCount += Serialization<typename Sequence::value_type>::serialize(startp + serializedCount, elem);
         }
@@ -344,7 +355,7 @@ struct SequenceSz
 template <class Sequence>
 struct SequenceDsz
 {
-    using SizeTypeSerializer = Serialization<typename Sequence::size_type>;
+    using SizeTypeSerializer = Serialization<SizeType>;
     using ElemSerializer = Serialization<typename Sequence::value_type>;
     inline static Sequence deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         Sequence c;
@@ -391,8 +402,6 @@ SPECIALIZE_SEQUENCE_SERIALIZATION(std::list)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::map)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::unordered_map)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::multimap)
-
-
 
 
 }// srz

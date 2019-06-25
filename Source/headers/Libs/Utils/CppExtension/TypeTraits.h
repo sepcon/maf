@@ -18,7 +18,7 @@ struct type_name_traits;
 template <typename T>
 struct is_number_type
 {
-    inline static constexpr bool value = std::is_enum_v<T> || std::is_integral_v<T> || std::is_floating_point_v<T>;
+    inline static constexpr bool value = std::is_integral_v<T> || std::is_floating_point_v<T>;
 };
 
 template <typename T>

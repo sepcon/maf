@@ -4,11 +4,12 @@ CONFIG -= qt
 CONFIG += c++17
 
 win32-msvc* {
-message(Compile with msvc)
+    message(Compile with msvc)
     QMAKE_CXXFLAGS += /std=c++17 /O0
 } else {
-message(compile with gcc)
+    message(compile with gcc)
     QMAKE_CXXFLAGS += -std=c++17 -O0
+    LIBS += -lpthread
 }
 
 SOURCES += \
@@ -73,10 +74,10 @@ HEADERS += \
     headers/Libs/Utils/CppExtension/TupleManip.h \
     headers/Libs/Utils/CppExtension/TypeTraits.h \
     headers/Libs/Utils/Serialization/ByteArray.h \
+    headers/Libs/Utils/Serialization/DumpHelper.h \
     headers/Libs/Utils/Serialization/SerializableObjMacros.h \
     headers/Libs/Utils/Serialization/SerializableObject.h \
     headers/Libs/Utils/Serialization/Serialization.h \
     headers/Libs/Utils/Serialization/Serializer.h
 
-LIBS += -lpthread
 

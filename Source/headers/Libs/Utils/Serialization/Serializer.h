@@ -103,7 +103,7 @@ public:
             ByteArray ba;
             ba.resize(valueSize);
             auto pstart = &ba[0];
-            TSerialization::serialize(pstart, value);
+            valueSize = TSerialization::serialize(pstart, value);
             write(pstart, valueSize);
         }
         return *this;
@@ -139,17 +139,27 @@ class StreamDeserializer
     inline static constexpr long long DEFAULT_BUFFER_SIZE = 500;
 public:
     StreamDeserializer(std::istream& stream, SizeType buffSize = DEFAULT_BUFFER_SIZE)
-        : _istream(stream), _totalAvailableBytes(0), _totalRead(0)
+        : _istream(stream), _curpos(ByteArray::InvalidPos), _lastpos(ByteArray::InvalidPos), _totalAvailableBytes(0), _totalRead(0)
     {
         resizeBuffer(buffSize);
         _istream.read(reinterpret_cast<char*>(&_totalAvailableBytes), sizeof (_totalAvailableBytes));
-        _curpos = _lastpos = _buffer.firstpos();
     }
+
+
 
     template<typename T>
     StreamDeserializer& operator>>(T& obj)
     {
         using Srz = Serialization<T>;
+		if (_totalRead <= 0 && _totalAvailableBytes > 0)
+        {
+            auto willbeRead = _totalAvailableBytes > streamsize(_buffer.size()) ? streamsize(_buffer.size()) : _totalAvailableBytes;
+            _istream.read(_buffer.firstpos(), willbeRead);
+            _totalRead = willbeRead;
+			_curpos = _buffer.firstpos();
+            _lastpos = _curpos + willbeRead - 1;
+		}
+
         obj = Srz::deserialize(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
             this->fetchMoreBytes(startp, lastp, neededBytes);
         });
@@ -180,11 +190,14 @@ public:
         }
         return read;
     }
-    bool exhaust() const
+
+    bool exhausted() const
     {
-        return _totalRead >= _totalAvailableBytes;
+        return _totalRead >= _totalAvailableBytes && _lastpos < _curpos;
     }
+
 private:
+    constexpr std::streamsize streamsize(size_t val) { return static_cast<std::streamsize>( val ); }
     void fetchMoreBytes(const char** startp, const char** lastp, SizeType neededBytes)
     {
         if(neededBytes > _buffer.size())

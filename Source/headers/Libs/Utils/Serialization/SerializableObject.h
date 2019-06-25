@@ -2,6 +2,7 @@
 #define SERIALIZABLEOBJECT_H
 
 #include "Serializer.h"
+#include "DumpHelper.h"
 #include "SerializableObjMacros.h"
 
 /**
@@ -41,11 +42,11 @@
  * */
 
 
-#define SB_OBJECT_S(ClassName) SERIALIZABLE_OBJECT_PRV_(ClassName)
+#define tfmc_serializable_object(ClassName) SERIALIZABLE_OBJECT_PRV_(ClassName)
 
-#define SB_OBJECT_E(ClassName) SERIALIZABLE_OBJECT_END_PRV_(ClassName)
+#define tfmc_serializable_object_end(ClassName) SERIALIZABLE_OBJECT_END_PRV_(ClassName)
 
-#define SB_PROPERTIES(...) PROPERTIES_MAP_(__VA_ARGS__)
+#define tfmc_properties(...) PROPERTIES_MAP_(__VA_ARGS__)
 
 
 #endif // SERIALIZABLEOBJECT_H
