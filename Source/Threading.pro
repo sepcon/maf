@@ -19,6 +19,7 @@ SOURCES += \
     src/Framework/Logging/ConsoleLogger.cpp \
     src/Framework/Logging/LoggerBase.cpp \
     src/Framework/Logging/LoggingComponent.cpp \
+    src/Framework/Messaging/IPC/IPCMessage.cpp \
     src/Libs/Threading/Thread.cpp \
     src/Libs/Threading/ThreadPool/DynamicCountThreadPool.cpp \
     src/Libs/Threading/ThreadPool/ThreadPoolFactory.cpp \
@@ -47,6 +48,7 @@ HEADERS += \
     headers/Framework/Messaging/IPC/Interfaces/Address.h \
     headers/Framework/Messaging/IPC/Interfaces/IPCClient.h \
     headers/Framework/Messaging/IPC/Interfaces/IPCCommunicator.h \
+    headers/Framework/Messaging/IPC/Interfaces/IPCMessage.h \
     headers/Framework/Messaging/IPC/Interfaces/IPCReceiver.h \
     headers/Framework/Messaging/IPC/Interfaces/IPCSender.h \
     headers/Framework/Messaging/IPC/Interfaces/IPCService.h \

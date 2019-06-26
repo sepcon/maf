@@ -18,7 +18,7 @@ tfmc_properties
     (
         (std::wstring, Properties),
         (uint32_t, Index)
-        )
+    )
 tfmc_serializable_object_end(SubOject)
 
 tfmc_serializable_object(TheObject)
@@ -93,13 +93,13 @@ void thaf_srz_runTest()
             ++i;
             TheObject to1;
             dsrz >> to1;
-//            std::cout << i << ".   " <<  to1.name() << to1.dump(2) << std::endl;
+            std::cout << i << ".   " <<  to1.name() << to1.dump(2) << std::endl;
         }
         std::cout << std::endl;
     }
-    catch (std::string s)
+    catch (const std::exception& e)
     {
-        std::cout << "Dammaged Serializtion data with exception: " << s << std::endl;
+        std::cout << "Dammaged Serializtion data with exception: " << e.what() << std::endl;
     }
 
     std::cout << "total time: " << duration_cast<milliseconds>(system_clock::now() - startTime).count() << std::endl;

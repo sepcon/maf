@@ -13,7 +13,6 @@ void print(int a, int b) {
 int main()
 {
     thaf_srz_runTest();
-	std::tuple<REMOVE_LAST_ARG(int, int,)> tp;
-	std::cin.get();
+//	std::cin.get();
     return 0;
 }

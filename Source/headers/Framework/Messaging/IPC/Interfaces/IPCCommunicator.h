@@ -18,31 +18,6 @@ class MessageValidator;
 class IPCSender;
 class IPCReceiver;
 
-using OperationID = int;
-enum struct OperationCode : char
-{
-    REGISTER,
-    UNREGISTER,
-    ACTION_REQUEST,
-    ACTION_RESULT,
-    STATUS_UPDATE,
-    STATUS_SET,
-    INVALID
-};
-
-
-class IPCMessage : public messaging::MessageBase
-{
-public:
-
-private:
-    std::shared_ptr<srz::ByteArray> _payload;
-    Address _sourceAddress;
-    OperationID _opID;
-    OperationCode _opCode;
-
-};
-
 class IPCCommunicator : public app::AppComponent
 {
 protected:
@@ -50,6 +25,7 @@ protected:
     std::unique_ptr<IPCReceiver> _pReceiver;
     std::unique_ptr<MessageValidator> _pValidator;
 };
+
 }// ipc
 }// messaging
 }// thaf

@@ -64,7 +64,13 @@ public:
         }
         return *this;
     }
-
+    bool exhausted() const
+    {
+        if(_cpByteArray)
+            return _curPos > _cpByteArray->lastpos();
+        else
+            return true;
+    }
     void reset() 
 	{
         if (_cpByteArray)
