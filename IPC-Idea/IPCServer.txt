@@ -1,0 +1,50 @@
+
+IPCServer
+	onRawMessageCome:
+		decode -> IPCMessage:msg
+		msg.wellformed:
+			case msg.opCode:
+				Reg:
+					updateLatestStatus(msg.opCode, msg.opID, msg.address)
+					store(msg.opCode, msg.opID, msg.address)
+					break;
+				Req:
+				Rej:
+				Set:
+					store(msg.opCode, msg.opID, msg.address)
+					component.postMessage(msg)
+				Get:
+					updateLatestStatus(msg.opCode, msg.opID, msg.address)
+					break
+					
+				ResRslt:
+				ResErr:
+					listAddress = getObserverAddress(msg.opCode, msg.opID)
+					for each address in listAddress:
+						ipcMsg = constructOutgoingMessage(msg)
+						removeFromPendingResponseList(msg.opCode, msg.opID, address)
+						sender.send(ipcMsg.toBytes())
+				Unreg:
+					
+	updateLatestStatus(opCode, opID, receiverAddress):
+		respMsg = getMessage(msg.opCode, msg.opID)
+		
+		sender.send(respMsg.toBytes(), address)
+	
+	getObserverAddress(opCode, opID):
+		return list<address>
+		
+		
+IPCMessage:
+	1. opCode
+	2. opID
+	3. payload
+	
+IPCRequestMsg extends IPCMessage:
+	1. returnAddress
+
+IPCResponseMsg extends IPCMessage:
+	1. 
+	
+		
+		
