@@ -62,7 +62,7 @@ public:
 			static size_t requestCount = 1;
 			thafMsg("----------->Got request: " << requestCount++);
 
-			_timer.start(3000, [this] {
+			_timer.start(1000, [this] {
 				for (int i = 0; i < REQUESTS_PER_CLIENT; ++i)
 				{
 					thafMsg("Start sending weather status to clients: " << requestCount);

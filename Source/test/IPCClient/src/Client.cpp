@@ -10,7 +10,7 @@ using namespace thaf::messaging;
 using namespace thaf::app;
 using namespace thaf::srz;
 
-
+ 
 struct TimeMeasurement
 {
 	TimeMeasurement()

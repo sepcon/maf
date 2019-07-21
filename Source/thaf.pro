@@ -1,9 +1,16 @@
 
+#TARGET = thaf
+#TEMPLATE = lib
+#CONFIG += staticlib
+
+#QT       -= core gui
+
 TARGET = thaf
-TEMPLATE = lib
-CONFIG += staticlib
+TEMPLATE = app
 
 QT       -= core gui
+
+CONFIG += c++17
 
 DEFINES += ENABLE_IPC_DEBUG=2
 
@@ -14,9 +21,14 @@ win32: {
     message(win32)
     LIBS += -lKernel32
 
-    SOURCES += src/thaf/Messaging/IPC/platforms/Windows/LocalIPCReceiver.cpp \
-                src/thaf/Messaging/IPC/platforms/Windows/LocalIPCSender.cpp \
-                src/thaf/Messaging/IPC/platforms/Windows/OverlappedPipeReceiver.cpp
+    SOURCES += src/thaf/messaging/ipc/platforms/windows/LocalIPCReceiver.cpp \
+                src/thaf/messaging/ipc/platforms/windows/LocalIPCSender.cpp \
+                src/thaf/messaging/ipc/platforms/windows/NamedPipeReceiver.cpp \
+                src/thaf/messaging/ipc/platforms/windows/NamedPipeReceiverBase.cpp \
+                src/thaf/messaging/ipc/platforms/windows/NamedPipeSender.cpp \
+                src/thaf/messaging/ipc/platforms/windows/NamedPipeSenderBase.cpp \
+                src/thaf/messaging/ipc/platforms/windows/OverlappedPipeSender.cpp \
+                src/thaf/messaging/ipc/platforms/windows/OverlappedPipeReceiver.cpp
 
 
     HEADERS +=    
@@ -27,121 +39,153 @@ win32: {
         LIBS += -lpthread
     }
     msvc {
-#        CONFIG += console
+        CONFIG += console
         QMAKE_CXXFLAGS += /std:c++17
     }
 
 } else {
     message(Not win32)
-    QMAKE_CXXFLAGS += -std=c++17 -O0
+    QMAKE_CXXFLAGS += -std=c++17
     LIBS += -lpthread
 }
 
-SOURCES += \
-    src/thaf/Application/AppComponent.cpp \
-    src/thaf/Application/Component.cpp \
-    src/thaf/Application/IPCClient.cpp \
-    src/thaf/Application/IPCMessages.cpp \
-    src/thaf/Application/IPCServer.cpp \
-    src/thaf/Application/Timer.cpp \
-    src/thaf/Logging/ConsoleLogger.cpp \
-    src/thaf/Logging/LoggingComponent.cpp \
-    src/thaf/Messaging/IPC/Address.cpp \
-    src/thaf/Messaging/IPC/IPCCommunicator.cpp \
-    src/thaf/Messaging/IPC/IPCFactory.cpp \
-    src/thaf/Messaging/IPC/IPCMessage.cpp \
-    src/thaf/Messaging/IPC/IPCRequestTracker.cpp \
-    src/thaf/Messaging/IPC/IPCServiceProxy.cpp \
-    src/thaf/Messaging/IPC/IPCServiceStub.cpp \
-    src/thaf/Messaging/IPC/platforms/Windows/NamedPipeReceiver.cpp \
-    src/thaf/Messaging/IPC/platforms/Windows/NamedPipeReceiverBase.cpp \
-    src/thaf/Messaging/IPC/platforms/Windows/NamedPipeSender.cpp \
-    src/thaf/Messaging/IPC/platforms/Windows/NamedPipeSenderBase.cpp \
-    src/thaf/Messaging/IPC/platforms/Windows/OverlappedPipeSender.cpp \
-    src/thaf/Threading/Thread.cpp \
-    src/thaf/Threading/ThreadPool/DynamicCountThreadPool.cpp \
-    src/thaf/Threading/ThreadPool/ThreadPoolFactory.cpp \
-    src/thaf/Threading/ThreadPool/PriorityThreadPool.cpp \
-    src/thaf/Threading/ThreadPool/StableThreadPool.cpp \
-    src/thaf/Threading/Time/TimerManager.cpp \
-    src/thaf/Threading/Time/TimerManagerImpl.cpp \
-    src/thaf/Threading/Time/Waiter.cpp \
-    src/thaf/Utils/IDManager.cpp \
-    src/thaf/Utils/Serialization/Serializer.cpp \
-    src/thaf/Messaging/IPC/IPCReceiver.cpp
+#    C:/Users/sepcon/Documents/qtproject/untitled2/Untitled2.cpp \
 
 INCLUDEPATH += ./include
 
+SOURCES += \
+    src/thaf/main.cpp \
+    src/thaf/messaging/Component.cpp \
+    src/thaf/messaging/Timer.cpp \
+    src/thaf/logging/ConsoleLogger.cpp \
+    src/thaf/logging/LoggingComponent.cpp \
+    src/thaf/messaging/client-server/CSMessage.cpp \
+    src/thaf/messaging/client-server/ClientBase.cpp \
+    src/thaf/messaging/client-server/IAMessageRouter.cpp \
+    src/thaf/messaging/client-server/IAServiceProxy.cpp \
+    src/thaf/messaging/client-server/IAServiceStub.cpp \
+    src/thaf/messaging/client-server/RequestKeeper.cpp \
+    src/thaf/messaging/client-server/ServerBase.cpp \
+    src/thaf/messaging/client-server/ServiceProxyBase.cpp \
+    src/thaf/messaging/client-server/ServiceStubBase.cpp \
+    src/thaf/messaging/client-server/Address.cpp \
+    src/thaf/messaging/ipc/BytesCommunicator.cpp \
+    src/thaf/messaging/ipc/IPCClientBase.cpp \
+    src/thaf/messaging/ipc/IPCServerBase.cpp \
+    src/thaf/threading/Thread.cpp \
+    src/thaf/threading/threadpool/DynamicCountThreadPool.cpp \
+    src/thaf/threading/threadpool/ThreadPoolFactory.cpp \
+    src/thaf/threading/threadpool/PriorityThreadPool.cpp \
+    src/thaf/threading/threadpool/StableThreadPool.cpp \
+    src/thaf/threading/time/TimerManager.cpp \
+    src/thaf/threading/time/TimerManagerImpl.cpp \
+    src/thaf/threading/time/Waiter.cpp \
+    src/thaf/utils/IDManager.cpp \
+    src/thaf/utils/serialization/Serializer.cpp \
+    src/thaf/messaging/ipc/IPCFactory.cpp \
+    src/thaf/messaging/ipc/IPCMessage.cpp \
+    src/thaf/messaging/ipc/IPCReceiver.cpp
+
 HEADERS += \
-    include/thaf/Application/AppComponent.h \
-    include/thaf/Application/Application.h \
-    include/thaf/Application/BasicMessages.h \
-    include/thaf/Application/Component.h \
-    include/thaf/Application/IPCClient.h \
-    include/thaf/Application/IPCMessages.h \
-    include/thaf/Application/IPCServer.h \
-    include/thaf/Application/Timer.h \
-    include/thaf/Logging/ConsoleLogger.h \
-    include/thaf/Logging/LoggerBase.h \
-    include/thaf/Logging/LoggerInterface.h \
-    include/thaf/Logging/LoggingComponent.h \
-    include/thaf/Messaging/IPC/Address.h \
-    include/thaf/Messaging/IPC/CSContractMC.h \
-    include/thaf/Messaging/IPC/ClientServerContract.h \
-    include/thaf/Messaging/IPC/ClientServerContractMacros.h \
-    include/thaf/Messaging/IPC/Connection.h \
-    include/thaf/Messaging/IPC/IPCCommunicator.h \
-    include/thaf/Messaging/IPC/IPCFactory.h \
-    include/thaf/Messaging/IPC/IPCInfo.h \
-    include/thaf/Messaging/IPC/IPCMessage.h \
-    include/thaf/Messaging/IPC/IPCReceiver.h \
-    include/thaf/Messaging/IPC/IPCRequestTracker.h \
-    include/thaf/Messaging/IPC/IPCSender.h \
-    include/thaf/Messaging/IPC/IPCServiceProxy.h \
-    include/thaf/Messaging/IPC/IPCServiceStub.h \
-    include/thaf/Messaging/IPC/MessageValidator.h \
-    include/thaf/Messaging/IPC/cscmbk.h \
-    include/thaf/Messaging/IPC/cscmrs.h \
-    include/thaf/Messaging/IPC/Prv/LocalIPCReceiver.h \
-    include/thaf/Messaging/IPC/Prv/LocalIPCSender.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/LocalIPCReceiver.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/LocalIPCSender.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/NamedPipeReceiver.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/NamedPipeReceiverBase.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/NamedPipeSender.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/NamedPipeSenderBase.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/OverlappedPipeReceiver.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/OverlappedPipeSender.h \
-    include/thaf/Messaging/IPC/Prv/Platforms/Windows/PipeShared.h \
-    include/thaf/Messaging/Message.h \
-    include/thaf/Messaging/MessageHandler.h \
-    include/thaf/Threading/IThreadPool.h \
-    include/thaf/Threading/Queue.h \
-    include/thaf/Threading/Runnable.h \
-    include/thaf/Threading/Signal.h \
-    include/thaf/Threading/Thread.h \
-    include/thaf/Threading/ThreadJoiner.h \
-    include/thaf/Threading/ThreadPoolFactory.h \
-    include/thaf/Threading/ThreadSafeQueue.h \
-    include/thaf/Threading/TimerManager.h \
-    include/thaf/Threading/Waiter.h \
-    include/thaf/Threading/Prv/TP/DynamicCountThreadPool.h \
-    include/thaf/Threading/Prv/TP/PriorityThreadPool.h \
-    include/thaf/Threading/Prv/TP/StableThreadPool.h \
-    include/thaf/Threading/Prv/TP/ThreadPoolImplBase.h \
-    include/thaf/Threading/Prv/Time/TimerManagerImpl.h \
-    include/thaf/Utils/CppExtension/AtomicContainer.h \
-    include/thaf/Utils/Debugging/Debug.h \
-    include/thaf/Utils/IDManager.h \
-    include/thaf/Patterns/Patterns.h \
-    include/thaf/Utils/CppExtension/Macros.h \
-    include/thaf/Utils/CppExtension/TupleManip.h \
-    include/thaf/Utils/CppExtension/TypeTraits.h \
-    include/thaf/Utils/Serialization/ByteArray.h \
-    include/thaf/Utils/Serialization/DumpHelper.h \
-    include/thaf/Utils/Serialization/SerializableObjMacros.h \
-    include/thaf/Utils/Serialization/SerializableObject.h \
-    include/thaf/Utils/Serialization/Serialization.h \
-    include/thaf/Utils/Serialization/Serializer.h
+    include/thaf/messaging/BasicMessages.h \
+    include/thaf/messaging/Component.h \
+    include/thaf/messaging/LocalIPCServer.h \
+    include/thaf/messaging/MessageBase.h \
+    include/thaf/messaging/MessageQueue.h \
+    include/thaf/messaging/Timer.h \
+    include/thaf/logging/ConsoleLogger.h \
+    include/thaf/logging/LoggerBase.h \
+    include/thaf/logging/LoggerInterface.h \
+    include/thaf/logging/LoggingComponent.h \
+    include/thaf/messaging/Communicator.h \
+    include/thaf/messaging/client-server/ClientBase.h \
+    include/thaf/messaging/client-server/ClientServerContract.h \
+    include/thaf/messaging/client-server/IAMessageRouter.h \
+    include/thaf/messaging/client-server/IAServiceProxy.h \
+    include/thaf/messaging/client-server/IAServiceStub.h \
+    include/thaf/messaging/client-server/QueueingServiceProxy.h \
+    include/thaf/messaging/client-server/QueueingServiceStub.h \
+    include/thaf/messaging/client-server/ServerBase.h \
+    include/thaf/messaging/client-server/ServiceProxyBase.h \
+    include/thaf/messaging/client-server/ServiceStubBase.h \
+    include/thaf/messaging/client-server/interfaces/Address.h \
+    include/thaf/messaging/client-server/interfaces/CSMessage.h \
+    include/thaf/messaging/client-server/interfaces/CSMessageReceiver.h \
+    include/thaf/messaging/client-server/interfaces/CSStatus.h \
+    include/thaf/messaging/client-server/interfaces/CSTypes.h \
+    include/thaf/messaging/client-server/interfaces/ClientInterface.h \
+    include/thaf/messaging/client-server/interfaces/RegisterDataStructure.h \
+    include/thaf/messaging/client-server/interfaces/RequestKeeper.h \
+    include/thaf/messaging/client-server/interfaces/ServerInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceMessageReceiver.h \
+    include/thaf/messaging/client-server/interfaces/ServiceProviderInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceProxyInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceRequesterInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceStatusObserverInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceStubHandlerInterface.h \
+    include/thaf/messaging/client-server/interfaces/ServiceStubInterface.h \
+    include/thaf/messaging/client-server/prv/CSMessageTrait.h \
+    include/thaf/messaging/client-server/prv/IAMessageTrait.h \
+    include/thaf/messaging/client-server/Connection.h \
+    include/thaf/messaging/MessageHandler.h \
+    include/thaf/messaging/client-server/prv/ServiceManagement.h \
+    include/thaf/messaging/ipc/BytesCommunicator.h \
+    include/thaf/messaging/ipc/IPCClientBase.h \
+    include/thaf/messaging/ipc/IPCServerBase.h \
+    include/thaf/messaging/ipc/IPCTypes.h \
+    include/thaf/messaging/ipc/LocalIPCClient.h \
+    include/thaf/messaging/ipc/LocalIPCServer.h \
+    include/thaf/messaging/ipc/LocalIPCServiceProxy.h \
+    include/thaf/messaging/ipc/LocalIPCServiceStub.h \
+    include/thaf/messaging/ipc/prv/platforms/linux/LocalIPCSender.h \
+    include/thaf/threading/IThreadPool.h \
+    include/thaf/threading/Queue.h \
+    include/thaf/threading/Runnable.h \
+    include/thaf/threading/Signal.h \
+    include/thaf/threading/Thread.h \
+    include/thaf/threading/ThreadJoiner.h \
+    include/thaf/threading/ThreadPoolFactory.h \
+    include/thaf/threading/ThreadSafeQueue.h \
+    include/thaf/threading/TimerManager.h \
+    include/thaf/threading/Waiter.h \
+    include/thaf/threading/prv/DynamicCountThreadPool.h \
+    include/thaf/threading/prv/PriorityThreadPool.h \
+    include/thaf/threading/prv/StableThreadPool.h \
+    include/thaf/threading/prv/ThreadPoolImplBase.h \
+    include/thaf/threading/prv/TimerManagerImpl.h \
+    include/thaf/utils/cppextension/SyncObject.h \
+    include/thaf/utils/debugging/Debug.h \
+    include/thaf/utils/IDManager.h \
+    include/thaf/patterns/Patterns.h \
+    include/thaf/utils/cppextension/Macros.h \
+    include/thaf/utils/cppextension/TupleManip.h \
+    include/thaf/utils/cppextension/TypeTraits.h \
+    include/thaf/utils/serialization/ByteArray.h \
+    include/thaf/utils/serialization/DumpHelper.h \
+    include/thaf/utils/serialization/SerializableObjMacros.h \
+    include/thaf/utils/serialization/SerializableObject.h \
+    include/thaf/utils/serialization/Serialization.h \
+    include/thaf/utils/serialization/Serializer.h \
+    include/thaf/messaging/ipc/CSContractMC.h \
+    include/thaf/messaging/ipc/ClientServerContractMacros.h \
+    include/thaf/messaging/ipc/IPCFactory.h \
+    include/thaf/messaging/ipc/IPCMessage.h \
+    include/thaf/messaging/ipc/IPCMessageTrait.h \
+    include/thaf/messaging/ipc/IPCReceiver.h \
+    include/thaf/messaging/ipc/IPCSender.h \
+    include/thaf/messaging/ipc/MessageValidator.h \
+    include/thaf/messaging/ipc/cscmbk.h \
+    include/thaf/messaging/ipc/cscmrs.h \
+    include/thaf/messaging/ipc/prv/LocalIPCReceiver.h \
+    include/thaf/messaging/ipc/prv/LocalIPCSender.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/LocalIPCReceiver.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/LocalIPCSender.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeReceiver.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeReceiverBase.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeSender.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeSenderBase.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/OverlappedPipeReceiver.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/OverlappedPipeSender.h \
+    include/thaf/messaging/ipc/prv/platforms/windows/PipeShared.h
 
 
