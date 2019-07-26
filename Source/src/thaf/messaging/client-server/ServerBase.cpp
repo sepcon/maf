@@ -47,11 +47,10 @@ bool ServerBase::hasServiceProvider(ServiceID sid)
 
 bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    auto lock(_providers.pa_lock());
-    auto it = _providers->find(csMsg->serviceID());
-    if(it != _providers->end())
+    auto provider = findByID(_providers, csMsg->serviceID());
+    if(provider)
     {
-        (*it)->onIncomingMessage(csMsg);
+        provider->onIncomingMessage(csMsg);
         return true;
     }
     else

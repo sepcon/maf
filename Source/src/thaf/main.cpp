@@ -8,7 +8,7 @@
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/client-server/IAServiceProxy.h"
 #include "thaf/messaging/client-server/IAServiceStub.h"
-
+#include "thaf/messaging/Timer.h"
 
 using namespace thaf::messaging::ipc;
 using namespace thaf::messaging;
@@ -83,21 +83,22 @@ public:
         Data _data;
 };
 
+
 template<class Proxy, class Stub, class RequestMessage>
 void test()
 {
     Component serverComp(false);
-    Component clientComp;
-
+    Timer serverTimer;
     std::shared_ptr<Proxy> proxy;
+    Component clientComp;
     clientComp.onMessage<ServiceStatusMsg>([&proxy](const std::shared_ptr<ServiceStatusMsg>& msg){
         thafMsg("Got Service status change update: " << static_cast<int>(msg->newStatus));
         if(msg->newStatus == Availability::Available)
         {
             auto request = std::make_shared<WeatherStusRequest>();
-            for (int i = 0; i < 1000; ++i) {
+            for (int i = 0; i < 2; ++i) {
                 proxy->template sendActionRequestSync<WeatherStusResult>(request, [](const std::shared_ptr<WeatherStusResult>& result){
-                    thafMsg(result->_data.get_the_status());
+                    thafMsg("thread " << std::this_thread::get_id() << " get update: " << result->_data.get_the_status());
                 });
             }
             request->_data.set_command(1);
@@ -107,32 +108,83 @@ void test()
             });
         }
     });
+    clientComp.start([&proxy, &clientComp]{
+        proxy = Proxy::createProxy(1);
+        thafMsg ("proxy for service 1 ready ! Component  = " << clientComp.getID());
+    });
 
-    serverComp.onMessage<RequestMessage>([&serverComp](const std::shared_ptr<RequestMessage>& msg){
+    Component clientComp1;
+    std::shared_ptr<Proxy> proxy1;
+    clientComp1.onMessage<ServiceStatusMsg>([&proxy1](const std::shared_ptr<ServiceStatusMsg>& msg){
+        thafMsg("Got Service status change update: " << static_cast<int>(msg->newStatus));
+        if(msg->newStatus == Availability::Available)
+        {
+            auto request = std::make_shared<WeatherStusRequest>();
+            for (int i = 0; i < 2; ++i) {
+                proxy1->template sendActionRequestSync<WeatherStusResult>(request, [](const std::shared_ptr<WeatherStusResult>& result){
+                    thafMsg("thread " << std::this_thread::get_id() << " get update: " << result->_data.get_the_status());
+                });
+            }
+            request->_data.set_command(1);
+            proxy1->template sendActionRequest<WeatherStusResult>(request, [](const std::shared_ptr<WeatherStusResult>& result){
+                thafMsg("************************************************sending the shutdown request!");
+                thafMsg(result->_data.get_the_status());
+            });
+        }
+    });
+    clientComp1.start([&proxy1, &clientComp1]{
+        proxy1 = Proxy::createProxy(1);
+        thafMsg( "proxy for service 1 ready ! Component  = " << clientComp1.getID());
+    });
+
+
+    Component clientComp2;
+    std::shared_ptr<Proxy> proxy2;
+    clientComp2.onMessage<ServiceStatusMsg>([&proxy2](const std::shared_ptr<ServiceStatusMsg>& msg){
+        thafMsg("Got Service status change update: " << static_cast<int>(msg->newStatus));
+        if(msg->newStatus == Availability::Available)
+        {
+            auto request = std::make_shared<WeatherStusRequest>();
+            for (int i = 0; i < 2; ++i) {
+                proxy2->template sendActionRequestSync<WeatherStusResult>(request, [](const std::shared_ptr<WeatherStusResult>& result){
+                    thafMsg("thread " << std::this_thread::get_id() << " get update: " << result->_data.get_the_status());
+                });
+            }
+            request->_data.set_command(1);
+            proxy2->template sendActionRequest<WeatherStusResult>(request, [](const std::shared_ptr<WeatherStusResult>& result){
+                thafMsg("************************************************sending the shutdown request!");
+                thafMsg(result->_data.get_the_status());
+            });
+        }
+    });
+    clientComp2.start([&proxy2, &clientComp2]{
+        proxy2 = Proxy::createProxy(1);
+        thafMsg( "proxy for service 1 ready ! Component  = " << clientComp2.getID());
+    });
+
+    serverComp.onMessage<RequestMessage>([&serverComp, &serverTimer](const std::shared_ptr<RequestMessage>& msg){
         static thread_local int requestCount = 0;
         ++requestCount;
+        serverTimer.start(21, [&serverComp]{
+            thafMsg(" ******************************************Received command shutdown, total request: " << requestCount);
+            serverComp.shutdown();
+        });
         auto reqk = msg->getRequestKeeper();
         auto req = reqk->template getRequestContent<WeatherStusRequest>();
         thafMsg("Receiver request from client: " << req->_data.get_client_name());
         auto res = std::make_shared<WeatherStusResult>();
         reqk->reply(res);
-        if(req->_data.get_command() != 0)
-        {
-            thafMsg(" ******************************************Received command shutdown, total request: " << requestCount);
-            serverComp.shutdown();
-        }
-    });
-
-
-    clientComp.start([&proxy]{
-        proxy = Proxy::createProxy(1);
-        std::cout << "proxy for service 1 ready !"  << std::endl;
+//        if(req->_data.get_command() != 0)
+//        {
+//            thafMsg(" ******************************************Received command shutdown, total request: " << requestCount);
+//            serverComp.shutdown();
+//        }
     });
 
     std::shared_ptr<Stub> stub;
-    serverComp.start([&]{
+    serverComp.start([&stub]{
         stub = Stub::createStub(1);
-        std::cout << "Stub ready as well" << std::endl;
+        thafMsg( "Stub ready as well");
 
 
     });
@@ -146,6 +198,14 @@ int main()
     test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
     test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
 
-    thafInfo("hello world");
+    thafMsg("hello world");
+	//stl::SyncObject<std::set<ComponentRef>> myList;
+	//auto compref1 = std::make_shared< ComponentSyncPtr >();
+	//compref1->reset(new Component);
+	//myList->insert(compref1);
+	//auto compref2 = std::make_shared< ComponentSyncPtr >();
+	//compref2->reset(new Component);
+	//myList->insert(compref2);
+//	std::cin.get();
     return 0;
 }

@@ -16,6 +16,7 @@ namespace messaging {
 class Component;
 using ComponentSyncPtr = stl::SyncObject<Component*>;
 using ComponentRef = std::shared_ptr<ComponentSyncPtr>;
+using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
 class Component : pattern::Unasignable
 {
@@ -48,14 +49,13 @@ public:
 
 protected:
     using MsgHandlerMap = stl::SyncObjectM<std::map<MessageBase::Type, MessageHandlerFunc>>;
-    static std::shared_ptr<threading::TimerManager> getTimeManager();
+    static TimerMgrPtr getTimeManager();
     void startMessageLoop();
     std::thread _workerThread;
     MessageQueue _msgQueue;
     MsgHandlerMap _msgHandlers;
-    ComponentID _id;
     bool _detached;
-    std::shared_ptr<threading::TimerManager> _timerMgr;
+    TimerMgrPtr _timerMgr;
 
     ComponentRef _myref;
     static thread_local Component* _tlspInstance;

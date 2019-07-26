@@ -2,6 +2,7 @@
 
 #include "interfaces/ClientInterface.h"
 #include "interfaces/ServiceStatusObserverInterface.h"
+#include "interfaces/ServiceRequesterInterface.h"
 #include "prv/ServiceManagement.h"
 
 namespace thaf {

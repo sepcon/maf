@@ -2,7 +2,7 @@
 #include "thaf/messaging/ipc/prv/platforms/windows/PipeShared.h"
 #include "thaf/messaging/client-server/Connection.h"
 #include "thaf/utils/debugging/Debug.h"
-#include <windows.h>
+#include <Windows.h>
 #include <stdio.h>
 #include <strsafe.h>
 
@@ -72,7 +72,7 @@ bool OverlappedPipeReceiver::initPipes()
             PIPE_TYPE_MESSAGE |			// * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
             PIPE_READMODE_MESSAGE |     // * block of bytes that greater than buffer_size
             PIPE_WAIT,                  // blocking mode
-            _pipeInstances.size(),		// number of instances
+            static_cast<DWORD>(_pipeInstances.size()),		// number of instances
             0,                          // output buffer size
             BUFFER_SIZE*sizeof(char),   // input buffer size
             PIPE_TIMEOUT,               // client time-out
@@ -98,7 +98,7 @@ void OverlappedPipeReceiver::listningThreadFunction()
     while (listening())
     {
         dwWait = WaitForMultipleObjects(
-            _hEvents.size(),    // number of event objects
+            static_cast<DWORD>(_hEvents.size()),    // number of event objects
             &_hEvents[0],		// array of event objects
             FALSE,              // does not wait for all
             INFINITE);          // waits indefinitely

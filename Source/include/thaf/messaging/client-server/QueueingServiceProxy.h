@@ -13,7 +13,7 @@ class QueueingServiceProxy : public ServiceProxyBase
 {
     using MyType = QueueingServiceProxy<MessageTrait, ManagerClient>;
     using MyRef = std::shared_ptr<MyType>;
-    using ListOfInterestedComponents = stl::SyncObject<std::set<ComponentRef>>;
+    using ListOfInterestedComponents = stl::SyncObject<std::set<ComponentRef, std::less<ComponentRef>>>;
 public:
     template <class SpecificMsgContent>
     using PayloadProcessCallback = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
@@ -42,6 +42,7 @@ public:
 protected:
     QueueingServiceProxy(ServiceID sid);
     void addInterestedComponent(ComponentRef compref);
+    bool updateServiceStatusToComponent(ComponentRef compref, Availability oldStatus, Availability newStatus);
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     template<class IncomingMsgContent>
     CSMessageHandlerCallback createMsgHandlerCallback(PayloadProcessCallback<IncomingMsgContent> callback, bool sync = false);
@@ -53,7 +54,9 @@ protected:
 template<class MessageTrait, class ManagerClient>
 typename QueueingServiceProxy<MessageTrait, ManagerClient>::MyRef QueueingServiceProxy<MessageTrait, ManagerClient>::createProxy(ServiceID sid)
 {
-    auto isNew = true;
+    static std::mutex creatingMutex;
+    std::lock_guard lock(creatingMutex);
+    auto isNew = false;
     auto serviceRequester = ManagerClient::instance().getServiceRequeser(sid);
     if(!serviceRequester)
     {
@@ -62,11 +65,19 @@ typename QueueingServiceProxy<MessageTrait, ManagerClient>::MyRef QueueingServic
     }
 
     auto proxy = std::static_pointer_cast<MyType>(serviceRequester);
-    proxy->addInterestedComponent(Component::getComponentRef());
+    auto compref = Component::getComponentRef();
+    proxy->addInterestedComponent(compref);
 
     //Registering service requester could notify back the change ServiceProvider status immediately
     //Then the call to registerServiceRequester must be invoked after addInterestedComponent
-    if(isNew) ManagerClient::instance().registerServiceRequester(serviceRequester);
+	if (isNew) 
+	{
+		ManagerClient::instance().registerServiceRequester(serviceRequester);
+	}
+    else if(proxy->_serviceStatus == Availability::Available)
+    {
+        proxy->updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
+	}
 
     return proxy;
 }
@@ -85,7 +96,21 @@ void QueueingServiceProxy<MessageTrait, ManagerClient>::addInterestedComponent(C
     {
         auto lock(_listComponents.pa_lock());
         _listComponents->insert(compref);
+        thafMsg("Total registers to service id: " << serviceID() << " = " << _listComponents->size());
+        thafMsg("Component id [" << reinterpret_cast<long long>(compref.get()) << compref->get()->getID() << "] regsitered to listen to service status change");
     }
+}
+
+template<class MessageTrait, class ManagerClient>
+bool QueueingServiceProxy<MessageTrait, ManagerClient>::updateServiceStatusToComponent(ComponentRef compref, Availability oldStatus, Availability newStatus)
+{
+    auto comprefLock(compref->pa_lock());
+    if(auto component = compref->get())
+    {
+        component->postMessage(messaging::createMessage<ServiceStatusMsg>(serviceID(), oldStatus, newStatus));
+        return true;
+    }
+    return false;
 }
 
 template<class MessageTrait, class ManagerClient>
@@ -97,20 +122,16 @@ void QueueingServiceProxy<MessageTrait, ManagerClient>::onServiceStatusChanged(S
     {
         _serviceStatus.store(newStatus, std::memory_order_release);
         auto lock(_listComponents.pa_lock());
-        ComponentRef liveSavingRef;
         for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
         {
-            auto comprefLock((*itCompref)->pa_lock());
-            if(auto component = (*itCompref)->get())
+            if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))
             {
-                component->postMessage(messaging::createMessage<ServiceStatusMsg>(oldStatus, newStatus));
                 ++itCompref;
             }
             else
             {
                 // Doing this to prevent the refcount to reach zero then the compptr object will be destroyed when it is
                 // holding the mutex lock that will crash the program
-                liveSavingRef = *itCompref;
                 itCompref = _listComponents->erase(itCompref);
             }
         }
@@ -120,7 +141,8 @@ void QueueingServiceProxy<MessageTrait, ManagerClient>::onServiceStatusChanged(S
 template<class MessageTrait, class ManagerClient> template<class IncomingMsgContent>
 CSMessageHandlerCallback QueueingServiceProxy<MessageTrait, ManagerClient>::createMsgHandlerCallback(PayloadProcessCallback<IncomingMsgContent> callback, bool sync)
 {
-    if(auto compref = Component::getComponentRef())
+	auto compref = Component::getComponentRef();
+    if(compref)
     {
         CSMessageHandlerCallback ipcMessageHandlerCB =
                 [this, callback, sync, compref](const CSMessagePtr& msg){

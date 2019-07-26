@@ -30,7 +30,7 @@ public:
     typedef typename TaskQueue::const_reference TaskCRef;
     typedef std::function<void (TaskRef)> TaskExc;
 	static inline void fDoNothing(TaskRef) {}
-    ThreadPoolImplBase(size_t maxCount, TaskExc fRun, TaskExc fStop = &fDoNothing, TaskExc fDone = &fDoNothing):
+    ThreadPoolImplBase(unsigned int maxCount, TaskExc fRun, TaskExc fStop = &fDoNothing, TaskExc fDone = &fDoNothing):
         _maxThreadCount(maxCount != 0 ? maxCount : std::thread::hardware_concurrency()),
         _fRun(fRun),
         _fStop(fStop),

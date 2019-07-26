@@ -31,11 +31,10 @@ void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newS
 
 void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
-    auto lock(_requesters.pa_lock());
-    auto it = _requesters->find(sid);
-    if(it != _requesters->end())
+    auto requester = findByID(_requesters, sid);
+    if(requester)
     {
-        (*it)->onServiceStatusChanged(sid, oldStatus, newStatus);
+        requester->onServiceStatusChanged(sid, oldStatus, newStatus);
     }
     else
     {
@@ -64,11 +63,10 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
     }
     else
     {
-        auto lock(_requesters.pa_lock());
-        auto it = _requesters->find(msg->serviceID());
-        if(it != _requesters->end())
+        auto requester = findByID(_requesters, msg->serviceID());
+        if(requester)
         {
-            return (*it)->onIncomingMessage(msg);
+            return requester->onIncomingMessage(msg);
         }
         return false;
     }

@@ -56,7 +56,7 @@ void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler
     }
 }
 
-std::shared_ptr<threading::TimerManager> Component::getTimeManager()
+TimerMgrPtr Component::getTimeManager()
 {
     if(_tlspInstance)
     {
@@ -137,7 +137,7 @@ ComponentRef Component::getComponentRef()
 
 Component::ComponentID Component::getID() const
 {
-    return _id;
+    return _workerThread.get_id();
 }
 
 void Component::startMessageLoop()

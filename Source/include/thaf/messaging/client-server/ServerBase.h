@@ -3,6 +3,7 @@
 #pragma once
 
 #include "interfaces/ServerInterface.h"
+#include "interfaces/ServiceProviderInterface.h"
 #include "prv/ServiceManagement.h"
 
 
