@@ -40,12 +40,12 @@ class QueueingServiceStub : public ServiceStubBase, public ServiceStubHandlerInt
     using MyRequestMessagePtr = std::shared_ptr<MyRequestMessage>;
     using MyRequestKeeperPtr = std::shared_ptr<MyRequestKeeper>;
     using MyType = QueueingServiceStub<MessageTrait, ControllingServer>;
-    using MyRef = std::shared_ptr<MyType>;
+    using MyPtr = std::shared_ptr<MyType>;
+
 public:
-    static MyRef createStub(ServiceID sid);
+    static MyPtr createStub(ServiceID sid);
     template<class CSMessageContentSpecific>
     bool sendStatusUpdate(const std::shared_ptr<CSMessageContentSpecific>& msgContent);
-//    ~QueueingServiceStub();
 
 protected:
     QueueingServiceStub(ServiceID sid);
@@ -69,7 +69,7 @@ bool QueueingServiceStub<MessageTrait, ControllingServer>::sendStatusUpdate(cons
 }
 
 template<class MessageTrait, class ControllingServer>
-typename QueueingServiceStub<MessageTrait, ControllingServer>::MyRef QueueingServiceStub<MessageTrait, ControllingServer>::createStub(ServiceID sid)
+typename QueueingServiceStub<MessageTrait, ControllingServer>::MyPtr QueueingServiceStub<MessageTrait, ControllingServer>::createStub(ServiceID sid)
 {
     auto serviceProvider = ControllingServer::instance().getServiceProvider(sid);
     if(!serviceProvider)
@@ -81,10 +81,6 @@ typename QueueingServiceStub<MessageTrait, ControllingServer>::MyRef QueueingSer
     return stub;
 }
 
-//template<class MessageTrait, class ControllingServer>
-//QueueingServiceStub<MessageTrait, ControllingServer>::~QueueingServiceStub()
-//{
-//}
 
 template<class MessageTrait, class ControllingServer>
 QueueingServiceStub<MessageTrait, ControllingServer>::QueueingServiceStub(ServiceID sid) : ServiceStubBase(sid, &ControllingServer::instance(), this)

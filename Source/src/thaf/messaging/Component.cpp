@@ -80,16 +80,26 @@ void Component::start(std::function<void()> entryPointFunc)
         postMessage<StartupMessage>();
     }
 
-    if(_detached)
-    {
-        _workerThread = std::thread {[this] {
-            this->startMessageLoop();
-        }};
-    }
-    else
-    {
+    _workerThread = std::thread {[this] {
         this->startMessageLoop();
+    }};
+    if(!_detached)
+    {
+        if(_workerThread.joinable())
+        {
+            _workerThread.join();
+        }
     }
+//    if(_detached)
+//    {
+//        _workerThread = std::thread {[this] {
+//            this->startMessageLoop();
+//        }};
+//    }
+//    else
+//    {
+//        this->startMessageLoop();
+//    }
 }
 
 void Component::shutdown()
@@ -112,10 +122,10 @@ Component::~Component()
     }
     shutdown();
 
-    if(_myref)
+    if(_myPtr)
     {
-        auto lock(_myref->pa_lock());
-        _myref->reset(); //To tell others who are holding this reference that the component is already destroyed!
+        auto lock(_myPtr->pa_lock());
+        _myPtr->reset(); //To tell others who are holding this reference that the component is already destroyed!
     }
 }
 
@@ -123,11 +133,11 @@ ComponentRef Component::getComponentRef()
 {
     if(_tlspInstance)
     {
-        if(!_tlspInstance->_myref)
+        if(!_tlspInstance->_myPtr)
         {
-            _tlspInstance->_myref = std::make_shared<ComponentSyncPtr>(_tlspInstance);
+            _tlspInstance->_myPtr = std::make_shared<ComponentSyncPtr>(_tlspInstance);
         }
-        return _tlspInstance->_myref;
+        return _tlspInstance->_myPtr;
     }
     else
     {

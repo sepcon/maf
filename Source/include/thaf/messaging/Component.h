@@ -57,7 +57,7 @@ protected:
     bool _detached;
     TimerMgrPtr _timerMgr;
 
-    ComponentRef _myref;
+    ComponentRef _myPtr;
     static thread_local Component* _tlspInstance;
 
     friend class Timer;

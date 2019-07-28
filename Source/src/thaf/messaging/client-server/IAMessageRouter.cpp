@@ -7,12 +7,25 @@ namespace thaf {
 namespace messaging {
 
 
+void IAMessageRouter::init()
+{
+    ClientBase::init();
+    ServerBase::init();
+}
+
+void IAMessageRouter::deinit()
+{
+    ClientBase::deinit();
+    ClientBase::deinit();
+}
+
 bool IAMessageRouter::registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface> &requester)
 {
     if(ClientBase::registerServiceRequester(requester))
     {
         if(ServerBase::hasServiceProvider(requester->serviceID()))
         {
+            thafMsg("\n------------IAMessageRouter::registerServiceRequester--------------------\n");
             requester->onServiceStatusChanged(requester->serviceID(), Availability::Unavailable, Availability::Available);
         }
         return true;

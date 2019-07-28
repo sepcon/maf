@@ -1,7 +1,6 @@
 #include "thaf/threading/prv/TimerManagerImpl.h"
 #include "thaf/utils/debugging/Debug.h"
 #include <algorithm>
-#include <cassert>
 
 using namespace std::chrono;
 
@@ -150,7 +149,6 @@ void TimerManagerImpl::stop(TimerManagerImpl::JobID jid)
     }
     else
     {
-        assert(false);
         LOG("Job " << jid << " does not exist or is already canceled");
     }
 }
@@ -357,7 +355,6 @@ void TimerManagerImpl::run() noexcept
             this->adoptPendingJobs__();
 
         } while(!test(_shutdowned));
-        LOG("Timer manager thread is exitting");
         this->cleanup();
     });
 }

@@ -131,6 +131,7 @@ HEADERS += \
     include/thaf/messaging/client-server/prv/ServiceManagement.h \
     include/thaf/messaging/ipc/BytesCommunicator.h \
     include/thaf/messaging/ipc/IPCClientBase.h \
+    include/thaf/messaging/ipc/IPCMsgDefinesMacros.h \
     include/thaf/messaging/ipc/IPCServerBase.h \
     include/thaf/messaging/ipc/IPCTypes.h \
     include/thaf/messaging/ipc/LocalIPCClient.h \
@@ -153,6 +154,7 @@ HEADERS += \
     include/thaf/threading/prv/StableThreadPool.h \
     include/thaf/threading/prv/ThreadPoolImplBase.h \
     include/thaf/threading/prv/TimerManagerImpl.h \
+    include/thaf/utils/TimeMeasurement.h \
     include/thaf/utils/cppextension/SyncObject.h \
     include/thaf/utils/debugging/Debug.h \
     include/thaf/utils/IDManager.h \
@@ -166,7 +168,6 @@ HEADERS += \
     include/thaf/utils/serialization/SerializableObject.h \
     include/thaf/utils/serialization/Serialization.h \
     include/thaf/utils/serialization/Serializer.h \
-    include/thaf/messaging/ipc/CSContractMC.h \
     include/thaf/messaging/ipc/ClientServerContractMacros.h \
     include/thaf/messaging/ipc/IPCFactory.h \
     include/thaf/messaging/ipc/IPCMessage.h \

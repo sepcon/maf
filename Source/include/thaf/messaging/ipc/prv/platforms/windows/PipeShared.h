@@ -8,7 +8,7 @@ namespace messaging {
 namespace ipc {
 
 static constexpr int WAIT_DURATION_MAX = 5000; // milliseconds
-static constexpr int BUFFER_SIZE = 1000;       // bytes
+static constexpr int BUFFER_SIZE = 500;       // bytes
 
 inline std::string constructPipeName(const Address& pAddr)
 {

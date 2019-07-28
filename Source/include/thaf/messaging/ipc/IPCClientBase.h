@@ -14,6 +14,7 @@ class IPCClientBase : public ClientBase, public BytesCommunicator
 public:
     IPCClientBase();
     void init(IPCType type, const Address& serverAddress);
+    void deinit();
     ~IPCClientBase() override;
     DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg)  override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;

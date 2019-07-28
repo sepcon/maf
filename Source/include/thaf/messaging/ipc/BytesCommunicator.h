@@ -21,6 +21,7 @@ class BytesCommunicator : BytesComeObserver
 public:
     BytesCommunicator(CSMessageReceiver* receiver);
     void init(IPCType type, const Address& serverAddress, bool isClient);
+    void deinit();
     void startWaitingMessages();
     void stopWaitingMessages();
     bool isWaiting() const;

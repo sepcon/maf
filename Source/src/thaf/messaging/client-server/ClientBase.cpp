@@ -5,12 +5,12 @@
 namespace thaf {
 namespace messaging {
 
-bool ClientBase::registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface> &requester)
+bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
 {
     return addIfNew(_requesters, requester);
 }
 
-bool ClientBase::unregisterServiceRequester(const std::shared_ptr<ServiceRequesterInterface> &requester)
+bool ClientBase::unregisterServiceRequester(const IServiceRequesterPtr &requester)
 {
     return remove(_requesters, requester);
 }
@@ -72,9 +72,20 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
     }
 }
 
-std::shared_ptr<ServiceRequesterInterface> ClientBase::getServiceRequeser(ServiceID sid)
+IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
 {
     return findByID(_requesters, sid);
+}
+
+void ClientBase::init()
+{
+    //TBD: add if needed
+}
+
+void ClientBase::deinit()
+{
+    auto lock = _requesters.a_lock();
+    _requesters->clear();
 }
 
 }

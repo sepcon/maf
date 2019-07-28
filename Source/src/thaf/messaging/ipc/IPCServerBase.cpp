@@ -21,6 +21,12 @@ void IPCServerBase::init(IPCType type, const Address &serverAddress)
     _communicator->init(type, serverAddress, /*isClient = */false);
 }
 
+void IPCServerBase::deinit()
+{
+    _communicator->deinit();
+    ServerBase::deinit();
+}
+
 DataTransmissionErrorCode IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, const Address &addr)
 {
     return _communicator->send(std::static_pointer_cast<IPCMessage>(msg), addr);

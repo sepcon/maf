@@ -13,12 +13,14 @@ namespace thaf {
 namespace messaging {
 
 
-class IAMessageRouter : public ClientBase, public ServerBase, private pattern::SingletonObject<IAMessageRouter>
+class IAMessageRouter : public ClientBase, public ServerBase, public pattern::SingletonObject<IAMessageRouter>
 {
     friend class QueueingServiceProxy<IAMessageTrait, IAMessageRouter>;
     friend class QueueingServiceStub<IAMessageTrait, IAMessageRouter>;
 public:
     IAMessageRouter(Invisible){}
+    void init();
+    void deinit();
     bool registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface>& requester)  override;
     DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
     DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg) override;

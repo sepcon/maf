@@ -12,13 +12,13 @@ template<class MessageTrait, class ManagerClient>
 class QueueingServiceProxy : public ServiceProxyBase
 {
     using MyType = QueueingServiceProxy<MessageTrait, ManagerClient>;
-    using MyRef = std::shared_ptr<MyType>;
+    using MyPtr = std::shared_ptr<MyType>;
     using ListOfInterestedComponents = stl::SyncObject<std::set<ComponentRef, std::less<ComponentRef>>>;
 public:
     template <class SpecificMsgContent>
     using PayloadProcessCallback = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
 
-    static MyRef createProxy(ServiceID sid);
+    static MyPtr createProxy(ServiceID sid);
 
     template<class IncomingMsgContent>
     RegID sendStatusChangeRegister(OpID propertyID, PayloadProcessCallback<IncomingMsgContent> callback);
@@ -31,53 +31,48 @@ public:
             );
 
     template<class IncomingMsgContent>
+    std::shared_ptr<IncomingMsgContent> sendActionRequestSync
+    (
+            const CSMsgContentPtr& outgoingData,
+            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            );
+
+    template<class IncomingMsgContent>
     bool sendActionRequestSync
     (
             const CSMsgContentPtr& outgoingData,
-            PayloadProcessCallback<IncomingMsgContent> callback = nullptr,
+            PayloadProcessCallback<IncomingMsgContent> callback,
             unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
             );
 
     ~QueueingServiceProxy(){}
 protected:
     QueueingServiceProxy(ServiceID sid);
-    void addInterestedComponent(ComponentRef compref);
     bool updateServiceStatusToComponent(ComponentRef compref, Availability oldStatus, Availability newStatus);
+    void addInterestedComponent(ComponentRef compref);
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     template<class IncomingMsgContent>
     CSMessageHandlerCallback createMsgHandlerCallback(PayloadProcessCallback<IncomingMsgContent> callback, bool sync = false);
 
     ListOfInterestedComponents _listComponents;
-    std::atomic<Availability> _serviceStatus{Availability::Unavailable};
+    Availability _serviceStatus = Availability::Unavailable ;
 };
 
 template<class MessageTrait, class ManagerClient>
-typename QueueingServiceProxy<MessageTrait, ManagerClient>::MyRef QueueingServiceProxy<MessageTrait, ManagerClient>::createProxy(ServiceID sid)
+typename QueueingServiceProxy<MessageTrait, ManagerClient>::MyPtr QueueingServiceProxy<MessageTrait, ManagerClient>::createProxy(ServiceID sid)
 {
     static std::mutex creatingMutex;
     std::lock_guard lock(creatingMutex);
-    auto isNew = false;
-    auto serviceRequester = ManagerClient::instance().getServiceRequeser(sid);
+    auto serviceRequester = ManagerClient::instance().getServiceRequester(sid);
     if(!serviceRequester)
     {
         serviceRequester.reset(new MyType(sid));
-        isNew = true;
+        ManagerClient::instance().registerServiceRequester(serviceRequester);
     }
 
     auto proxy = std::static_pointer_cast<MyType>(serviceRequester);
     auto compref = Component::getComponentRef();
     proxy->addInterestedComponent(compref);
-
-    //Registering service requester could notify back the change ServiceProvider status immediately
-    //Then the call to registerServiceRequester must be invoked after addInterestedComponent
-	if (isNew) 
-	{
-		ManagerClient::instance().registerServiceRequester(serviceRequester);
-	}
-    else if(proxy->_serviceStatus == Availability::Available)
-    {
-        proxy->updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
-	}
 
     return proxy;
 }
@@ -91,13 +86,18 @@ QueueingServiceProxy<MessageTrait, ManagerClient>::QueueingServiceProxy(ServiceI
 template<class MessageTrait, class ManagerClient>
 void QueueingServiceProxy<MessageTrait, ManagerClient>::addInterestedComponent(ComponentRef compref)
 {
+    auto lockListComps(_listComponents.pa_lock()); //Lock must be invoked here to protect both
+
+    if(_serviceStatus == Availability::Available)
+    {
+        thafMsg("\n------------> Update Service status to component <<<<<<<< \n");
+        updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
+    }
     auto comprefLock(compref->pa_lock());
     if(compref->get())
     {
-        auto lock(_listComponents.pa_lock());
         _listComponents->insert(compref);
-        thafMsg("Total registers to service id: " << serviceID() << " = " << _listComponents->size());
-        thafMsg("Component id [" << reinterpret_cast<long long>(compref.get()) << compref->get()->getID() << "] regsitered to listen to service status change");
+        thafMsg("Component id [" << std::this_thread::get_id() << "] regsitered to listen to service status change");
     }
 }
 
@@ -118,10 +118,10 @@ void QueueingServiceProxy<MessageTrait, ManagerClient>::onServiceStatusChanged(S
 {
 
     thafInfo("Service Status Changed: " << static_cast<int>(oldStatus) << " - " << static_cast<int>(newStatus));
-    if(_serviceStatus.load(std::memory_order_acquire) != newStatus)
+    auto lock(_listComponents.pa_lock()); //this lock is responsible for both _listComponents protection and _serviceStatus
+    if(_serviceStatus != newStatus)
     {
-        _serviceStatus.store(newStatus, std::memory_order_release);
-        auto lock(_listComponents.pa_lock());
+        _serviceStatus = newStatus;
         for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
         {
             if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))
@@ -130,8 +130,7 @@ void QueueingServiceProxy<MessageTrait, ManagerClient>::onServiceStatusChanged(S
             }
             else
             {
-                // Doing this to prevent the refcount to reach zero then the compptr object will be destroyed when it is
-                // holding the mutex lock that will crash the program
+                thafWarn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
                 itCompref = _listComponents->erase(itCompref);
             }
         }
@@ -203,9 +202,27 @@ CSMessageHandlerCallback QueueingServiceProxy<MessageTrait, ManagerClient>::crea
 template<class MessageTrait, class ManagerClient> template<class IncomingMsgContent>
 RegID QueueingServiceProxy<MessageTrait, ManagerClient>::sendActionRequest(const CSMsgContentPtr& outgoingData, PayloadProcessCallback<IncomingMsgContent> callback)
 {
-    assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>()) && "Please provide MessageContent that has same id with IncomingMessagecontent");
+    assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
+           && "Please provide MessageContent that has same id with IncomingMessagecontent");
     outgoingData->makesureTransferable();
     return sendRequest(outgoingData, createMsgHandlerCallback(callback));
+}
+
+template<class MessageTrait, class ManagerClient> template<class IncomingMsgContent>
+std::shared_ptr<IncomingMsgContent> QueueingServiceProxy<MessageTrait, ManagerClient>::sendActionRequestSync(const CSMsgContentPtr &outgoingData, unsigned long maxWaitTimeMs)
+{
+    assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
+           && "Please provide MessageContent that has same id with IncomingMessagecontent");
+
+    outgoingData->makesureTransferable();
+    if(auto csMsg = sendRequestSync(outgoingData, maxWaitTimeMs))
+    {
+        return MessageTrait::template translate<IncomingMsgContent>(csMsg->content());
+    }
+    else
+    {
+        return {};
+    }
 }
 
 template<class MessageTrait, class ManagerClient> template<class IncomingMsgContent>
@@ -213,7 +230,8 @@ bool QueueingServiceProxy<MessageTrait, ManagerClient>::sendActionRequestSync(co
         PayloadProcessCallback<IncomingMsgContent> callback,
         unsigned long maxWaitTimeMs )
 {
-    assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>()) && "Please provide MessageContent that has same id with IncomingMessagecontent");
+    assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
+           && "Please provide MessageContent that has same id with IncomingMessagecontent");
     outgoingData->makesureTransferable();
     return sendRequestSync
             (
@@ -228,6 +246,8 @@ RegID QueueingServiceProxy<MessageTrait, ManagerClient>::sendStatusChangeRegiste
 {
     return ServiceProxyBase::sendStatusChangeRegister(propertyID, createMsgHandlerCallback(std::move(callback)));
 }
+
+
 
 
 }

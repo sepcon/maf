@@ -1,14 +1,13 @@
 #pragma once
 
-#include "thaf/messaging/client-server/CSShared.h"
+#include "thaf/messaging/client-server/interfaces/CSTypes.h"
 #include "IPCMessageTrait.h"
 
 #define result_object_s(ActionName) \
-static constexpr thaf::messaging::ipc::OpID CSC_OpID_##ActionName = __LINE__; \
+static constexpr thaf::messaging::OpID CSC_OpID_##ActionName = __LINE__; \
 client_server_contract_object_s(ActionName, Result)
 
 #define result_object_e(ActionName) client_server_contract_object_e(ActionName, Result)
-
 #define request_object_s(ActionName) client_server_contract_object_s(ActionName, Request)
 #define request_object_e(ActionName) client_server_contract_object_e(ActionName, Request)
 
@@ -26,8 +25,8 @@ public: \
             thaf::srz::BADeserializer ds(bytes); \
             ds >> _myProperties; \
     } \
-    static constexpr thaf::messaging::ipc::OpID ID() { return CSC_OpID_##ActionName; } \
-    thaf::messaging::ipc::OpID getID() const override { return ID(); } \
+    static constexpr thaf::messaging::OpID sOperationID() { return CSC_OpID_##ActionName; } \
+    thaf::messaging::OpID operationID() const override { return sOperationID(); }
 
 
 
@@ -44,7 +43,6 @@ private: \
     ActionName##Type(Args&&... args) : _myProperties(std::forward<Args>(args)...) {} \
 public: \
     ActionName##Type() = default; \
- \
     template<typename ...Args> \
     static std::shared_ptr<ActionName##Type> create(Args&&... args) { \
         auto p = new ActionName##Type(std::forward<Args>(args)...); \

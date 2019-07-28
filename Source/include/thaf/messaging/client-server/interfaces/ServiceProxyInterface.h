@@ -15,6 +15,7 @@ public:
     virtual void sendAbortRequest(const RegID& regID) = 0;
     virtual void sendAbortSyncRequest(const RegID& regID) = 0;
     virtual bool sendRequestSync (const CSMsgContentPtr& msgContent, CSMessageHandlerCallback callback, unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)) = 0;
+    virtual CSMessagePtr sendRequestSync (const CSMsgContentPtr& msgContent, unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)) = 0;
 };
 
 

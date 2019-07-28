@@ -15,7 +15,7 @@ namespace messaging {
 
 //std::shared_ptr<IAServiceProxy> IAServiceProxy::createProxy(ServiceID sid)
 //{
-//    auto serviceRequester = IAMessageRouter::instance().getServiceRequeser(sid);
+//    auto serviceRequester = IAMessageRouter::instance().getServiceRequester(sid);
 //    if(!serviceRequester)
 //    {
 //        serviceRequester = std::make_shared<IAServiceProxy>();

@@ -13,16 +13,18 @@ class ClientBase : public ClientInterface
 public:
     //Dervied class must provide implementation for this method
     DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg) override = 0;
-    bool registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface>& requester)  override;
-    bool unregisterServiceRequester(const std::shared_ptr<ServiceRequesterInterface>& requester)  override;
+    bool registerServiceRequester(const IServiceRequesterPtr& requester)  override;
+    bool unregisterServiceRequester(const IServiceRequesterPtr& requester)  override;
     bool unregisterServiceRequester(ServiceID sid) override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool hasServiceRequester(ServiceID sid) override;
-    bool onIncomingMessage(const CSMessagePtr& msg) override;
-    std::shared_ptr<ServiceRequesterInterface> getServiceRequeser(ServiceID sid);
-
+    IServiceRequesterPtr getServiceRequester(ServiceID sid) override;
+    void init();
+    void deinit();
 protected:
+    bool onIncomingMessage(const CSMessagePtr& msg) override;
+
     using Requesters = SMList<ServiceRequesterInterface>;
     Requesters _requesters;
 };

@@ -18,13 +18,22 @@ void IPCClientBase::init(IPCType type, const Address &serverAddress)
     monitorServerStatus();
 }
 
-IPCClientBase::~IPCClientBase()
+void IPCClientBase::deinit()
 {
+    ClientBase::deinit();
+    BytesCommunicator::deinit();
     _stop.store(true, std::memory_order_release);
     if(_serverMonitorThread.joinable())
     {
         _serverMonitorThread.join();
     }
+    auto lock(_requesters.pa_lock());
+    _requesters->clear();
+}
+
+IPCClientBase::~IPCClientBase()
+{
+    deinit();
 }
 
 DataTransmissionErrorCode IPCClientBase::sendMessageToServer(const CSMessagePtr &msg)

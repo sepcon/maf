@@ -99,44 +99,60 @@ void ServiceProxyBase::sendAbortSyncRequest(const RegID &regID)
 
 bool ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback, unsigned long maxWaitTimeMs)
 {
-    RegID regID;
     bool success = false;
-    auto csMsg = createCSMessage(msgContent->operationID(), OpCode::RequestSync, msgContent);
     if(callback)
     {
-        auto resultFuture = storeSyncRegEntry(csMsg, regID);
-        if(resultFuture && sendMessageToServer(csMsg))
+        if(auto responseMsg = sendRequestSync(msgContent, maxWaitTimeMs))
         {
             try
             {
-                if(resultFuture->wait_for(std::chrono::milliseconds(maxWaitTimeMs)) == std::future_status::ready)
-                {
-                    if(auto msg = resultFuture->get())
-                    {
-                        callback(msg);
-                        success = true;
-                    }
-                    else
-                    {
-                        thafWarn("Request id: " << regID.requestID << " has been cancelled");
-                    }
-                }
-                else
-                {
-                    sendAbortSyncRequest(regID);
-                }
+                callback(responseMsg);
+                success = true;
             }
-            catch(const std::exception& e)
+            catch (const std::exception& e)
             {
-                thafErr("Error while waiting for result from server(Exception): " << e.what());
-            }
-            catch(...)
-            {
-                thafErr("Unknown exception when sending sync request to server");
+                thafErr("Exception when executing callback: " << e.what());
             }
         }
     }
     return success;
+}
+
+CSMessagePtr ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, unsigned long maxWaitTimeMs)
+{
+    RegID regID;
+    auto csMsg = createCSMessage(msgContent->operationID(), OpCode::RequestSync, msgContent);
+    auto resultFuture = storeSyncRegEntry(csMsg, regID);
+    if(resultFuture && sendMessageToServer(csMsg))
+    {
+        try
+        {
+            if(resultFuture->wait_for(std::chrono::milliseconds(maxWaitTimeMs)) == std::future_status::ready)
+            {
+                if(auto msg = resultFuture->get())
+                {
+                    return msg;
+                }
+                else
+                {
+                    thafWarn("Request id: " << regID.requestID << " has been cancelled");
+                }
+            }
+            else
+            {
+                sendAbortSyncRequest(regID);
+            }
+        }
+        catch(const std::exception& e)
+        {
+            thafErr("Error while waiting for result from server(Exception): " << e.what());
+        }
+        catch(...)
+        {
+            thafErr("Unknown exception when sending sync request to server");
+        }
+    }
+    return {};
 }
 
 void ServiceProxyBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)

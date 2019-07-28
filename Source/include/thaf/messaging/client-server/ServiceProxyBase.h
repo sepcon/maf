@@ -24,12 +24,17 @@ public:
     void sendAbortRequest(const RegID& regID) override;
     void sendAbortSyncRequest(const RegID& regID) override;
     bool sendRequestSync
-        (
+    (
             const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback,
             unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
             ) override;
 
+    CSMessagePtr sendRequestSync
+    (
+            const CSMsgContentPtr& msgContent,
+            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            ) override;
 
 protected:
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;

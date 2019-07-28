@@ -10,10 +10,7 @@ namespace ipc {
 
 BytesCommunicator::~BytesCommunicator()
 {
-    if(_pReceiver && _pReceiver->listening())
-    {
-        _pReceiver->stopListening();
-    }
+    deinit();
 }
 
 BytesCommunicator::BytesCommunicator(CSMessageReceiver *receiver) :
@@ -34,6 +31,14 @@ void BytesCommunicator::init(IPCType type, const Address &serverAddress, bool is
     _pReceiver->initConnection(_address, isClient);
     _pReceiver->registerObserver(this);
     startWaitingMessages();
+}
+
+void BytesCommunicator::deinit()
+{
+    if(_pReceiver && _pReceiver->listening())
+    {
+        _pReceiver->stopListening();
+    }
 }
 
 void BytesCommunicator::startWaitingMessages()

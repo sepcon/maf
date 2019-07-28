@@ -6,7 +6,7 @@ namespace thaf {
 namespace messaging {
 
 
-bool ServerBase::registerServiceProvider(const std::shared_ptr<ServiceProviderInterface> &provider)
+bool ServerBase::registerServiceProvider(const IServiceProviderPtr &provider)
 {
     auto newProvider = addIfNew(_providers, provider);
     if(newProvider)
@@ -21,7 +21,7 @@ bool ServerBase::registerServiceProvider(const std::shared_ptr<ServiceProviderIn
     }
 }
 
-bool ServerBase::unregisterServiceProvider(const std::shared_ptr<ServiceProviderInterface> &provider)
+bool ServerBase::unregisterServiceProvider(const IServiceProviderPtr &provider)
 {
     return unregisterServiceProvider(provider->serviceID());
 }
@@ -59,9 +59,20 @@ bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     }
 }
 
-std::shared_ptr<ServiceProviderInterface> ServerBase::getServiceProvider(ServiceID sid)
+IServiceProviderPtr ServerBase::getServiceProvider(ServiceID sid)
 {
     return findByID(_providers, sid);
+}
+
+void ServerBase::init()
+{
+// TBD: add if needed
+}
+
+void ServerBase::deinit()
+{
+    auto lock = _providers.a_lock();
+    _providers->clear();
 }
 
 }
