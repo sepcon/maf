@@ -116,7 +116,7 @@ void OverlappedPipeReceiver::listningThreadFunction()
         static int readCount = 0;
         thafInfo("Prepare to read bytes number: " << ++readCount);
         size_t index = static_cast<size_t>(i);
-        if (readBytesOnPipe(index))
+        if (readOnPipe(index))
         {
             notifyObervers(std::make_shared<srz::ByteArray>(std::move(_pipeInstances[index]->ba)));
         }
@@ -129,7 +129,7 @@ void OverlappedPipeReceiver::listningThreadFunction()
     }
 }
 
-bool OverlappedPipeReceiver::readBytesOnPipe(size_t index)
+bool OverlappedPipeReceiver::readOnPipe(size_t index)
 {
     bool fSuccess = false;
     do

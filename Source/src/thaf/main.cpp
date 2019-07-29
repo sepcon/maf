@@ -163,7 +163,7 @@ int main()
     LocalIPCClient::instance().init(addr);
     LocalIPCServer::instance().init(addr);
 
-    test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
+//    test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
 //    test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
 
     thafMsg("Program ends!");

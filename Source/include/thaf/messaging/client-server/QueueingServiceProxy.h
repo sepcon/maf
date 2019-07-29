@@ -1,10 +1,10 @@
 #pragma once
 
+#include "interfaces/CSDefines.h"
 #include "ServiceProxyBase.h"
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/BasicMessages.h"
 #include "thaf/utils/debugging/Debug.h"
-
 namespace thaf {
 namespace messaging {
 
@@ -34,7 +34,7 @@ public:
     std::shared_ptr<IncomingMsgContent> sendActionRequestSync
     (
             const CSMsgContentPtr& outgoingData,
-            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
             );
 
     template<class IncomingMsgContent>
@@ -42,7 +42,7 @@ public:
     (
             const CSMsgContentPtr& outgoingData,
             PayloadProcessCallback<IncomingMsgContent> callback,
-            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
             );
 
     ~QueueingServiceProxy(){}

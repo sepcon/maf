@@ -27,7 +27,7 @@ private:
     bool initPipes();
     void listningThreadFunction() override;
     void disconnectAndReconnect(size_t index);
-    bool readBytesOnPipe(size_t index);
+    bool readOnPipe(size_t index);
     PipeInstances _pipeInstances;
     Handles _hEvents;
 

@@ -3,6 +3,7 @@
 #include "Connection.h"
 #include "interfaces/CSStatus.h"
 #include "interfaces/ServiceProxyInterface.h"
+#include "interfaces/CSDefines.h"
 
 namespace thaf {
 namespace messaging {
@@ -27,13 +28,13 @@ public:
     (
             const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback,
-            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            unsigned long maxWaitTimeMs = THAF_INFINITE_WAIT_PERIOD
             ) override;
 
     CSMessagePtr sendRequestSync
     (
             const CSMsgContentPtr& msgContent,
-            unsigned long maxWaitTimeMs = static_cast<unsigned long>(-1)
+            unsigned long maxWaitTimeMs = THAF_INFINITE_WAIT_PERIOD
             ) override;
 
 protected:

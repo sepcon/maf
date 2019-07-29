@@ -109,6 +109,7 @@ HEADERS += \
     include/thaf/messaging/client-server/ServiceProxyBase.h \
     include/thaf/messaging/client-server/ServiceStubBase.h \
     include/thaf/messaging/client-server/interfaces/Address.h \
+    include/thaf/messaging/client-server/interfaces/CSDefines.h \
     include/thaf/messaging/client-server/interfaces/CSMessage.h \
     include/thaf/messaging/client-server/interfaces/CSMessageReceiver.h \
     include/thaf/messaging/client-server/interfaces/CSStatus.h \

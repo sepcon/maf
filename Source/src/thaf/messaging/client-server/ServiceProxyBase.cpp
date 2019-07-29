@@ -46,7 +46,7 @@ RegID ServiceProxyBase::sendRequest(const CSMsgContentPtr &msgContent,
     )
 {
     RegID regID = {};
-    auto csMsg = createCSMessage(msgContent->operationID(), OpCode::Request, msgContent);
+    auto csMsg = this->createCSMessage(msgContent->operationID(), OpCode::Request, msgContent);
     if(callback)
     {
         regID = storeAndSendRequestToServer(_requestEntriesMap, csMsg, callback);
@@ -83,7 +83,7 @@ void ServiceProxyBase::sendAbortRequest(const RegID &regID)
 
         if(found)
         {
-            auto msg = createCSMessage(regID.opID, OpCode::Abort);
+            auto msg = this->createCSMessage(regID.opID, OpCode::Abort);
             msg->setRequestID(regID.requestID);
             _client->sendMessageToServer(msg);
             RegID::reclaimID(regID, _idMgr);
@@ -94,7 +94,7 @@ void ServiceProxyBase::sendAbortRequest(const RegID &regID)
 void ServiceProxyBase::sendAbortSyncRequest(const RegID &regID)
 {
     removeSyncRegEntry(regID);
-    _client->sendMessageToServer(createCSMessage(regID.opID, OpCode::Abort));
+    _client->sendMessageToServer(this->createCSMessage(regID.opID, OpCode::Abort));
 }
 
 bool ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback, unsigned long maxWaitTimeMs)
@@ -121,7 +121,7 @@ bool ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, CSMess
 CSMessagePtr ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, unsigned long maxWaitTimeMs)
 {
     RegID regID;
-    auto csMsg = createCSMessage(msgContent->operationID(), OpCode::RequestSync, msgContent);
+    auto csMsg = this->createCSMessage(msgContent->operationID(), OpCode::RequestSync, msgContent);
     auto resultFuture = storeSyncRegEntry(csMsg, regID);
     if(resultFuture && sendMessageToServer(csMsg))
     {
@@ -169,28 +169,6 @@ CSMessagePtr ServiceProxyBase::createCSMessage(OpID opID, OpCode opCode, const C
 {
     return messaging::createCSMessage(serviceID(), std::move(opID), std::move(opCode), RequestIDInvalid, msgContent);
 }
-
-
-//void ServiceProxyBase::startMonitoringService(ServiceStatusObserver *observer, long checkingPeriodMs)
-//{
-//    _serviceMonitoringThread = std::thread {[this, observer, checkingPeriodMs]{
-//        static thread_local Availability currentStatus = Availability::UnAvailable;
-//        while(!_stopFlag.load(std::memory_order_acquire))
-//        {
-//            auto status = _client->checkReceiverStatus();
-//            if(status != currentStatus)
-//            {
-//                if(status == Availability::UnAvailable)
-//                {
-//                    thafWarn("Server has not been available for " << checkingPeriodMs << " second");
-//                }
-//                observer->onStatusChanged(currentStatus, status);
-//                currentStatus = status;
-//            }
-//            std::this_thread::sleep_for(std::chrono::milliseconds(checkingPeriodMs));
-//        }
-//    }};
-//}
 
 RegID ServiceProxyBase::sendStatusChangeRegister(OpID propertyID, CSMessageHandlerCallback callback)
 {
