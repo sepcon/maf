@@ -57,12 +57,12 @@ namespace messaging {
 //    return ostr << OpCodeString[static_cast<int>(code)];
 //}
 
-//class IPCMessageContentBase : public pattern::UnCopyable
+//class SerializableMessageContentBase : public pattern::UnCopyable
 //{
 //public:
 //    static OpID ID() { return OpIDInvalid; }
 //    virtual OpID getID() const = 0;
-//    virtual ~IPCMessageContentBase() = default;
+//    virtual ~SerializableMessageContentBase() = default;
 //    virtual srz::ByteArray toBytes() const = 0;
 //    virtual void fromBytes(const srz::ByteArray& bytes) = 0;
 //};

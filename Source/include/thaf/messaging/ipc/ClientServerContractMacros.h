@@ -69,7 +69,7 @@
 #   define request_object_e(ActionName) client_server_contract_object_e(ActionName, Request)
 
 #   define client_server_contract_object_s(ActionName, Type)                													\
-           class ActionName##Type : public thaf::messaging::ipc::IPCMessageContentBase                                                 \
+           class ActionName##Type : public thaf::messaging::ipc::SerializableMessageContentBase                                                 \
            {                                                                                                                    \
            public:                                                                                                              \
                thaf::srz::ByteArray toBytes() const override                                                                    \

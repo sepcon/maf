@@ -106,6 +106,11 @@ CSMessageContentBase::~CSMessageContentBase()
 
 }
 
+void CSMessageContentBase::makesureTransferable()
+{
+
+}
+
 
 } // messaging
 } // thaf

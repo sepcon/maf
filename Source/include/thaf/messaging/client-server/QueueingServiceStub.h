@@ -3,6 +3,9 @@
 #include "thaf/messaging/client-server/ServiceStubBase.h"
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/BasicMessages.h"
+#include "thaf/utils/cppextension/thaf.h"
+#include "thaf/threading/Queue.h"
+#include "thaf/utils/debugging/Debug.h"
 
 namespace thaf {
 namespace messaging {
@@ -17,7 +20,7 @@ public:
     ClientRequestMessage(MyRequestKeeperPtr clp): _requestKeeper(std::move(clp)){}
     MyRequestKeeperPtr getRequestKeeper() { return _requestKeeper; }
     template<class CSMessageContentSpecific>
-    std::shared_ptr<CSMessageContentSpecific> getRequestData() const noexcept {
+    std::shared_ptr<CSMessageContentSpecific> getRequestContent() const noexcept {
         return _requestKeeper->template getRequestContent<CSMessageContentSpecific>();
     }
 
@@ -43,13 +46,15 @@ class QueueingServiceStub : public ServiceStubBase, public ServiceStubHandlerInt
     using MyPtr = std::shared_ptr<MyType>;
 
 public:
-    static MyPtr createStub(ServiceID sid);
+    static MyPtr createStub(ServiceID sid) thaf_throws(std::rutime_error);
+
     template<class CSMessageContentSpecific>
     bool sendStatusUpdate(const std::shared_ptr<CSMessageContentSpecific>& msgContent);
 
 protected:
     QueueingServiceStub(ServiceID sid);
     void onClientRequest(const std::shared_ptr<RequestKeeperBase>& requestKeeper) override;
+
     ComponentRef _compref;
 };
 
@@ -69,16 +74,25 @@ bool QueueingServiceStub<MessageTrait, ControllingServer>::sendStatusUpdate(cons
 }
 
 template<class MessageTrait, class ControllingServer>
-typename QueueingServiceStub<MessageTrait, ControllingServer>::MyPtr QueueingServiceStub<MessageTrait, ControllingServer>::createStub(ServiceID sid)
+typename QueueingServiceStub<MessageTrait, ControllingServer>::MyPtr
+QueueingServiceStub<MessageTrait, ControllingServer>::createStub(ServiceID sid)
 {
     auto serviceProvider = ControllingServer::instance().getServiceProvider(sid);
     if(!serviceProvider)
     {
         serviceProvider.reset(new MyType(sid));
-        ControllingServer::instance().registerServiceProvider(serviceProvider);
+        if(!ControllingServer::instance().registerServiceProvider(serviceProvider))
+        {
+            //Error: there are more than one component trying to create Stub for one service ID
+            std::runtime_error("Stub of service ID " + std::to_string(sid) + "has already taken care by another component!");
+        }
     }
-    auto stub = std::static_pointer_cast<MyType>(serviceProvider);
-    return stub;
+    else
+    {
+        throw std::runtime_error("Stub of service ID " + std::to_string(sid) + "has already taken care by another component!");
+    }
+
+    return std::static_pointer_cast<MyType>(serviceProvider);
 }
 
 
@@ -95,6 +109,11 @@ void QueueingServiceStub<MessageTrait, ControllingServer>::onClientRequest(const
     if(_compref->get())
     {
         _compref->get()->postMessage<MyRequestMessage>(std::static_pointer_cast<MyRequestKeeper>(requestKeeper) );
+    }
+    else
+    {
+        thafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
+        ControllingServer::instance().unregisterServiceProvider(this->serviceID());
     }
 }
 

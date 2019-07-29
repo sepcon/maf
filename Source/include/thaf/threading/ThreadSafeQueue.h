@@ -74,6 +74,21 @@ public:
         }
     }
 
+    bool tryPop(value_type& value)
+    {
+        MT_ALOCK(_mt);
+        if(!isClosed() && !_queue.empty())
+        {
+            value = _queue.front();
+            _queue.pop();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     void close()
     {
         if(!isClosed())

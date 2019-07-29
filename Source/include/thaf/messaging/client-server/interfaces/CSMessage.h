@@ -59,7 +59,7 @@ class CSMessageContentBase
 {
 public:
     virtual ~CSMessageContentBase();
-    virtual void makesureTransferable() {}
+    virtual void makesureTransferable();
     virtual OpID operationID() const { return OpIDInvalid; }
 };
 

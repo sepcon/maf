@@ -4,7 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <istream>
-#include "Serialization.h"
+#include "SerializationTrait.h"
 #include "ByteArray.h"
 
 namespace thaf {
@@ -13,7 +13,7 @@ namespace srz {
 class Serializer
 {
 public:
-    template <typename SerializableObject, std::enable_if_t<std::is_class_v<Serialization<SerializableObject>>, bool> = true>
+    template <typename SerializableObject, std::enable_if_t<std::is_class_v<SerializationTrait<SerializableObject>>, bool> = true>
     Serializer& operator<<(const SerializableObject& obj);
     Serializer& operator<<(const ByteArray& value);
     virtual void flush();
@@ -27,7 +27,7 @@ protected:
 class Deserializer
 {
 public:
-    template <typename T, std::enable_if_t<std::is_class_v<Serialization<T>>, bool> = true>
+    template <typename T, std::enable_if_t<std::is_class_v<SerializationTrait<T>>, bool> = true>
     Deserializer& operator>>(T& obj);
     Deserializer& operator>>(ByteArray& obj);
     virtual bool exhausted() const = 0;
@@ -98,22 +98,22 @@ private:
     std::streamsize _totalRead;
 };
 
-template <typename SerializableObject, std::enable_if_t<std::is_class_v<Serialization<SerializableObject>>, bool>>
+template <typename SerializableObject, std::enable_if_t<std::is_class_v<SerializationTrait<SerializableObject>>, bool>>
 Serializer& Serializer::operator<<(const SerializableObject& obj)
 {
-    using ObjectSerialization = Serialization<SerializableObject>;
-    auto valueSize = ObjectSerialization::serializeSizeOf(obj);
-    ObjectSerialization::serialize(getNextWriteArea(valueSize), obj);
+    using SZTrait = SerializationTrait<SerializableObject>;
+    auto valueSize = SZTrait::serializeSizeOf(obj);
+    SZTrait::serialize(getNextWriteArea(valueSize), obj);
     sync();
     return *this;
 }
 
-template <typename T, std::enable_if_t<std::is_class_v<Serialization<T>>, bool>>
+template <typename T, std::enable_if_t<std::is_class_v<SerializationTrait<T>>, bool>>
 Deserializer& Deserializer::operator>>(T& obj)
 {
     assert((_curpos != ByteArray::InvalidPos) && (_lastpos != ByteArray::InvalidPos));
-    using Srz = Serialization<T>;
-    obj = Srz::deserialize(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
+    using SZTrait = SerializationTrait<T>;
+    obj = SZTrait::deserialize(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
         this->fetchMoreBytes(startp, lastp, neededBytes);
     });
     return *this;

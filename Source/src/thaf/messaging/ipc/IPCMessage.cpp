@@ -11,7 +11,7 @@ namespace ipc {
 srz::ByteArray IPCMessage::toBytes() const noexcept
 {
     BASerializer sr;
-    auto ipcContent = std::static_pointer_cast<IPCMessageContentBase>(content());
+    auto ipcContent = std::static_pointer_cast<SerializableMessageContentBase>(content());
     srz::ByteArray payload = "";
     if(ipcContent)
     {
@@ -28,7 +28,7 @@ bool IPCMessage::fromBytes(const std::shared_ptr<srz::ByteArray> &bytes) noexcep
     BADeserializer ds(*bytes);
     try
     {
-        auto ipcContent = std::make_shared<IPCMessageContentBase>();
+        auto ipcContent = std::make_shared<SerializableMessageContentBase>();
         ds >> _serviceID >> _operationID >> _operationCode >> _requestID >> ipcContent->payload() >> _sourceAddress;
         setContent(std::static_pointer_cast<CSMessageContentBase>(ipcContent));
         return true;

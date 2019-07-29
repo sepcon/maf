@@ -69,14 +69,6 @@ struct ByteArray : public std::string
     }
 };
 
-class Serializable
-{
-public:
-    virtual ByteArray toBytes() = 0;
-    virtual bool fromBytes(const ByteArray& ba) noexcept = 0;
-    virtual ~Serializable() = default;
-};
-
 } // namespace srz
 } // namespace thaf
 

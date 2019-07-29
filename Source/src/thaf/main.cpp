@@ -18,8 +18,9 @@ using namespace thaf::messaging;
 using namespace thaf;
 
 result_object_s(WeatherStatus)
-    properties((std::string, the_status, "It is going to rain now!"),
-               (std::vector<std::string>, list_of_places))
+properties((std::string, the_status, "It is going to rain now!"),
+           (std::vector<std::string>, list_of_places),
+           (std::shared_ptr<std::vector<std::string>>, shared_list_of_places))
 result_object_e(WeatherStatus)
 
 request_object_s(WeatherStatus)
@@ -27,7 +28,7 @@ properties
 (
         (std::string, client_name, "This is client"),
         (uint32_t, command, 0)
-)
+        )
 request_object_e(WeatherStatus)
 
 
@@ -43,9 +44,9 @@ std::vector<std::string> createList()
     return thelist;
 }
 
-std::vector<std::string> listOfPlaces = createList<1000>();
+std::shared_ptr<std::vector<std::string>> listOfPlaces = std::make_shared<std::vector<std::string>>(createList<100000>());
 
-template<class Proxy>
+template<class Proxy, int ServiceID>
 struct ClientComponent
 {
     std::shared_ptr<Proxy> _proxy;
@@ -57,7 +58,11 @@ struct ClientComponent
             if (msg->newStatus == Availability::Available)
             {
                 auto request = std::make_shared<WeatherStatusRequest>();
-                for (int i = 0; i < 10; ++i)
+                _proxy->template sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, [](const std::shared_ptr<WeatherStatusResult>& result){
+                    //thafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: " << (*result)->get_the_status());
+                });
+
+                for (int i = 0; i < 100; ++i)
                 {
                     {
                         util::TimeMeasurement t([](auto time) {
@@ -69,21 +74,21 @@ struct ClientComponent
                             thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*response)->get_the_status());
                         }
                     }
-//                    _proxy->template sendActionRequestSync<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-//                        thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*result)->get_the_status());
-//                        });
+                    /*_proxy->template sendActionRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
+                        thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*result)->get_the_status());
+                        });*/
                 }
                 (*request)->set_command(1);
                 _proxy->template sendActionRequestSync<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-                    thafMsg("************************************************sending the shutdown request!");
-                    thafMsg((*result)->get_the_status());
-                    });
+                    //thafMsg("************************************************sending the shutdown request!");
+                    //thafMsg((*result)->get_the_status());
+                });
             }
-            });
+        });
         _component->start([this] {
-            _proxy = Proxy::createProxy(1);
-            thafMsg("proxy for service 1 ready ! Component  = " << _component->getID());
-            });
+            _proxy = Proxy::createProxy(ServiceID);
+            //thafMsg("proxy for service 1 ready ! Component  = " << _component->getID());
+        });
     }
     void stopTest()
     {
@@ -93,38 +98,60 @@ struct ClientComponent
 };
 
 
-template <class Stub, class RequestMessage>
+template <class Stub, class RequestMessage, int ServiceID>
 class ServerComponent
 {
-	std::shared_ptr<Stub> _stub;
-	std::shared_ptr<Component> _component;
+    std::shared_ptr<Stub> _stub;
+    std::shared_ptr<Component> _component;
     Timer _serverTimer;
 public:
-	void startTest()
-	{
-        _component = std::make_shared<Component>(false);
+    void startTest(bool detached = true)
+    {
+        _component = std::make_shared<Component>(detached);
         _component->onMessage<RequestMessage>([this](const std::shared_ptr<RequestMessage>& msg) {
-			static thread_local int requestCount = 0;
-			++requestCount;
-            _serverTimer.start(15, [this] {
-//				assert(requestCount == (NumberOfRequests + 1) * NClient);
-				thafMsg(" ******************************************Received command shutdown, total request: " << requestCount);
-                _component->shutdown();
-				});
-			auto reqk = msg->getRequestKeeper();
-			auto req = reqk->template getRequestContent<WeatherStatusRequest>();
-			thafMsg("Receiver request from client: " << (*req)->get_client_name());
-			auto res = std::make_shared<WeatherStatusResult>();
-            res->props().set_list_of_places(listOfPlaces);
-			reqk->reply(res);
-			});
+            auto requestKeeper = msg->getRequestKeeper();
+            switch(requestKeeper->getOperationCode())
+            {
+            case OpCode::Register:
+            {
+                //thafMsg("Client registered to status " << msg->getRequestKeeper()->getOperationID());
+                auto msg = WeatherStatusResult::create();
+                msg->props().set_the_status("Response to register");
+                requestKeeper->reply(msg);
+            }
+                break;
+            case OpCode::Request:
+            {
+                //thafMsg("");
+                static thread_local int requestCount = 0;
+                ++requestCount;
+                _serverTimer.start(3000, [this] {
+                    //				assert(requestCount == (NumberOfRequests + 1) * NClient);
+                    //thafMsg("Component id: " << std::this_thread::get_id() << " Timer expired , total request: " << requestCount);
+                    _component->shutdown();
+                });
+                auto req = msg->template getRequestContent<WeatherStatusRequest>();
+                //thafMsg("Receiver request from client: " << (*req)->get_client_name());
+                auto res = std::make_shared<WeatherStatusResult>();
+                res->props().set_shared_list_of_places(listOfPlaces);
+                requestKeeper->reply(res);
+                //                _stub->sendStatusUpdate(res);
+            }
+                break;
 
-		//std::shared_ptr<Stub> stub;
+            default:
+                break;
+
+            }
+
+        });
+
+        //std::shared_ptr<Stub> stub;
         _component->start([this] {
-            _stub = Stub::createStub(1);
-			thafMsg("Stub ready as well");
-			});
-	}
+            _stub = Stub::createStub(ServiceID);
+            //thafMsg("Stub ready as well");
+        });
+    }
     void stopTest()
     {
         _stub.reset();
@@ -133,28 +160,45 @@ public:
 };
 
 
-template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 1>
+template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 3>
 void test()
 {
-    ClientComponent<Proxy> clients[NClient];
-    for (auto i = 0; i < NClient; ++i)
+    ClientComponent<Proxy, 0> clients[NClient];
+    for (auto i = 0; i < NClient / 4; ++i)
     {
         clients[i].startTest();
     }
+    ClientComponent<Proxy, 1> clients1[NClient];
+    for (auto i = 0; i < NClient / 4; ++i)
+    {
+        clients1[i].startTest();
+    }
 
-    //auto clientComp1 = createClientComponent<Proxy>();
-    //auto clientComp2 = createClientComponent<Proxy>();
-    ServerComponent<Stub, RequestMessage> server;
+    ClientComponent<Proxy, 2> clients2[NClient];
+    for (auto i = 0; i < NClient / 4; ++i)
+    {
+        clients2[i].startTest();
+    }
+
+    ClientComponent<Proxy, 3> clients3[NClient];
+    for (auto i = 0; i < NClient / 4; ++i)
+    {
+        clients3[i].startTest();
+    }
+
+    ServerComponent<Stub, RequestMessage, 0> server;
     server.startTest();
-//    LocalIPCClient::instance().deinit();
-//    LocalIPCServer::instance().deinit();
-//    IAMessageRouter::instance().deinit();
-//    server.stopTest();
-//    for(auto& cl : clients)
-//    {
-//        cl.stopTest();
-//    }
-	thafMsg("End test");
+
+    ServerComponent<Stub, RequestMessage, 1> server1;
+    server1.startTest();
+    
+    ServerComponent<Stub, RequestMessage, 2> server2;
+    server2.startTest();
+
+    ServerComponent<Stub, RequestMessage, 3> server3;
+    server3.startTest(false);
+
+    //thafMsg("End test");
 }
 int main()
 {
@@ -162,12 +206,17 @@ int main()
 
     LocalIPCClient::instance().init(addr);
     LocalIPCServer::instance().init(addr);
+    {
+        util::TimeMeasurement tm([](long long time) {
+            thafMsg("Total test time = " << time << "ms");
+        });
 
-//    test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
-//    test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
+        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
+        test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
 
-    thafMsg("Program ends!");
-	std::cin.get();
+        thafMsg("Program ends!");
+    }
+    std::cin.get();
     return 0;
 }
 

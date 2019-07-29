@@ -99,8 +99,6 @@ private:
     mutable Mutex _m;
 };
 
-template <typename ProtectedObject>
-using SyncObjectM = SyncObject<ProtectedObject, std::mutex>;
 
 } // stl
 } // thaf

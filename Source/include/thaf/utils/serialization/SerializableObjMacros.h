@@ -1,14 +1,14 @@
 #ifndef SERIALIZABLEOBJMACROS_H
 #define SERIALIZABLEOBJMACROS_H
 
-#include "thaf/utils/cppextension/Macros.h"
+#include "thaf/utils/cppextension/LoopMacros.h"
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 /// ----------------------------Declare Serializable class --------------------------------------------------------------------------------
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 #define mc_serializable_object_(ClassName) \
     struct ClassName { \
-    friend struct thaf::srz::Serialization<ClassName>; \
+    friend struct thaf::srz::SerializationTrait<ClassName>; \
     constexpr const char* class_name() const { return #ClassName; } \
     mc_constructors_(ClassName)
 

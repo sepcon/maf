@@ -73,17 +73,17 @@ inline void makeSureDeserializable(const char** startp, const char** lastp, Size
  * 2. Serialize the object in to byte_array
  * 3. Deserialize to re-structure the object from byte_array
  */
-template<typename NonDeterminedType>
-struct Serialization
+template<typename T>
+struct SerializationTrait
 {
     /**
      * @brief serializeSizeOf: Calculating size of object to be serialized
      * @param value: the const reference to object tobe serialized
      * @return number of contiguous bytes needed to serialize the provided object
      */
-    inline static SizeType serializeSizeOf(const NonDeterminedType& value) noexcept
+    inline static SizeType serializeSizeOf(const T& value) noexcept
     {
-        return prv::template serializeSizeOf<NonDeterminedType>(value);
+        return prv::template serializeSizeOf<T>(value);
     }
 
     /**
@@ -92,9 +92,9 @@ struct Serialization
      * @param value: the const reference to object tobe serialized
      * @return number of contiguous bytes used to store the object == serializeSizeOf(value)
      */
-    inline static SizeType serialize(char* startp, const NonDeterminedType& value) noexcept
+    inline static SizeType serialize(char* startp, const T& value) noexcept
     {
-        return prv::template serialize<NonDeterminedType>(startp, value);
+        return prv::template serialize<T>(startp, value);
     }
     /**
      * @brief deserialize: re-structure the object from byte_array, thows the std::length_error if not enough bytes for re-constructing object
@@ -105,9 +105,9 @@ struct Serialization
      * greater than size ofprovided byte_array
      * @return the deseralized object
      */
-    inline static NonDeterminedType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+    inline static T deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
     {
-        return prv::template deserialize<NonDeterminedType>(startp, lastp, requestMoreBytes);
+        return prv::template deserialize<T>(startp, lastp, requestMoreBytes);
     }
 
     struct prv
@@ -117,86 +117,48 @@ struct Serialization
 #define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
 #define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
 #define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
-#define mc_enable_if_is_a_serializable_object(Object) template <typename Object, std::enable_if_t<std::is_base_of_v<Serializable, Object>, bool> = true>
 #define mc_enable_if_is_a_char_string(CharString) template <typename CharString, std::enable_if_t<std::is_base_of_v<std::string, CharString> && !std::is_same_v<std::string, CharString>, bool> = true>
 #define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
 
-        //mc_enable_if_is_a_serializable_object(SerializableObject)
-        //inline static SizeType serializeSizeOf(const SerializableObject& value)
-        //{
-        //    return static_cast<SizeType>(value.toBytes().size());
-        //}
-        //mc_enable_if_is_a_serializable_object(SerializableObject)
-        //    inline static SizeType serialize(char* startp, const SerializableObject& value) noexcept
-        //{
-        //    return Serialization<ByteArray>::serialize(startp, value.toBytes());
-        //}
-
-        //mc_enable_if_is_a_serializable_object(SerializableObject)
-        //    inline static SerializableObject deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
-        //{
-        //    ByteArray bytes;
-        //    SerializableObject sbObject;
-        //    bytes = Serialization<ByteArray>::deserialize(startp, lastp, requestMoreBytes);
-        //    sbObject.fromBytes(bytes);
-        //    return sbObject;
-        //}
-
-        //mc_enable_if_is_a_char_string(CharString)
-        //inline static SizeType serializeSizeOf(const CharString& value)
-        //{
-        //    return Serialization<std::string>::serializeSizeOf(static_cast<const std::string&>(value));
-        //}
-        //mc_enable_if_is_a_char_string(CharString)
-        //    inline static SizeType serialize(char* startp, const CharString& value) noexcept
-        //{
-        //    return Serialization<std::string>::serialize(startp, static_cast<const std::string&>(value));
-        //}
-
-        //mc_enable_if_is_a_char_string(CharString)
-        //    inline static CharString deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
-        //{
-        //    return Serialization<std::string>::deserialize(startp, lastp, requestMoreBytes);
-        //}
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static SizeType serializeSizeOf(const TupleWrap& value) noexcept
         {
-            return Serialization<typename TupleWrap::value_type>::serializeSizeOf(value._data);
+            return SerializationTrait<typename TupleWrap::value_type>::serializeSizeOf(value._data);
         }
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static SizeType serialize(char* startp, const TupleWrap& value) noexcept
         {
-            return Serialization<typename TupleWrap::value_type>::serialize(startp, value._data);
+            return SerializationTrait<typename TupleWrap::value_type>::serialize(startp, value._data);
         }
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static TupleWrap deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             TupleWrap value;
-            value._data = Serialization<typename TupleWrap::value_type>::deserialize(startp, lastp, requestMoreBytes);
+            value._data = SerializationTrait<typename TupleWrap::value_type>::deserialize(startp, lastp, requestMoreBytes);
             return value;
         }
 
-        mc_enable_if_is_number_or_enum_(NumberType)
-        inline static SizeType serializeSizeOf(const NumberType& /*value*/) noexcept
+        mc_enable_if_is_number_or_enum_(NumberOrEnum)
+        inline static SizeType serializeSizeOf(const NumberOrEnum& /*value*/) noexcept
         {
-            return sizeof(NumberType);
+            return sizeof(NumberOrEnum);
         }
 
-        mc_enable_if_is_number_or_enum_(NumberType)
-        inline static SizeType serialize(char* startp, const NumberType& value) noexcept
+        mc_enable_if_is_number_or_enum_(NumberOrEnum)
+        inline static SizeType serialize(char* startp, const NumberOrEnum& value) noexcept
         {
             auto serializedCount = serializeSizeOf(value);
-            *reinterpret_cast<PURE_TYPE_OF_TYPE(NumberType)*>(startp) = value;
+            *reinterpret_cast<PURE_TYPE_OF_TYPE(NumberOrEnum)*>(startp) = value;
             return serializedCount;
         }
-        mc_enable_if_is_number_or_enum_(NumberType)
-            inline static NumberType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        mc_enable_if_is_number_or_enum_(NumberOrEnum)
+            inline static NumberOrEnum deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
-            makeSureDeserializable(startp, lastp, sizeof(NumberType), requestMoreBytes);
-            auto value = *(reinterpret_cast<const PURE_TYPE_OF_TYPE(NumberType)*>(*startp));
+            makeSureDeserializable(startp, lastp, sizeof(NumberOrEnum), requestMoreBytes);
+            auto value = *(reinterpret_cast<const PURE_TYPE_OF_TYPE(NumberOrEnum)*>(*startp));
             *startp += serializeSizeOf(value);
             return value;
         }
@@ -208,7 +170,7 @@ struct Serialization
             if(value)
             {
                 using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
-                size += Serialization<NormalTypeOfPointerType>::serializeSizeOf(*value);
+                size += SerializationTrait<NormalTypeOfPointerType>::serializeSizeOf(*value);
             }
             return size;
         }
@@ -223,7 +185,7 @@ struct Serialization
             {
                 using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
                 *startp = 1;
-                bytesUsed += Serialization<NormalTypeOfPointerType>::serialize(startp + 1, *value);
+                bytesUsed += SerializationTrait<NormalTypeOfPointerType>::serialize(startp + 1, *value);
             }
             else
             {
@@ -245,7 +207,7 @@ struct Serialization
             if(isNotNull)
             {
                 value = new NormalTypeOfPointerType;
-                *value = Serialization<NormalTypeOfPointerType>::deserialize(startp, lastp, requestMoreBytes);
+                *value = SerializationTrait<NormalTypeOfPointerType>::deserialize(startp, lastp, requestMoreBytes);
             }
             return value;
         }
@@ -254,21 +216,21 @@ struct Serialization
             inline static SizeType serializeSizeOf(const SmartPtrType& value) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
-            return Serialization<PtrType>::serializeSizeOf(value.get());
+            return SerializationTrait<PtrType>::serializeSizeOf(value.get());
         }
 
         mc_enable_if_is_smartptr_(SmartPtrType)
             inline static SizeType serialize(char* startp, const SmartPtrType& value) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
-            return Serialization<PtrType>::serialize(startp, value.get());
+            return SerializationTrait<PtrType>::serialize(startp, value.get());
         }
 
         mc_enable_if_is_smartptr_(SmartPtrType)
         inline static SmartPtrType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             using PtrType = typename SmartPtrType::element_type*;
-            return SmartPtrType(Serialization<PtrType>::deserialize(startp, lastp, requestMoreBytes));
+            return SmartPtrType(SerializationTrait<PtrType>::deserialize(startp, lastp, requestMoreBytes));
         }
     };
 
@@ -281,40 +243,40 @@ struct Serialization
 };
 
 template <typename T1, typename T2>
-struct Serialization<std::pair<T1, T2>>
+struct SerializationTrait<std::pair<T1, T2>>
 {
     using DType = std::pair<T1, T2>;
     inline static SizeType serializeSizeOf(const DType& p)  noexcept
     {
-        return Serialization<PURE_TYPE(p.first)>::serializeSizeOf(p.first) +
-            Serialization<PURE_TYPE(p.second)>::serializeSizeOf(p.second);
+        return SerializationTrait<PURE_TYPE(p.first)>::serializeSizeOf(p.first) +
+            SerializationTrait<PURE_TYPE(p.second)>::serializeSizeOf(p.second);
     }
 
     inline static SizeType serialize(char* startp, const DType& p) noexcept
     {
         SizeType bytesCount = 0;
-        bytesCount += Serialization<PURE_TYPE(p.first)>::serialize(startp, p.first);
-        bytesCount += Serialization<PURE_TYPE(p.second)>::serialize(startp + bytesCount, p.second);
+        bytesCount += SerializationTrait<PURE_TYPE(p.first)>::serialize(startp, p.first);
+        bytesCount += SerializationTrait<PURE_TYPE(p.second)>::serialize(startp + bytesCount, p.second);
         return bytesCount;
     }
     inline static DType deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
     {
         DType p;
-        p.first = Serialization<PURE_TYPE(p.first)>::deserialize(startp, lastp, requestMoreBytes);
-        p.second = Serialization<PURE_TYPE(p.second)>::deserialize(startp, lastp, requestMoreBytes);
+        p.first = SerializationTrait<PURE_TYPE(p.first)>::deserialize(startp, lastp, requestMoreBytes);
+        p.second = SerializationTrait<PURE_TYPE(p.second)>::deserialize(startp, lastp, requestMoreBytes);
         return p;
     }
 };
 
 template<typename ... ElemType >
-struct Serialization<std::tuple<ElemType...> >
+struct SerializationTrait<std::tuple<ElemType...> >
 {
-    using SizeTypeSerializer = Serialization<SizeType>;
+    using SizeTypeSerializer = SerializationTrait<SizeType>;
 
     inline static SizeType serializeSizeOf(const std::tuple<ElemType...>& tp) noexcept {
         SizeType contentSize = 0;
         stl::tuple_for_each(tp, [&contentSize](const auto& elem) {
-            contentSize += Serialization<PURE_TYPE(elem)>::serializeSizeOf(elem);
+            contentSize += SerializationTrait<PURE_TYPE(elem)>::serializeSizeOf(elem);
         });
         return contentSize;
     }
@@ -322,7 +284,7 @@ struct Serialization<std::tuple<ElemType...> >
     inline static SizeType serialize(char* startp, const std::tuple<ElemType...>& tp) noexcept {
         SizeType serializedCount = 0;
         stl::tuple_for_each(tp, [&serializedCount, &startp](const auto& elem) {
-            serializedCount += Serialization<PURE_TYPE(elem)>::serialize(startp + serializedCount, elem);
+            serializedCount += SerializationTrait<PURE_TYPE(elem)>::serialize(startp + serializedCount, elem);
         });
         return serializedCount;
     }
@@ -330,16 +292,16 @@ struct Serialization<std::tuple<ElemType...> >
     inline static std::tuple<ElemType...> deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         std::tuple<ElemType...> tp;
         stl::tuple_for_each(tp, [&startp, &lastp, requestMoreBytes](auto& elem) {
-            elem = Serialization<PURE_TYPE(elem)>::deserialize(startp, lastp, requestMoreBytes);
+            elem = SerializationTrait<PURE_TYPE(elem)>::deserialize(startp, lastp, requestMoreBytes);
         });
         return tp;
     }
 };
 
 template<typename CharT, class Trait, class Allocator>
-struct Serialization<std::basic_string<CharT, Trait, Allocator> >
+struct SerializationTrait<std::basic_string<CharT, Trait, Allocator> >
 {
-    using SizeTypeSerializer = Serialization<SizeType>;
+    using SizeTypeSerializer = SerializationTrait<SizeType>;
     using ValueType = std::basic_string<CharT>;
     inline static SizeType contentSizeOf(const ValueType& s) noexcept
     {
@@ -368,9 +330,9 @@ struct Serialization<std::basic_string<CharT, Trait, Allocator> >
 };
 
 template<>
-struct Serialization<ByteArray>
+struct SerializationTrait<ByteArray>
 {
-    using SizeTypeSerializer = Serialization<SizeType>;
+    using SizeTypeSerializer = SerializationTrait<SizeType>;
     using ValueType = ByteArray;
     inline static SizeType contentSizeOf(const ValueType& s) noexcept
     {
@@ -380,13 +342,25 @@ struct Serialization<ByteArray>
         return SIZETYPE_WIDE + static_cast<SizeType>(contentSizeOf(value));
     }
     inline static SizeType serialize(char* startp, const ValueType& value) noexcept {
-        return Serialization<std::string>::serialize(startp, static_cast<const std::string&>(value));
+        return SerializationTrait<std::string>::serialize(startp, static_cast<const std::string&>(value));
     }
     inline static ValueType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         ValueType value;
-        static_cast<std::string&>(value) = Serialization<std::string>::deserialize(startp, lastp, requestMoreBytes);
+        static_cast<std::string&>(value) = SerializationTrait<std::string>::deserialize(startp, lastp, requestMoreBytes);
         return value;
     }
+};
+
+template <class Container>
+struct Reserver
+{
+    static void reserve(Container& /*c*/, SizeType /*size*/){}
+};
+
+template<typename T>
+struct Reserver<std::vector<T>>
+{
+    static void reserve(std::vector<T>& c, SizeType size){ c.reserve(static_cast<size_t>(size)); }
 };
 
 template<class Sequence>
@@ -396,7 +370,7 @@ struct SequenceSC
     {
         SizeType contentSize = 0;
         for (const auto& e : c) {
-            contentSize += Serialization<typename Sequence::value_type>::serializeSizeOf(e);
+            contentSize += SerializationTrait<typename Sequence::value_type>::serializeSizeOf(e);
         }
         return SIZETYPE_WIDE + contentSize;
     }
@@ -408,9 +382,9 @@ struct SequenceSz
     {
         SizeType serializedCount = 0;
         SizeType numberOfElems = static_cast<SizeType>(c.size());
-        serializedCount += Serialization<SizeType>::serialize(startp, numberOfElems);
+        serializedCount += SerializationTrait<SizeType>::serialize(startp, numberOfElems);
         for (const auto& elem : c) {
-            serializedCount += Serialization<typename Sequence::value_type>::serialize(startp + serializedCount, elem);
+            serializedCount += SerializationTrait<typename Sequence::value_type>::serialize(startp + serializedCount, elem);
         }
         return serializedCount;
     }
@@ -418,12 +392,13 @@ struct SequenceSz
 template <class Sequence>
 struct SequenceDsz
 {
-    using SizeTypeSerializer = Serialization<SizeType>;
-    using ElemSerializer = Serialization<typename Sequence::value_type>;
+    using SizeTypeSerializer = SerializationTrait<SizeType>;
+    using ElemSerializer = SerializationTrait<typename Sequence::value_type>;
     inline static Sequence deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         Sequence c;
         auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
         if (size > 0) {
+            Reserver<Sequence>::reserve(c, size);
             for (SizeType i = 0; i < size; ++i) {
                 c.insert(c.end(), ElemSerializer::deserialize(startp, lastp, requestMoreBytes));
             }
@@ -438,11 +413,11 @@ struct AssociativeDsz
     using ValueType = typename Associative::mapped_type;
     inline static Associative deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         Associative m;
-        SizeType size = Serialization<SizeType>::deserialize(startp, lastp, requestMoreBytes);
+        SizeType size = SerializationTrait<SizeType>::deserialize(startp, lastp, requestMoreBytes);
         for (SizeType i = 0; i < size; ++i)
         {
-            auto key = Serialization<PURE_TYPE_OF_TYPE(KeyType)>::deserialize(startp, lastp, requestMoreBytes);
-            auto value = Serialization<PURE_TYPE_OF_TYPE(ValueType)>::deserialize(startp, lastp, requestMoreBytes);
+            auto key = SerializationTrait<PURE_TYPE_OF_TYPE(KeyType)>::deserialize(startp, lastp, requestMoreBytes);
+            auto value = SerializationTrait<PURE_TYPE_OF_TYPE(ValueType)>::deserialize(startp, lastp, requestMoreBytes);
             m.emplace(std::move(key), std::move(value));
         }
         return m;
@@ -454,8 +429,8 @@ struct SequenceSerializer : public SequenceSC<Containter>, public SequenceSz<Con
 template<class Containter>
 struct AssociativeSerializer : public SequenceSC<Containter>, public SequenceSz<Containter>, public AssociativeDsz<Containter> {};
 
-#define SPECIALIZE_SEQUENCE_SERIALIZATION(Container) template<typename ElemType > struct Serialization< Container<ElemType> > : public SequenceSerializer< Container<ElemType> >{};
-#define SPECIALIZE_ASSOCIATIVE_SERIALIZATION(Container) template<typename Key, typename Value > struct Serialization< Container<Key, Value> > : public AssociativeSerializer< Container<Key, Value> >{};
+#define SPECIALIZE_SEQUENCE_SERIALIZATION(Container) template<typename ElemType > struct SerializationTrait< Container<ElemType> > : public SequenceSerializer< Container<ElemType> >{};
+#define SPECIALIZE_ASSOCIATIVE_SERIALIZATION(Container) template<typename Key, typename Value > struct SerializationTrait< Container<Key, Value> > : public AssociativeSerializer< Container<Key, Value> >{};
 
 SPECIALIZE_SEQUENCE_SERIALIZATION(std::vector)
 SPECIALIZE_SEQUENCE_SERIALIZATION(std::set)

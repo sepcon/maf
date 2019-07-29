@@ -48,7 +48,7 @@ public:
     Component& onSignal(SignalMsgHandlerFunc handler);
 
 protected:
-    using MsgHandlerMap = stl::SyncObjectM<std::map<MessageBase::Type, MessageHandlerFunc>>;
+    using MsgHandlerMap = stl::SyncObject<std::map<MessageBase::Type, MessageHandlerFunc>>;
     static TimerMgrPtr getTimeManager();
     void startMessageLoop();
     std::thread _workerThread;

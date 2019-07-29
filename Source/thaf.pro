@@ -156,18 +156,20 @@ HEADERS += \
     include/thaf/threading/prv/ThreadPoolImplBase.h \
     include/thaf/threading/prv/TimerManagerImpl.h \
     include/thaf/utils/TimeMeasurement.h \
+    include/thaf/utils/cppextension/LoopMacros.h \
     include/thaf/utils/cppextension/SyncObject.h \
+    include/thaf/utils/cppextension/thaf.h \
     include/thaf/utils/debugging/Debug.h \
     include/thaf/utils/IDManager.h \
     include/thaf/patterns/Patterns.h \
-    include/thaf/utils/cppextension/Macros.h \
     include/thaf/utils/cppextension/TupleManip.h \
     include/thaf/utils/cppextension/TypeTraits.h \
     include/thaf/utils/serialization/ByteArray.h \
     include/thaf/utils/serialization/DumpHelper.h \
+    include/thaf/utils/serialization/SerializableInterface.h \
     include/thaf/utils/serialization/SerializableObjMacros.h \
     include/thaf/utils/serialization/SerializableObject.h \
-    include/thaf/utils/serialization/Serialization.h \
+    include/thaf/utils/serialization/SerializationTrait.h \
     include/thaf/utils/serialization/Serializer.h \
     include/thaf/messaging/ipc/ClientServerContractMacros.h \
     include/thaf/messaging/ipc/IPCFactory.h \

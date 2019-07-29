@@ -2,7 +2,7 @@
 #define IPCMESSAGE_H
 
 #include "thaf/utils/serialization/ByteArray.h"
-#include "thaf/utils/serialization/SerializableObject.h"
+#include "thaf/utils/serialization/SerializableInterface.h"
 #include "thaf/utils/debugging/Debug.h"
 #include "thaf/messaging/client-server/interfaces/CSMessage.h"
 #include <functional>
@@ -12,11 +12,11 @@ namespace messaging {
 namespace ipc {
 
 using PayloadType = srz::ByteArray;
-class IPCMessageContentBase : public CSMessageContentBase
+class SerializableMessageContentBase : public CSMessageContentBase, public srz::SerializableInterface
 {
 public:
-    virtual srz::ByteArray toBytes() noexcept { return {}; }
-    virtual void fromBytes(const srz::ByteArray& /*ba*/) {}
+    srz::ByteArray toBytes() noexcept override { return {}; }
+    void fromBytes(const srz::ByteArray& /*ba*/) override {}
     void makesureTransferable() override {
         _payload = toBytes();
     }
