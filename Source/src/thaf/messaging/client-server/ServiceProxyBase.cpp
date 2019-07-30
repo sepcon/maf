@@ -1,5 +1,5 @@
 #include "thaf/messaging/client-server/ServiceProxyBase.h"
-#include "thaf/messaging/client-server/interfaces/ClientInterface.h"
+#include "thaf/messaging/client-server/ClientInterface.h"
 #include "thaf/utils/debugging/Debug.h"
 
 
@@ -45,17 +45,8 @@ RegID ServiceProxyBase::sendRequest(const CSMsgContentPtr &msgContent,
     CSMessageHandlerCallback callback
     )
 {
-    RegID regID = {};
-    auto csMsg = this->createCSMessage(msgContent->operationID(), OpCode::Request, msgContent);
-    if(callback)
-    {
-        regID = storeAndSendRequestToServer(_requestEntriesMap, csMsg, callback);
-    }
-    else
-    {
-        _client->sendMessageToServer(csMsg);
-    }
-    return regID;
+    assert(msgContent && "Message content must not be null when passing to this function");
+    return sendRequest(msgContent->operationID(), msgContent, callback);
 }
 
 void ServiceProxyBase::sendAbortRequest(const RegID &regID)
@@ -100,28 +91,35 @@ void ServiceProxyBase::sendAbortSyncRequest(const RegID &regID)
 bool ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback, unsigned long maxWaitTimeMs)
 {
     bool success = false;
-    if(callback)
+    auto responseMsg = sendRequestSync(msgContent, maxWaitTimeMs);
+    try
     {
-        if(auto responseMsg = sendRequestSync(msgContent, maxWaitTimeMs))
-        {
-            try
-            {
-                callback(responseMsg);
-                success = true;
-            }
-            catch (const std::exception& e)
-            {
-                thafErr("Exception when executing callback: " << e.what());
-            }
-        }
+       if(callback) callback(responseMsg);
+        success = true;
+    }
+    catch (const std::exception& e)
+    {
+        thafErr("Exception when executing callback: " << e.what());
     }
     return success;
 }
 
 CSMessagePtr ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, unsigned long maxWaitTimeMs)
 {
+    assert(msgContent && "msgContent is not allowed to be null here");
+    return sendRequestSync(msgContent->operationID(), msgContent, maxWaitTimeMs);
+}
+
+RegID ServiceProxyBase::sendRequest(OpID operationID, const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback)
+{
+    auto csMsg = this->createCSMessage(operationID, OpCode::Request, msgContent);
+    return storeAndSendRequestToServer(_requestEntriesMap, csMsg, callback);
+}
+
+CSMessagePtr ServiceProxyBase::sendRequestSync(OpID operationID, const CSMsgContentPtr &msgContent, unsigned long maxWaitTimeMs)
+{
     RegID regID;
-    auto csMsg = this->createCSMessage(msgContent->operationID(), OpCode::RequestSync, msgContent);
+    auto csMsg = this->createCSMessage(operationID, OpCode::RequestSync, msgContent);
     auto resultFuture = storeSyncRegEntry(csMsg, regID);
     if(resultFuture && sendMessageToServer(csMsg))
     {
@@ -241,7 +239,10 @@ void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg)
         }
     }
 
-    callback(msg);
+    if(callback)
+    {
+        callback(msg);
+    }
 }
 
 void ServiceProxyBase::onRequestSyncResult(const CSMessagePtr &msg)

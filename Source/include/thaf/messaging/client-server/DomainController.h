@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interfaces/Address.h"
+#include "Address.h"
 #include "thaf/utils/cppextension/SyncObject.h"
 #include "thaf/patterns/Patterns.h"
 

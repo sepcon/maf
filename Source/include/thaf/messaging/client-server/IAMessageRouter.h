@@ -1,9 +1,9 @@
 #pragma once
 
-#include "interfaces/ClientInterface.h"
-#include "interfaces/ServerInterface.h"
+#include "ClientInterface.h"
+#include "ServerInterface.h"
 #include "thaf/patterns/Patterns.h"
-#include "prv/IAMessageTrait.h"
+#include "IAMessageTrait.h"
 #include "ClientBase.h"
 #include "ServerBase.h"
 

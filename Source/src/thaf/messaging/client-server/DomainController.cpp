@@ -1,5 +1,5 @@
 #include "thaf/messaging/client-server/DomainController.h"
-#include "thaf/messaging/client-server/interfaces/DomainUser.h"
+#include "thaf/messaging/client-server/DomainUser.h"
 #include "thaf/utils/debugging/Debug.h"
 
 namespace thaf {

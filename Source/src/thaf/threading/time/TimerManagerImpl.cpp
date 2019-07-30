@@ -1,4 +1,4 @@
-#include "thaf/threading/prv/TimerManagerImpl.h"
+#include "thaf/threading/internal/TimerManagerImpl.h"
 #include "thaf/utils/debugging/Debug.h"
 #include <algorithm>
 

@@ -111,7 +111,7 @@ Serializer& Serializer::operator<<(const SerializableObject& obj)
 template <typename T, std::enable_if_t<std::is_class_v<SerializationTrait<T>>, bool>>
 Deserializer& Deserializer::operator>>(T& obj)
 {
-    assert((_curpos != ByteArray::InvalidPos) && (_lastpos != ByteArray::InvalidPos));
+//    assert((_curpos != ByteArray::InvalidPos) && (_lastpos != ByteArray::InvalidPos));
     using SZTrait = SerializationTrait<T>;
     obj = SZTrait::deserialize(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
         this->fetchMoreBytes(startp, lastp, neededBytes);

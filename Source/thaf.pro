@@ -21,14 +21,14 @@ win32: {
     message(win32)
     LIBS += -lKernel32
 
-    SOURCES += src/thaf/messaging/ipc/platforms/windows/LocalIPCReceiver.cpp \
-                src/thaf/messaging/ipc/platforms/windows/LocalIPCSender.cpp \
-                src/thaf/messaging/ipc/platforms/windows/NamedPipeReceiver.cpp \
-                src/thaf/messaging/ipc/platforms/windows/NamedPipeReceiverBase.cpp \
-                src/thaf/messaging/ipc/platforms/windows/NamedPipeSender.cpp \
-                src/thaf/messaging/ipc/platforms/windows/NamedPipeSenderBase.cpp \
-                src/thaf/messaging/ipc/platforms/windows/OverlappedPipeSender.cpp \
-                src/thaf/messaging/ipc/platforms/windows/OverlappedPipeReceiver.cpp
+    SOURCES += src/thaf/messaging/client-server/ipc/platforms/windows/LocalIPCReceiver.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/LocalIPCSender.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiver.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiverBase.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeSender.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/OverlappedPipeSender.cpp \
+                src/thaf/messaging/client-server/ipc/platforms/windows/OverlappedPipeReceiver.cpp
 
 
     HEADERS +=    
@@ -69,9 +69,9 @@ SOURCES += \
     src/thaf/messaging/client-server/ServiceProxyBase.cpp \
     src/thaf/messaging/client-server/ServiceStubBase.cpp \
     src/thaf/messaging/client-server/Address.cpp \
-    src/thaf/messaging/ipc/BytesCommunicator.cpp \
-    src/thaf/messaging/ipc/IPCClientBase.cpp \
-    src/thaf/messaging/ipc/IPCServerBase.cpp \
+    src/thaf/messaging/client-server/ipc/BytesCommunicator.cpp \
+    src/thaf/messaging/client-server/ipc/IPCClientBase.cpp \
+    src/thaf/messaging/client-server/ipc/IPCServerBase.cpp \
     src/thaf/threading/Thread.cpp \
     src/thaf/threading/threadpool/DynamicCountThreadPool.cpp \
     src/thaf/threading/threadpool/ThreadPoolFactory.cpp \
@@ -82,9 +82,9 @@ SOURCES += \
     src/thaf/threading/time/Waiter.cpp \
     src/thaf/utils/IDManager.cpp \
     src/thaf/utils/serialization/Serializer.cpp \
-    src/thaf/messaging/ipc/IPCFactory.cpp \
-    src/thaf/messaging/ipc/IPCMessage.cpp \
-    src/thaf/messaging/ipc/IPCReceiver.cpp
+    src/thaf/messaging/client-server/ipc/IPCFactory.cpp \
+    src/thaf/messaging/client-server/ipc/IPCMessage.cpp \
+    src/thaf/messaging/client-server/ipc/IPCReceiver.cpp
 
 HEADERS += \
     include/thaf/messaging/BasicMessages.h \
@@ -110,39 +110,40 @@ HEADERS += \
     include/thaf/messaging/client-server/ServerDomainController.h \
     include/thaf/messaging/client-server/ServiceProxyBase.h \
     include/thaf/messaging/client-server/ServiceStubBase.h \
-    include/thaf/messaging/client-server/interfaces/Address.h \
-    include/thaf/messaging/client-server/interfaces/CSDefines.h \
-    include/thaf/messaging/client-server/interfaces/CSMessage.h \
-    include/thaf/messaging/client-server/interfaces/CSMessageReceiver.h \
-    include/thaf/messaging/client-server/interfaces/CSStatus.h \
-    include/thaf/messaging/client-server/interfaces/CSTypes.h \
-    include/thaf/messaging/client-server/interfaces/ClientInterface.h \
-    include/thaf/messaging/client-server/interfaces/DomainUser.h \
-    include/thaf/messaging/client-server/interfaces/RegisterDataStructure.h \
-    include/thaf/messaging/client-server/interfaces/RequestKeeper.h \
-    include/thaf/messaging/client-server/interfaces/ServerInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceMessageReceiver.h \
-    include/thaf/messaging/client-server/interfaces/ServiceProviderInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceProxyInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceRequesterInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceStatusObserverInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceStubHandlerInterface.h \
-    include/thaf/messaging/client-server/interfaces/ServiceStubInterface.h \
-    include/thaf/messaging/client-server/prv/CSMessageTrait.h \
-    include/thaf/messaging/client-server/prv/IAMessageTrait.h \
+    include/thaf/messaging/client-server/Address.h \
+    include/thaf/messaging/client-server/CSDefines.h \
+    include/thaf/messaging/client-server/CSMessage.h \
+    include/thaf/messaging/client-server/CSMessageReceiver.h \
+    include/thaf/messaging/client-server/CSStatus.h \
+    include/thaf/messaging/client-server/CSTypes.h \
+    include/thaf/messaging/client-server/ClientInterface.h \
+    include/thaf/messaging/client-server/DomainUser.h \
+    include/thaf/messaging/client-server/RegisterDataStructure.h \
+    include/thaf/messaging/client-server/RequestKeeper.h \
+    include/thaf/messaging/client-server/ServerInterface.h \
+    include/thaf/messaging/client-server/ServiceMessageReceiver.h \
+    include/thaf/messaging/client-server/ServiceProviderInterface.h \
+    include/thaf/messaging/client-server/ServiceProxyInterface.h \
+    include/thaf/messaging/client-server/ServiceRequesterInterface.h \
+    include/thaf/messaging/client-server/ServiceStatusObserverInterface.h \
+    include/thaf/messaging/client-server/ServiceStubHandlerInterface.h \
+    include/thaf/messaging/client-server/ServiceStubInterface.h \
+    include/thaf/messaging/client-server/internal/CSShared.h \
+    include/thaf/messaging/client-server/IAMessageTrait.h \
     include/thaf/messaging/client-server/Connection.h \
+    include/thaf/messaging/client-server/ipc/BytesCommunicator.h \
+    include/thaf/messaging/client-server/ipc/CSContractBegin.mc.h \
+    include/thaf/messaging/client-server/ipc/CSContractDefines.mc.h \
+    include/thaf/messaging/client-server/ipc/CSContractEnd.mc.h \
+    include/thaf/messaging/client-server/ipc/IPCClientBase.h \
+    include/thaf/messaging/client-server/ipc/IPCServerBase.h \
+    include/thaf/messaging/client-server/ipc/IPCTypes.h \
+    include/thaf/messaging/client-server/ipc/LocalIPCClient.h \
+    include/thaf/messaging/client-server/ipc/LocalIPCServer.h \
+    include/thaf/messaging/client-server/ipc/LocalIPCServiceProxy.h \
+    include/thaf/messaging/client-server/ipc/LocalIPCServiceStub.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/linux/LocalIPCSender.h \
     include/thaf/messaging/MessageHandler.h \
-    include/thaf/messaging/client-server/prv/ServiceManagement.h \
-    include/thaf/messaging/ipc/BytesCommunicator.h \
-    include/thaf/messaging/ipc/IPCClientBase.h \
-    include/thaf/messaging/ipc/IPCMsgDefinesMacros.h \
-    include/thaf/messaging/ipc/IPCServerBase.h \
-    include/thaf/messaging/ipc/IPCTypes.h \
-    include/thaf/messaging/ipc/LocalIPCClient.h \
-    include/thaf/messaging/ipc/LocalIPCServer.h \
-    include/thaf/messaging/ipc/LocalIPCServiceProxy.h \
-    include/thaf/messaging/ipc/LocalIPCServiceStub.h \
-    include/thaf/messaging/ipc/prv/platforms/linux/LocalIPCSender.h \
     include/thaf/threading/IThreadPool.h \
     include/thaf/threading/Queue.h \
     include/thaf/threading/Runnable.h \
@@ -153,11 +154,11 @@ HEADERS += \
     include/thaf/threading/ThreadSafeQueue.h \
     include/thaf/threading/TimerManager.h \
     include/thaf/threading/Waiter.h \
-    include/thaf/threading/prv/DynamicCountThreadPool.h \
-    include/thaf/threading/prv/PriorityThreadPool.h \
-    include/thaf/threading/prv/StableThreadPool.h \
-    include/thaf/threading/prv/ThreadPoolImplBase.h \
-    include/thaf/threading/prv/TimerManagerImpl.h \
+    include/thaf/threading/internal/DynamicCountThreadPool.h \
+    include/thaf/threading/internal/PriorityThreadPool.h \
+    include/thaf/threading/internal/StableThreadPool.h \
+    include/thaf/threading/internal/ThreadPoolImplBase.h \
+    include/thaf/threading/internal/TimerManagerImpl.h \
     include/thaf/utils/TimeMeasurement.h \
     include/thaf/utils/cppextension/LoopMacros.h \
     include/thaf/utils/cppextension/SyncObject.h \
@@ -174,25 +175,22 @@ HEADERS += \
     include/thaf/utils/serialization/SerializableObject.h \
     include/thaf/utils/serialization/SerializationTrait.h \
     include/thaf/utils/serialization/Serializer.h \
-    include/thaf/messaging/ipc/ClientServerContractMacros.h \
-    include/thaf/messaging/ipc/IPCFactory.h \
-    include/thaf/messaging/ipc/IPCMessage.h \
-    include/thaf/messaging/ipc/IPCMessageTrait.h \
-    include/thaf/messaging/ipc/IPCReceiver.h \
-    include/thaf/messaging/ipc/IPCSender.h \
-    include/thaf/messaging/ipc/MessageValidator.h \
-    include/thaf/messaging/ipc/cscmbk.h \
-    include/thaf/messaging/ipc/cscmrs.h \
-    include/thaf/messaging/ipc/prv/LocalIPCReceiver.h \
-    include/thaf/messaging/ipc/prv/LocalIPCSender.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/LocalIPCReceiver.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/LocalIPCSender.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeReceiver.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeReceiverBase.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeSender.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/NamedPipeSenderBase.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/OverlappedPipeReceiver.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/OverlappedPipeSender.h \
-    include/thaf/messaging/ipc/prv/platforms/windows/PipeShared.h
+    include/thaf/messaging/client-server/ipc/IPCFactory.h \
+    include/thaf/messaging/client-server/ipc/IPCMessage.h \
+    include/thaf/messaging/client-server/ipc/IPCMessageTrait.h \
+    include/thaf/messaging/client-server/ipc/IPCReceiver.h \
+    include/thaf/messaging/client-server/ipc/IPCSender.h \
+    include/thaf/messaging/client-server/ipc/MessageValidator.h \
+    include/thaf/messaging/client-server/ipc/internal/LocalIPCReceiver.h \
+    include/thaf/messaging/client-server/ipc/internal/LocalIPCSender.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCReceiver.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSender.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiver.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiverBase.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSender.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/OverlappedPipeReceiver.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/OverlappedPipeSender.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h
 
 

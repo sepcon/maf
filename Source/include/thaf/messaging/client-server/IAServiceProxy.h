@@ -2,7 +2,7 @@
 
 #include "QueueingServiceProxy.h"
 #include "IAMessageRouter.h"
-#include "prv/IAMessageTrait.h"
+#include "IAMessageTrait.h"
 
 namespace thaf {
 namespace messaging {

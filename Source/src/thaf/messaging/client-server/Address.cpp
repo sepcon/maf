@@ -1,4 +1,4 @@
-#include "thaf/messaging/client-server/interfaces/Address.h"
+#include "thaf/messaging/client-server/Address.h"
 
 namespace thaf {
 namespace messaging {

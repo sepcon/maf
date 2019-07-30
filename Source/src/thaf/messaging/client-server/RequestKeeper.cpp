@@ -1,4 +1,4 @@
-#include "thaf/messaging/client-server/interfaces/RequestKeeper.h"
+#include "thaf/messaging/client-server/RequestKeeper.h"
 #include "thaf/messaging/client-server/ServiceStubBase.h"
 #include "thaf/utils/debugging/Debug.h"
 

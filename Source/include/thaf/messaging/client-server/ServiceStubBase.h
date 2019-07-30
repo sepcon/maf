@@ -1,7 +1,7 @@
 #pragma once
 
-#include "interfaces/ServiceStubInterface.h"
-#include "interfaces/ServerInterface.h"
+#include "ServiceStubInterface.h"
+#include "ServerInterface.h"
 #include "thaf/utils/cppextension/SyncObject.h"
 
 namespace thaf {

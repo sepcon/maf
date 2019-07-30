@@ -1,5 +1,5 @@
 #include "thaf/messaging/client-server/ClientBase.h"
-#include "thaf/messaging/client-server/interfaces/ServiceRequesterInterface.h"
+#include "thaf/messaging/client-server/ServiceRequesterInterface.h"
 #include "thaf/utils/debugging/Debug.h"
 
 namespace thaf {

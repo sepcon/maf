@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interfaces/CSDefines.h"
+#include "CSDefines.h"
 #include "ServiceProxyBase.h"
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/BasicMessages.h"
@@ -12,7 +12,7 @@ namespace messaging {
 template<class MessageTrait>
 class QueueingServiceProxy : public ServiceProxyBase
 {
-    friend class ClientBase;
+    using _MyBase = ServiceProxyBase;
     using ListOfInterestedComponents = nstl::SyncObject<std::set<ComponentRef, std::less<ComponentRef>>>;
 public:
     template <class SpecificMsgContent>
@@ -22,26 +22,34 @@ public:
     RegID sendStatusChangeRegister(OpID propertyID, PayloadProcessCallback<IncomingMsgContent> callback);
 
     template<class IncomingMsgContent>
-    RegID sendActionRequest
+    RegID sendRequest
     (
             const CSMsgContentPtr& outgoingData,
-            PayloadProcessCallback<IncomingMsgContent> callback = nullptr
+            PayloadProcessCallback<IncomingMsgContent> callback
+            );
+    template<class IncomingMsgContent>
+    RegID sendRequest
+    (
+            PayloadProcessCallback<IncomingMsgContent> callback
             );
 
     template<class IncomingMsgContent>
-    std::shared_ptr<IncomingMsgContent> sendActionRequestSync
-    (
-            const CSMsgContentPtr& outgoingData,
-            unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
-            );
-
-    template<class IncomingMsgContent>
-    bool sendActionRequestSync
+    bool sendRequestSync
     (
             const CSMsgContentPtr& outgoingData,
             PayloadProcessCallback<IncomingMsgContent> callback,
             unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
             );
+
+    template<class IncomingMsgContent>
+    std::shared_ptr<IncomingMsgContent> sendRequestSync
+    (
+            const CSMsgContentPtr& outgoingData,
+            unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
+            );
+
+    template<class IncomingMsgContent>
+    std::shared_ptr<IncomingMsgContent> sendRequestSync(unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS);
 
     ~QueueingServiceProxy(){}
     QueueingServiceProxy(ServiceID sid, ClientInterface *client);
@@ -123,7 +131,7 @@ template<class MessageTrait> template<class IncomingMsgContent>
 CSMessageHandlerCallback QueueingServiceProxy<MessageTrait>::createMsgHandlerCallback(PayloadProcessCallback<IncomingMsgContent> callback, bool sync)
 {
 	auto compref = Component::getComponentRef();
-    if(compref)
+    if(compref && callback)
     {
         CSMessageHandlerCallback ipcMessageHandlerCB =
                 [this, callback, sync, compref](const CSMessagePtr& msg){
@@ -182,22 +190,22 @@ CSMessageHandlerCallback QueueingServiceProxy<MessageTrait>::createMsgHandlerCal
 
 
 template<class MessageTrait> template<class IncomingMsgContent>
-RegID QueueingServiceProxy<MessageTrait>::sendActionRequest(const CSMsgContentPtr& outgoingData, PayloadProcessCallback<IncomingMsgContent> callback)
+RegID QueueingServiceProxy<MessageTrait>::sendRequest(const CSMsgContentPtr& outgoingData, PayloadProcessCallback<IncomingMsgContent> callback)
 {
     assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
            && "Please provide MessageContent that has same id with IncomingMessagecontent");
     outgoingData->makesureTransferable();
-    return sendRequest(outgoingData, createMsgHandlerCallback(callback));
+    return _MyBase::sendRequest(outgoingData, createMsgHandlerCallback(callback));
 }
 
 template<class MessageTrait> template<class IncomingMsgContent>
-std::shared_ptr<IncomingMsgContent> QueueingServiceProxy<MessageTrait>::sendActionRequestSync(const CSMsgContentPtr &outgoingData, unsigned long maxWaitTimeMs)
+std::shared_ptr<IncomingMsgContent> QueueingServiceProxy<MessageTrait>::sendRequestSync(const CSMsgContentPtr &outgoingData, unsigned long maxWaitTimeMs)
 {
     assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
            && "Please provide MessageContent that has same id with IncomingMessagecontent");
 
     outgoingData->makesureTransferable();
-    if(auto csMsg = sendRequestSync(outgoingData, maxWaitTimeMs))
+    if(auto csMsg = _MyBase::sendRequestSync(outgoingData, maxWaitTimeMs))
     {
         return MessageTrait::template translate<IncomingMsgContent>(csMsg->content());
     }
@@ -208,25 +216,49 @@ std::shared_ptr<IncomingMsgContent> QueueingServiceProxy<MessageTrait>::sendActi
 }
 
 template<class MessageTrait> template<class IncomingMsgContent>
-bool QueueingServiceProxy<MessageTrait>::sendActionRequestSync(const CSMsgContentPtr &outgoingData,
+bool QueueingServiceProxy<MessageTrait>::sendRequestSync(const CSMsgContentPtr &outgoingData,
         PayloadProcessCallback<IncomingMsgContent> callback,
         unsigned long maxWaitTimeMs )
 {
     assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
            && "Please provide MessageContent that has same id with IncomingMessagecontent");
     outgoingData->makesureTransferable();
-    return sendRequestSync
-            (
-                outgoingData,
-                createMsgHandlerCallback(callback, true),
-                maxWaitTimeMs
-                );
+    auto response = sendRequestSync<IncomingMsgContent>(outgoingData, maxWaitTimeMs);
+    if(response)
+    {
+        callback(response);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 template<class MessageTrait> template<class IncomingMsgContent>
 RegID QueueingServiceProxy<MessageTrait>::sendStatusChangeRegister(OpID propertyID, PayloadProcessCallback<IncomingMsgContent> callback)
 {
     return ServiceProxyBase::sendStatusChangeRegister(propertyID, createMsgHandlerCallback(std::move(callback)));
+}
+
+template<class MessageTrait> template<class IncomingMsgContent>
+std::shared_ptr<IncomingMsgContent> QueueingServiceProxy<MessageTrait>::sendRequestSync(unsigned long maxWaitTimeMs)
+{
+    auto csMsgResponse = _MyBase::sendRequestSync(MessageTrait::template getOperationID<IncomingMsgContent>(), {}, maxWaitTimeMs);
+    if(csMsgResponse && csMsgResponse->content())
+    {
+        return MessageTrait::template translate<IncomingMsgContent>(csMsgResponse->content());
+    }
+    else
+    {
+        return {};
+    }
+}
+
+template<class MessageTrait> template<class IncomingMsgContent>
+RegID QueueingServiceProxy<MessageTrait>::sendRequest(PayloadProcessCallback<IncomingMsgContent> callback)
+{
+    return _MyBase::sendRequest(MessageTrait::template getOperationID<IncomingMsgContent>(), {}, callback);
 }
 
 

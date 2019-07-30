@@ -1,6 +1,6 @@
 #include "thaf/messaging/client-server/IAMessageRouter.h"
-#include "thaf/messaging/client-server/interfaces/ServiceRequesterInterface.h"
-#include "thaf/messaging/client-server/interfaces/ServiceProviderInterface.h"
+#include "thaf/messaging/client-server/ServiceRequesterInterface.h"
+#include "thaf/messaging/client-server/ServiceProviderInterface.h"
 #include "thaf/utils/debugging/Debug.h"
 
 namespace thaf {

@@ -1,7 +1,7 @@
 #include "thaf/threading/ThreadPoolFactory.h"
-#include "thaf/threading/prv/PriorityThreadPool.h"
-#include "thaf/threading/prv/StableThreadPool.h"
-#include "thaf/threading/prv/DynamicCountThreadPool.h"
+#include "thaf/threading/internal/PriorityThreadPool.h"
+#include "thaf/threading/internal/StableThreadPool.h"
+#include "thaf/threading/internal/DynamicCountThreadPool.h"
 
 namespace thaf {
 namespace threading {

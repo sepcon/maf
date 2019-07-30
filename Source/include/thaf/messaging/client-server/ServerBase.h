@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "interfaces/ServerInterface.h"
-#include "interfaces/ServiceProviderInterface.h"
-#include "prv/ServiceManagement.h"
+#include "ServerInterface.h"
+#include "ServiceProviderInterface.h"
+#include "internal/CSShared.h"
 #include "thaf/utils/cppextension/thaf.h"
 
 

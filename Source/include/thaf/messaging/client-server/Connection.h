@@ -1,8 +1,8 @@
 #pragma once
 
 #include "thaf/messaging/BasicMessages.h"
-#include "thaf/messaging/client-server/interfaces/CSStatus.h"
-#include "thaf/messaging/client-server/interfaces/CSTypes.h"
+#include "thaf/messaging/client-server/CSStatus.h"
+#include "thaf/messaging/client-server/CSTypes.h"
 
 
 namespace thaf {

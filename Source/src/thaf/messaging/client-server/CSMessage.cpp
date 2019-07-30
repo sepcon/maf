@@ -1,4 +1,4 @@
-#include "thaf/messaging/client-server/interfaces/CSMessage.h"
+#include "thaf/messaging/client-server/CSMessage.h"
 
 namespace thaf {
 namespace messaging {

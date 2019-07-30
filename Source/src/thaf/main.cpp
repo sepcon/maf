@@ -1,15 +1,15 @@
 #include "thaf/utils/debugging/Debug.h"
-#include "thaf/messaging/ipc/IPCMessageTrait.h"
+#include "thaf/messaging/client-server/ipc/IPCMessageTrait.h"
 #include "thaf/utils/serialization/SerializableObject.h"
-#include "thaf/messaging/ipc/LocalIPCClient.h"
-#include "thaf/messaging/ipc/LocalIPCServer.h"
-#include "thaf/messaging/ipc/LocalIPCServiceProxy.h"
-#include "thaf/messaging/ipc/LocalIPCServiceStub.h"
+#include "thaf/messaging/client-server/ipc/LocalIPCClient.h"
+#include "thaf/messaging/client-server/ipc/LocalIPCServer.h"
+#include "thaf/messaging/client-server/ipc/LocalIPCServiceProxy.h"
+#include "thaf/messaging/client-server/ipc/LocalIPCServiceStub.h"
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/client-server/IAServiceProxy.h"
 #include "thaf/messaging/client-server/IAServiceStub.h"
 #include "thaf/messaging/Timer.h"
-#include "thaf/messaging/ipc/IPCMsgDefinesMacros.h"
+#include "thaf/messaging/client-server/CSContractDefines.mc.h"
 #include "thaf/utils/TimeMeasurement.h"
 
 
@@ -31,6 +31,7 @@ properties
         )
 request_object_e(WeatherStatus)
 
+result_object_no_props(GetPingResult)
 
 template <size_t Size>
 std::vector<std::string> createList()
@@ -62,25 +63,34 @@ struct ClientComponent
                 _proxy->template sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, [](const std::shared_ptr<WeatherStatusResult>& result){
                     thafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: " << (*result)->get_the_status());
                 });
-
+                if(auto respone = _proxy->template sendRequestSync<GetPingResultResult>())
+                {
+                    thafMsg("----------------------------------Server is available");
+                }
+                else
+                {
+                    thafMsg("-------------------------timeout request");
+                    return;
+                }
                 for (int i = 0; i < 100; ++i)
                 {
                     {
                         util::TimeMeasurement t([](auto time) {
                             thafMsg("Time to execute a requestsync = " << time);
                         });
-                        auto response = _proxy->template sendActionRequestSync<WeatherStatusResult>(request, 4000);
-                        if(response)
-                        {
-                            thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*response)->get_the_status());
-                        }
+                        auto response = _proxy->template sendRequestSync<WeatherStatusResult>();
+                        thafMsg("response = " << (*response)->get_the_status());
+//                        _proxy->template sendRequestSync<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
+//                            thafMsg("************************************************sending the shutdown request!");
+//                            thafMsg((*result)->get_the_status());
+//                        });
                     }
-                    /*_proxy->template sendActionRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
+                    /*_proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
                         thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*result)->get_the_status());
                         });*/
                 }
                 (*request)->set_command(1);
-                _proxy->template sendActionRequestSync<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
+                _proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
                     thafMsg("************************************************sending the shutdown request!");
                     thafMsg((*result)->get_the_status());
                 });
@@ -132,7 +142,14 @@ public:
                     _component->shutdown();
                 });
                 auto req = msg->template getRequestContent<WeatherStatusRequest>();
-                thafMsg("Receiver request from client: " << (*req)->get_client_name());
+                if(req)
+                {
+                    thafMsg("Receiver request from client: " << (*req)->get_client_name());
+                }
+                else
+                {
+                    thafMsg("Get request with no content, operationID=  " << msg->getRequestKeeper()->getOperationID());
+                }
                 auto res = std::make_shared<WeatherStatusResult>();
                 res->props().set_shared_list_of_places(listOfPlaces);
                 requestKeeper->reply(res);

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "interfaces/ClientInterface.h"
-#include "interfaces/ServiceStatusObserverInterface.h"
-#include "interfaces/ServiceRequesterInterface.h"
-#include "prv/ServiceManagement.h"
+#include "ClientInterface.h"
+#include "ServiceStatusObserverInterface.h"
+#include "ServiceRequesterInterface.h"
+#include "internal/CSShared.h"
 #include "thaf/utils/cppextension/thaf.h"
 #include "thaf/utils/debugging/Debug.h"
 

@@ -1,5 +1,5 @@
-#include "thaf/threading/prv/PriorityThreadPool.h"
-#include "thaf/threading/prv/ThreadPoolImplBase.h"
+#include "thaf/threading/internal/PriorityThreadPool.h"
+#include "thaf/threading/internal/ThreadPoolImplBase.h"
 #include "thaf/threading/Queue.h"
 
 namespace thaf {

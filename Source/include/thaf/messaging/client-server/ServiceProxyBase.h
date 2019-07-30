@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Connection.h"
-#include "interfaces/CSStatus.h"
-#include "interfaces/ServiceProxyInterface.h"
-#include "interfaces/CSDefines.h"
+#include "CSStatus.h"
+#include "ServiceProxyInterface.h"
+#include "CSDefines.h"
 
 namespace thaf {
 namespace messaging {
@@ -18,8 +18,7 @@ public:
     RegID sendStatusChangeRegister(OpID propertyID, CSMessageHandlerCallback callback) override;
     void sendStatusChangeUnregister(RegID regID) override;
     RegID sendRequest
-        (
-            const CSMsgContentPtr& msgContent,
+        (const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback
             ) override;
     void sendAbortRequest(const RegID& regID) override;
@@ -38,6 +37,17 @@ public:
             ) override;
 
 protected:
+    //Helper functions
+    RegID sendRequest(OpID operationID,
+                      const CSMsgContentPtr& msgContent = {},
+                      CSMessageHandlerCallback callback = {});
+    CSMessagePtr sendRequestSync
+    (
+            OpID operationID,
+            const CSMsgContentPtr& msgContent = {},
+            unsigned long maxWaitTimeMs = THAF_INFINITE_WAIT_PERIOD
+            );
+
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool onIncomingMessage(const CSMessagePtr& msg) override;

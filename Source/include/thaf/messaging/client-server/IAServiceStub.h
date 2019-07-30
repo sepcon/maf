@@ -1,7 +1,7 @@
 #pragma once
 
 #include "QueueingServiceStub.h"
-#include "prv/IAMessageTrait.h"
+#include "IAMessageTrait.h"
 #include "IAMessageRouter.h"
 
 namespace thaf {
