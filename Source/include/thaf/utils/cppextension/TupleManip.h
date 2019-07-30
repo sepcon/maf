@@ -3,7 +3,7 @@
 #include <tuple>
 
 namespace thaf {
-namespace stl {
+namespace nstl {
 
 
 template <int Max>

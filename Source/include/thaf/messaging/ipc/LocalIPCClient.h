@@ -3,15 +3,15 @@
 #include "IPCClientBase.h"
 #include "thaf/patterns/Patterns.h"
 #include "IPCMessageTrait.h"
+#include "thaf/messaging/client-server/QueueingServiceProxy.h"
 
 namespace thaf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCClient : public IPCClientBase, public pattern::SingletonObject<LocalIPCClient>
+class LocalIPCClient : public IPCClientBase
 {
 public:
-    LocalIPCClient(Invisible) : IPCClientBase(){}
     void init(const Address& addr) {IPCClientBase::init(IPCType::Local, addr); }
 };
 

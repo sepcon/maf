@@ -18,7 +18,7 @@ public:
     void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
      bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 protected:
-    using RegistedClientAddresses = stl::SyncObject<std::set<Address>>;
+    using RegistedClientAddresses = nstl::SyncObject<std::set<Address>>;
     class BytesCommunicator* _communicator;
     RegistedClientAddresses _registedClAddrs;
 };

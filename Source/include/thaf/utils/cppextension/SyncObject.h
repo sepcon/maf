@@ -4,7 +4,7 @@
 #include <memory>
 
 namespace thaf {
-namespace stl {
+namespace nstl {
 
 
 template<class ProtectedObject, class Mutex = std::mutex>
@@ -100,7 +100,7 @@ private:
 };
 
 
-} // stl
+} // nstl
 } // thaf
 
 

@@ -33,7 +33,7 @@ struct TimerManagerImpl
 
 private:
     using JobDescRef = std::shared_ptr<JobDesc>;
-    using JobsContainer = stl::SyncObject<std::vector<JobDescRef>>;
+    using JobsContainer = nstl::SyncObject<std::vector<JobDescRef>>;
     using JobsIterator = JobsContainer::DataType::iterator;
     using JobsCIterator = JobsContainer::DataType::const_iterator;
     friend struct JobComp;

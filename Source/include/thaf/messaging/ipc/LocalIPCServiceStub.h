@@ -9,8 +9,8 @@ namespace messaging {
 namespace ipc {
 
 
-using IPCClientRequestMsg = ClientRequestMessage<IPCMessageTrait, LocalIPCServer>;
-using LocalIPCServiceStub = QueueingServiceStub<IPCMessageTrait, LocalIPCServer>;
+using IPCClientRequestMsg = ClientRequestMessage<IPCMessageTrait>;
+using LocalIPCServiceStub = QueueingServiceStub<IPCMessageTrait>;
 
 } // ipc
 } // messaging

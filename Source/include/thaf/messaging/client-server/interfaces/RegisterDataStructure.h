@@ -39,9 +39,9 @@ struct SyncRegEntry
     std::promise< std::shared_ptr<CSMessage> > _msgPromise;
 };
 
-using RegEntriesMap = stl::SyncObject<std::map<OpID, std::list<RegEntry> >>;
-using SyncRegEntriesMap = stl::SyncObject<std::map<OpID, std::list<SyncRegEntry>>>;
-using RegisteredClientsMap = stl::SyncObject<std::map<Address, std::set<OpID>>>;
+using RegEntriesMap = nstl::SyncObject<std::map<OpID, std::list<RegEntry> >>;
+using SyncRegEntriesMap = nstl::SyncObject<std::map<OpID, std::list<SyncRegEntry>>>;
+using RegisteredClientsMap = nstl::SyncObject<std::map<Address, std::set<OpID>>>;
 
 
 } // messaging

@@ -39,6 +39,7 @@ ServiceStubBase::ServiceStubBase(ServiceID sid, ServerInterface *server, Service
     _stubHandler(stubHandler),
     _server(server)
 {
+    assert(_server && "Server must not be null");
     setServiceID(sid);
 }
 

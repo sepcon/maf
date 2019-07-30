@@ -11,8 +11,8 @@ namespace messaging {
 class ServiceStubBase : public ServiceStubInterface
 {
     using RequestKeeperPtr = std::shared_ptr<RequestKeeperBase>;
-    using OpID2RequestKeeperMap = stl::SyncObject<std::map<OpID, std::list<RequestKeeperPtr>>>;
-    using Address2OpIDsMap = stl::SyncObject<std::map<Address, std::set<OpID>>>;
+    using OpID2RequestKeeperMap = nstl::SyncObject<std::map<OpID, std::list<RequestKeeperPtr>>>;
+    using Address2OpIDsMap = nstl::SyncObject<std::map<Address, std::set<OpID>>>;
 
 public:
     ServiceStubBase(ServiceID sid, ServerInterface* server, ServiceStubHandlerInterface* stubHandler = nullptr);

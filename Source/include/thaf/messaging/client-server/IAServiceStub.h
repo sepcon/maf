@@ -7,8 +7,8 @@
 namespace thaf {
 namespace messaging {
 
-using IARequestMesasge = ClientRequestMessage<IAMessageTrait, IAMessageRouter>;
-using IAServiceStub = QueueingServiceStub<IAMessageTrait, IAMessageRouter>;
+using IARequestMesasge = ClientRequestMessage<IAMessageTrait>;
+using IAServiceStub = QueueingServiceStub<IAMessageTrait>;
 
 }
 }

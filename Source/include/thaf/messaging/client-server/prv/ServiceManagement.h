@@ -15,7 +15,7 @@ template<class Elem>
 using SMElem = std::shared_ptr<Elem>;
 
 template <class Elem>
-using SMList = stl::SyncObject<std::vector<SMElem<Elem>>>;
+using SMList = nstl::SyncObject<std::vector<SMElem<Elem>>>;
 
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool addIfNew(SMList<Interester>& interesters, SMElem<Interester> interester)

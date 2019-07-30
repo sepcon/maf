@@ -41,7 +41,7 @@ inline static std::string getIndent(int indentLevel, bool newLine = false)
 
 struct hlp
 {
-    template<typename T, std::enable_if_t<stl::is_number_type_v<T>, bool> = true>
+    template<typename T, std::enable_if_t<nstl::is_number_type_v<T>, bool> = true>
     static std::string quote(T value) { return quote(std::to_string(value)); }
     static std::string quote(const std::string& str) { return '"' + str + '"'; }
 };
@@ -57,9 +57,9 @@ struct DumpHelper
     struct prv
     {
 
-#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<stl::is_tuple_v<typename TypeName::value_type>, bool> = true>
-#define mc_enable_if_is_number_(NumberType) template<typename NumberType, std::enable_if_t<stl::is_number_type_v<NumberType> , bool> = true>
-#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<nstl::is_tuple_v<typename TypeName::value_type>, bool> = true>
+#define mc_enable_if_is_number_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type_v<NumberType> , bool> = true>
+#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
 #define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
 #define mc_enable_if_is_enum_(EnumType) template<typename EnumType, std::enable_if_t<std::is_enum_v<EnumType>, bool> = true>
 
@@ -138,7 +138,7 @@ struct DumpHelper<std::tuple<ElemType...> >
     inline static void dump(const Tuple& tp, int level, std::string& strOut) noexcept {
         constexpr bool newLine = true;
         strOut += "<<";
-        stl::tuple_for_each(tp, [level, &strOut, &newLine](const auto& elem) {
+        nstl::tuple_for_each(tp, [level, &strOut, &newLine](const auto& elem) {
             strOut += getIndent(level + 1, newLine);
             DumpHelper<PURE_TYPE(elem)>::dump(elem, level + 1, strOut);
         });

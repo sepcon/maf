@@ -61,8 +61,8 @@ SOURCES += \
     src/thaf/logging/LoggingComponent.cpp \
     src/thaf/messaging/client-server/CSMessage.cpp \
     src/thaf/messaging/client-server/ClientBase.cpp \
+    src/thaf/messaging/client-server/DomainController.cpp \
     src/thaf/messaging/client-server/IAMessageRouter.cpp \
-    src/thaf/messaging/client-server/IAServiceProxy.cpp \
     src/thaf/messaging/client-server/IAServiceStub.cpp \
     src/thaf/messaging/client-server/RequestKeeper.cpp \
     src/thaf/messaging/client-server/ServerBase.cpp \
@@ -100,12 +100,14 @@ HEADERS += \
     include/thaf/messaging/Communicator.h \
     include/thaf/messaging/client-server/ClientBase.h \
     include/thaf/messaging/client-server/ClientServerContract.h \
+    include/thaf/messaging/client-server/DomainController.h \
     include/thaf/messaging/client-server/IAMessageRouter.h \
     include/thaf/messaging/client-server/IAServiceProxy.h \
     include/thaf/messaging/client-server/IAServiceStub.h \
     include/thaf/messaging/client-server/QueueingServiceProxy.h \
     include/thaf/messaging/client-server/QueueingServiceStub.h \
     include/thaf/messaging/client-server/ServerBase.h \
+    include/thaf/messaging/client-server/ServerDomainController.h \
     include/thaf/messaging/client-server/ServiceProxyBase.h \
     include/thaf/messaging/client-server/ServiceStubBase.h \
     include/thaf/messaging/client-server/interfaces/Address.h \
@@ -115,6 +117,7 @@ HEADERS += \
     include/thaf/messaging/client-server/interfaces/CSStatus.h \
     include/thaf/messaging/client-server/interfaces/CSTypes.h \
     include/thaf/messaging/client-server/interfaces/ClientInterface.h \
+    include/thaf/messaging/client-server/interfaces/DomainUser.h \
     include/thaf/messaging/client-server/interfaces/RegisterDataStructure.h \
     include/thaf/messaging/client-server/interfaces/RequestKeeper.h \
     include/thaf/messaging/client-server/interfaces/ServerInterface.h \

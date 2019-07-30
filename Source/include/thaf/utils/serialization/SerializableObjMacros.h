@@ -24,7 +24,7 @@
     mc_for_each_with_index( mc_declare_get_set_funcs_with_index, __VA_ARGS__) \
     msvc_expand_va_args( define_dump_function(__VA_ARGS__) ) \
     private: \
-    value_type _data = std::make_tuple< mc_remove_first_arg( mc_for_each(mc_take_only_first_arg, __VA_ARGS__ ) )>( mc_remove_first_arg( mc_for_each( mc_get_default_value, __VA_ARGS__ ) ) );
+    value_type _data = std::tuple< mc_remove_first_arg( mc_for_each(mc_take_only_first_arg, __VA_ARGS__ ) )>( mc_remove_first_arg( mc_for_each( mc_get_default_value, __VA_ARGS__ ) ) );
 
 
 #define mc_take_2_first_params_param_(first, second, ...) /*(*/ first, second /*)*/

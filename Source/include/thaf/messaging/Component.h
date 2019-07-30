@@ -14,7 +14,7 @@ namespace thaf {
 namespace messaging {
 
 class Component;
-using ComponentSyncPtr = stl::SyncObject<Component*>;
+using ComponentSyncPtr = nstl::SyncObject<Component*>;
 using ComponentRef = std::shared_ptr<ComponentSyncPtr>;
 using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
@@ -48,7 +48,7 @@ public:
     Component& onSignal(SignalMsgHandlerFunc handler);
 
 protected:
-    using MsgHandlerMap = stl::SyncObject<std::map<MessageBase::Type, MessageHandlerFunc>>;
+    using MsgHandlerMap = nstl::SyncObject<std::map<MessageBase::Type, MessageHandlerFunc>>;
     static TimerMgrPtr getTimeManager();
     void startMessageLoop();
     std::thread _workerThread;

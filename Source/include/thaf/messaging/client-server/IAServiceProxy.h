@@ -7,7 +7,7 @@
 namespace thaf {
 namespace messaging {
 
-using IAServiceProxy = QueueingServiceProxy<IAMessageTrait, IAMessageRouter>;
+using IAServiceProxy = QueueingServiceProxy<IAMessageTrait>;
 
 } // messaging
 } // thaf

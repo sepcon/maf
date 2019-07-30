@@ -3,6 +3,7 @@
 #include "CSMessage.h"
 #include "CSStatus.h"
 #include "CSMessageReceiver.h"
+#include "DomainUser.h"
 
 namespace thaf {
 namespace messaging {
@@ -10,7 +11,7 @@ namespace messaging {
 class ServiceProviderInterface;
 using IServiceProviderPtr = std::shared_ptr<ServiceProviderInterface>;
 
-class ServerInterface : public CSMessageReceiver
+class ServerInterface : public CSMessageReceiver, public DomainUser
 {
 public:
     virtual ~ServerInterface() = default;

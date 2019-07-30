@@ -6,12 +6,12 @@
 #include <memory>
 
 namespace thaf {
-namespace stl {
+namespace nstl {
 
 template <typename T>
 struct type_name_traits;
 
-#define REGISTER_TYPE_NAME(T) namespace thaf { namespace stl { template<> struct type_name_traits<T> {\
+#define REGISTER_TYPE_NAME(T) namespace thaf { namespace nstl { template<> struct type_name_traits<T> {\
     static constexpr const char* const name = #T; \
 }; } }
 

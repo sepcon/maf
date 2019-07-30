@@ -113,9 +113,9 @@ struct SerializationTrait
     struct prv
     {
 
-#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<stl::is_tuple_v<typename TypeName::value_type>, bool> = true>
-#define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<stl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
-#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<stl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<nstl::is_tuple_v<typename TypeName::value_type>, bool> = true>
+#define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
+#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
 #define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
 #define mc_enable_if_is_a_char_string(CharString) template <typename CharString, std::enable_if_t<std::is_base_of_v<std::string, CharString> && !std::is_same_v<std::string, CharString>, bool> = true>
 #define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
@@ -275,7 +275,7 @@ struct SerializationTrait<std::tuple<ElemType...> >
 
     inline static SizeType serializeSizeOf(const std::tuple<ElemType...>& tp) noexcept {
         SizeType contentSize = 0;
-        stl::tuple_for_each(tp, [&contentSize](const auto& elem) {
+        nstl::tuple_for_each(tp, [&contentSize](const auto& elem) {
             contentSize += SerializationTrait<PURE_TYPE(elem)>::serializeSizeOf(elem);
         });
         return contentSize;
@@ -283,7 +283,7 @@ struct SerializationTrait<std::tuple<ElemType...> >
 
     inline static SizeType serialize(char* startp, const std::tuple<ElemType...>& tp) noexcept {
         SizeType serializedCount = 0;
-        stl::tuple_for_each(tp, [&serializedCount, &startp](const auto& elem) {
+        nstl::tuple_for_each(tp, [&serializedCount, &startp](const auto& elem) {
             serializedCount += SerializationTrait<PURE_TYPE(elem)>::serialize(startp + serializedCount, elem);
         });
         return serializedCount;
@@ -291,7 +291,7 @@ struct SerializationTrait<std::tuple<ElemType...> >
 
     inline static std::tuple<ElemType...> deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
         std::tuple<ElemType...> tp;
-        stl::tuple_for_each(tp, [&startp, &lastp, requestMoreBytes](auto& elem) {
+        nstl::tuple_for_each(tp, [&startp, &lastp, requestMoreBytes](auto& elem) {
             elem = SerializationTrait<PURE_TYPE(elem)>::deserialize(startp, lastp, requestMoreBytes);
         });
         return tp;
