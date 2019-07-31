@@ -97,7 +97,7 @@ DataTransmissionErrorCode OverlappedPipeSender::send(const srz::ByteArray &ba)
 
             if (success || !shouldRetry)
 			{
-                FlushFileBuffers(pipeHandle);
+//                FlushFileBuffers(pipeHandle);
 				break;
             }
             else

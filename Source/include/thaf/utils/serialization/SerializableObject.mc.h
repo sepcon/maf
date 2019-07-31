@@ -1,7 +1,7 @@
 #ifndef SERIALIZABLEOBJMACROS_H
 #define SERIALIZABLEOBJMACROS_H
 
-#include "thaf/utils/cppextension/LoopMacros.h"
+#include "thaf/utils/cppextension/Loop.mc.h"
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 /// ----------------------------Declare Serializable class --------------------------------------------------------------------------------

@@ -10,13 +10,20 @@ namespace messaging {
 class CSMessage;
 class ServiceStubBase;
 
+enum class RequestResultStatus : bool
+{
+    Incomplete = false,
+    Complete = true
+};
+
 class RequestKeeperBase : public pattern::UnCopyable
 {
 public:
     OpCode getOperationCode() const;
     OpID getOperationID() const;
     bool valid() const;
-    bool reply(const CSMsgContentPtr& answer);
+    bool respond(const CSMsgContentPtr& answer, RequestResultStatus status = RequestResultStatus::Complete);
+    void update(const CSMsgContentPtr& answer);
     CSMsgContentPtr getRequestContent();
 
 protected:
@@ -37,7 +44,7 @@ public:
     template<class CSMessageContentSpecific>
     std::shared_ptr<CSMessageContentSpecific> getRequestContent();
     template<class CSMessageContentSpecific>
-    bool reply(const std::shared_ptr<CSMessageContentSpecific>& answer);
+    bool respond(const std::shared_ptr<CSMessageContentSpecific>& answer);
 };
 
 template<class MessageTrait> template<class CSMessageContentSpecific>
@@ -55,10 +62,10 @@ std::shared_ptr<CSMessageContentSpecific> RequestKeeper<MessageTrait>::getReques
 }
 
 template<class MessageTrait> template<class CSMessageContentSpecific>
-bool RequestKeeper<MessageTrait>::reply(const std::shared_ptr<CSMessageContentSpecific>& answer)
+bool RequestKeeper<MessageTrait>::respond(const std::shared_ptr<CSMessageContentSpecific>& answer)
 {
     auto csMsgContent = MessageTrait::template translate(answer);
-    return RequestKeeperBase::reply(csMsgContent);
+    return RequestKeeperBase::respond(csMsgContent);
 }
 
 } // messaging

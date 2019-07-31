@@ -2,6 +2,9 @@
 #define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 
 #undef ENABLE_IPC_DEBUG
+#define ENABLE_IPC_DEBUG 1
+
+
 #ifdef ENABLE_IPC_DEBUG
 #    if defined(__clang__) || defined (__GNUC__)
 #        define THAF_FUNC __FUNCTION__

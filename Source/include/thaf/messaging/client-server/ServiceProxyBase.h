@@ -50,16 +50,16 @@ protected:
 
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
-    bool onIncomingMessage(const CSMessagePtr& msg) override;
+    bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 
     CSMessagePtr createCSMessage(OpID opID, OpCode opCode, const CSMsgContentPtr& msgContent = nullptr);
     void onPropChangeUpdate(const CSMessagePtr& msg);
-    void onRequestResult(const CSMessagePtr& msg);
+    void onRequestResult(const CSMessagePtr& msg, bool done = true);
     void onRequestSyncResult(const CSMessagePtr& msg);
     void abortAllSyncRequest();
     bool sendMessageToServer(const CSMessagePtr& outgoingMsg);
     std::shared_ptr<std::future<CSMessagePtr >> storeSyncRegEntry(const CSMessagePtr& outgoingMsg, RegID &regID);
-    std::shared_ptr<std::promise<CSMessagePtr >> removeSyncRegEntry(const RegID &regID);
+    std::shared_ptr<std::promise<CSMessagePtr >> pickOutSyncRegEntry(const RegID &regID);
 
     RegID storeAndSendRequestToServer
         (

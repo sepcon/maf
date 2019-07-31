@@ -24,7 +24,10 @@ public:
             //We asume that the implementer will send/receive the CSMsgContentPtr as std::shared_ptr of SerializableMessageContentBase
             auto ipcContent = std::static_pointer_cast<SerializableMessageContentBase>(csMsgContent);
             auto dataCarrier = std::make_shared<IPCMessageContent>();
-            dataCarrier->fromBytes(ipcContent->payload());
+            if(!ipcContent->payload().empty())
+            {
+                dataCarrier->fromBytes(ipcContent->payload());
+            }
             return dataCarrier;
 
         }

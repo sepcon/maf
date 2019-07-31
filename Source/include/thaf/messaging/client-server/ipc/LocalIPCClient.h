@@ -12,7 +12,7 @@ namespace ipc {
 class LocalIPCClient : public IPCClientBase
 {
 public:
-    void init(const Address& addr) {IPCClientBase::init(IPCType::Local, addr); }
+    void init(const Address& addr, long long serverStatusCheckPeriodMS = 1000) {IPCClientBase::init(IPCType::Local, addr, serverStatusCheckPeriodMS); }
 };
 
 } // ipc

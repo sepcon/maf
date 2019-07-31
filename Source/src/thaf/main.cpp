@@ -63,32 +63,7 @@ struct ClientComponent
                 _proxy->template sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, [](const std::shared_ptr<WeatherStatusResult>& result){
                     thafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: " << (*result)->get_the_status());
                 });
-                if(auto respone = _proxy->template sendRequestSync<GetPingResultResult>())
-                {
-                    thafMsg("----------------------------------Server is available");
-                }
-                else
-                {
-                    thafMsg("-------------------------timeout request");
-                    return;
-                }
-                for (int i = 0; i < 100; ++i)
-                {
-                    {
-                        util::TimeMeasurement t([](auto time) {
-                            thafMsg("Time to execute a requestsync = " << time);
-                        });
-                        auto response = _proxy->template sendRequestSync<WeatherStatusResult>();
-                        thafMsg("response = " << (*response)->get_the_status());
-//                        _proxy->template sendRequestSync<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-//                            thafMsg("************************************************sending the shutdown request!");
-//                            thafMsg((*result)->get_the_status());
-//                        });
-                    }
-                    /*_proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-                        thafMsg("thread " << std::this_thread::get_id() << " get update: " << (*result)->get_the_status());
-                        });*/
-                }
+
                 (*request)->set_command(1);
                 _proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
                     thafMsg("************************************************sending the shutdown request!");
@@ -98,7 +73,6 @@ struct ClientComponent
         });
         _component->start([this, client] {
             _proxy = client->createProxy<Proxy>(ServiceID);
-            auto proxy = client->createProxy<LocalIPCServiceProxy>(ServiceID);
             thafMsg("proxy for service 1 ready ! Component  = " << _component->getID());
         });
     }
@@ -129,14 +103,14 @@ public:
                 thafMsg("Client registered to status " << msg->getRequestKeeper()->getOperationID());
                 auto msg = WeatherStatusResult::create();
                 msg->props().set_the_status("Response to register");
-                requestKeeper->reply(msg);
+                requestKeeper->respond(msg);
             }
                 break;
             case OpCode::Request:
             {
                 static thread_local int requestCount = 0;
                 ++requestCount;
-                _serverTimer.start(100, [this] {
+                _serverTimer.start(5, [this] {
                     //				assert(requestCount == (NumberOfRequests + 1) * NClient);
                     thafMsg("Component id: " << std::this_thread::get_id() << " Timer expired , total request: " << requestCount);
                     _component->shutdown();
@@ -150,10 +124,12 @@ public:
                 {
                     thafMsg("Get request with no content, operationID=  " << msg->getRequestKeeper()->getOperationID());
                 }
+
                 auto res = std::make_shared<WeatherStatusResult>();
                 res->props().set_shared_list_of_places(listOfPlaces);
-                requestKeeper->reply(res);
-                //                _stub->sendStatusUpdate(res);
+                for(int i = 0; i < 1000; ++i)
+                {requestKeeper->update(res);}
+                requestKeeper->respond(res);
             }
                 break;
 
@@ -227,7 +203,7 @@ int main()
         std::cout << "Total time is: " << t << std::endl;
     });
     Address addr("com.opswat.client", 0);
-    LocalIPCClient c; c.init(addr);
+    LocalIPCClient c; c.init(addr, 10);
     LocalIPCServer s; s.init(addr);
 
     {
@@ -237,7 +213,7 @@ int main()
 
 //        auto proxy = c.createProxy<LocalIPCServiceProxy>(1);
 //        auto stub = s.createStub<LocalIPCServiceStub>(1);
-        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>(&c, &s);
+//        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>(&c, &s);
         test<IAServiceProxy, IAServiceStub, IARequestMesasge>(&(IAMessageRouter::instance()), &(IAMessageRouter::instance()));
 
         thafMsg("Program ends!");

@@ -15,22 +15,21 @@ using RequestID = util::IDManager::IDType;
 enum class OpCode : unsigned char
 {
 //  Client Request
-    Register,
-    UnRegister,
-    Get,
-    Set,
-    Request,
-    RequestSync,
-    Abort,
-//  Server Response
-//    UpdateStatus,
-//    RequestResult,
-//    SyncRequestResult,
-//    RequestError,
-//    SyncRequestError,
-    ServiceStatusUpdate,
-//  Unhandle
-    Invalid
+    Register,                           // register to get update every time properties' status has changed
+    UnRegister,                         //
+    Request,                            // Send request to server (Doing actions/get properties' status...)
+    RequestSync,                        // Send request to server and the requester will be blocked until receiving the result
+    Abort,                              // Ask server to abort pending/ongoing request that has not been done yet
+    StatusUpdate,                       //
+    RequestResultUpdate,                //
+    RequestSyncResultUpdate,            //
+    RequestResultDone,                  // apply for server to complete a request MANY updates from server until the request is fully respond. the callers must
+    RequestSyncResultDone,              //
+    RequestError,                       //
+    SyncRequestError,                   //
+    ServiceStatusUpdate,                // registering from client to ask for update status of each service whenever its status has changed
+//  Unhandle                            // might be use to update client that the action is not applicable
+    Invalid                             //
 };
 
 constexpr OpID OpIDInvalid = static_cast<OpID>(-1);
@@ -47,9 +46,9 @@ constexpr const char* OpCodeString[] =
         "RequestSync",
         "Abort",
     //  Server Response
-        "UpdateStatus",
-        "RequestResult",
-        "SyncRequestResult",
+        "StatusUpdate",
+        "RequestResultUpdate",
+        "RequestSyncResultUpdate",
         "RequestError",
         "SyncRequestError",
     //  Unhandle

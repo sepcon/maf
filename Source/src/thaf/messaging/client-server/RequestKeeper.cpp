@@ -42,14 +42,14 @@ bool RequestKeeperBase::valid() const
     return _valid.load(std::memory_order_acquire);
 }
 
-bool RequestKeeperBase::reply(const CSMsgContentPtr& answer)
+bool RequestKeeperBase::respond(const CSMsgContentPtr& answer, RequestResultStatus status)
 {
-    if(valid())
+    if(valid()) //BUG: must use mutex to prevent _svStub from being destroyed after checking valid
     {
         if(answer->operationID() == _csMsg->operationID())
         {
             _csMsg->setContent(answer);
-            return _svStub->replyToRequest(_csMsg);
+            return _svStub->replyToRequest(_csMsg, status == RequestResultStatus::Complete);
         }
         else
         {
@@ -62,6 +62,11 @@ bool RequestKeeperBase::reply(const CSMsgContentPtr& answer)
         thafErr("IPCReplyHelper is no longer valid, might be the operation id [" << _csMsg->operationID() << "]");
         return false;
     }
+}
+
+void RequestKeeperBase::update(const CSMsgContentPtr &answer)
+{
+    respond(answer, RequestResultStatus::Incomplete);
 }
 
 CSMsgContentPtr RequestKeeperBase::getRequestContent()

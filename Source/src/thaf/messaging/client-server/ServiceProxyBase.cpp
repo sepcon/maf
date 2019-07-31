@@ -6,24 +6,28 @@
 namespace thaf {
 namespace messaging {
 
-bool ServiceProxyBase::onIncomingMessage(const CSMessagePtr &msg)
+bool ServiceProxyBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
     bool handled = true;
-    if(msg && msg->serviceID() == serviceID())
+    if(csMsg && csMsg->serviceID() == serviceID())
     {
-        switch (msg->operationCode()) {
-        case OpCode::Register:
-            onPropChangeUpdate(msg);
+        switch (csMsg->operationCode()) {
+        case OpCode::StatusUpdate:
+            onPropChangeUpdate(csMsg);
             break;
-        case OpCode::Request:
-            onRequestResult(msg);
+        case OpCode::RequestResultUpdate:
+            onRequestResult(csMsg, false);
             break;
-        case OpCode::RequestSync:
-            onRequestSyncResult(msg);
+        case OpCode::RequestSyncResultUpdate:
+        case OpCode::RequestSyncResultDone:
+            onRequestSyncResult(csMsg);
+            break;
+        case OpCode::RequestResultDone:
+            onRequestResult(csMsg, true);
             break;
         default:
             handled = false;
-            thafErr("Invalid opcode");
+            thafErr("Invalid RESPONSE operation code, then cannot match to any REQUEST code[" << csMsg->operationCode() << "]");
             break;
         }
     }
@@ -84,7 +88,7 @@ void ServiceProxyBase::sendAbortRequest(const RegID &regID)
 
 void ServiceProxyBase::sendAbortSyncRequest(const RegID &regID)
 {
-    removeSyncRegEntry(regID);
+    pickOutSyncRegEntry(regID);
     _client->sendMessageToServer(this->createCSMessage(regID.opID, OpCode::Abort));
 }
 
@@ -217,7 +221,7 @@ void ServiceProxyBase::onPropChangeUpdate(const CSMessagePtr& msg)
     }
 }
 
-void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg)
+void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg, bool done)
 {
     decltype (RegEntry::callback) callback;
     {
@@ -234,8 +238,16 @@ void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg)
                     break;
                 }
             }
-            callback = std::move(itRegEntry->callback);
-            regEntries.erase(itRegEntry);
+
+            if(done)
+            {
+                callback = std::move(itRegEntry->callback);
+                regEntries.erase(itRegEntry);
+            }
+            else
+            {
+                callback = itRegEntry->callback;
+            }
         }
     }
 
@@ -247,7 +259,7 @@ void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg)
 
 void ServiceProxyBase::onRequestSyncResult(const CSMessagePtr &msg)
 {
-    if(auto resultPromise = removeSyncRegEntry(RegID{ msg->requestID(), msg->operationID() }))
+    if(auto resultPromise = pickOutSyncRegEntry(RegID{ msg->requestID(), msg->operationID() }))
     {
         resultPromise->set_value(msg);
     }
@@ -300,7 +312,7 @@ std::shared_ptr<std::future<CSMessagePtr > > ServiceProxyBase::storeSyncRegEntry
     return resultFuture;
 }
 
-std::shared_ptr<std::promise<CSMessagePtr >> ServiceProxyBase::removeSyncRegEntry(const RegID& regID)
+std::shared_ptr<std::promise<CSMessagePtr >> ServiceProxyBase::pickOutSyncRegEntry(const RegID& regID)
 {
     std::shared_ptr<std::promise<CSMessagePtr >> resultPromise;
     { // using {block} to unlock the mutex of _syncRequestEntriesMap

@@ -63,7 +63,6 @@ SOURCES += \
     src/thaf/messaging/client-server/ClientBase.cpp \
     src/thaf/messaging/client-server/DomainController.cpp \
     src/thaf/messaging/client-server/IAMessageRouter.cpp \
-    src/thaf/messaging/client-server/IAServiceStub.cpp \
     src/thaf/messaging/client-server/RequestKeeper.cpp \
     src/thaf/messaging/client-server/ServerBase.cpp \
     src/thaf/messaging/client-server/ServiceProxyBase.cpp \
@@ -160,9 +159,9 @@ HEADERS += \
     include/thaf/threading/internal/ThreadPoolImplBase.h \
     include/thaf/threading/internal/TimerManagerImpl.h \
     include/thaf/utils/TimeMeasurement.h \
-    include/thaf/utils/cppextension/LoopMacros.h \
+    include/thaf/utils/cppextension/Loop.mc.h \
     include/thaf/utils/cppextension/SyncObject.h \
-    include/thaf/utils/cppextension/thaf.h \
+    include/thaf/utils/cppextension/thaf.mc.h \
     include/thaf/utils/debugging/Debug.h \
     include/thaf/utils/IDManager.h \
     include/thaf/patterns/Patterns.h \
@@ -171,8 +170,8 @@ HEADERS += \
     include/thaf/utils/serialization/ByteArray.h \
     include/thaf/utils/serialization/DumpHelper.h \
     include/thaf/utils/serialization/SerializableInterface.h \
-    include/thaf/utils/serialization/SerializableObjMacros.h \
     include/thaf/utils/serialization/SerializableObject.h \
+    include/thaf/utils/serialization/SerializableObject.mc.h \
     include/thaf/utils/serialization/SerializationTrait.h \
     include/thaf/utils/serialization/Serializer.h \
     include/thaf/messaging/client-server/ipc/IPCFactory.h \

@@ -19,7 +19,7 @@ public:
     ~ServiceStubBase() override;
 
     void setStubHandler(ServiceStubHandlerInterface *stubHandler) override;
-    bool replyToRequest(const CSMessagePtr &msgContent) override;
+    bool replyToRequest(const CSMessagePtr &csMsg, bool hasDone = true) override;
     bool sendStatusUpdate(const CSMessagePtr& csMsg) override;
 
 protected:
@@ -29,7 +29,7 @@ protected:
     void forwardToStubHandler(const RequestKeeperPtr& requestKeeper);
 
     RequestKeeperPtr saveRequestInfo(const CSMessagePtr& msg);
-    RequestKeeperPtr removeRequestInfo(const CSMessagePtr &msgContent);
+    RequestKeeperPtr pickOutRequestInfo(const CSMessagePtr &msgContent, bool done = true);
     void invalidateAndRemoveAllRequestKeepers();
 
     void saveRegisterInfo(const CSMessagePtr& msg);

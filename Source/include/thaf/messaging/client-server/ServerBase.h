@@ -5,7 +5,7 @@
 #include "ServerInterface.h"
 #include "ServiceProviderInterface.h"
 #include "internal/CSShared.h"
-#include "thaf/utils/cppextension/thaf.h"
+#include "thaf/utils/cppextension/thaf.mc.h"
 
 
 namespace thaf {

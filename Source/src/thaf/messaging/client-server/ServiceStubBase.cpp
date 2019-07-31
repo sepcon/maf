@@ -2,16 +2,67 @@
 #include "thaf/messaging/client-server/CSStatus.h"
 #include "thaf/utils/debugging/Debug.h"
 
+
 namespace thaf {
 namespace messaging {
 
+void setResultUpdateCode(const CSMessagePtr& csMsg)
+{
+    OpCode rescode = csMsg->operationCode();
+    switch (csMsg->operationCode()) {
+    case OpCode::Request:
+        rescode = OpCode::RequestResultUpdate;
+        break;
+    case OpCode::RequestSync:
+        rescode = OpCode::RequestSyncResultUpdate;
+        break;
+    case OpCode::Register:
+    case OpCode::UnRegister:
+        rescode = OpCode::StatusUpdate;
+        break;
+    default:
+        break;
+    }
+    csMsg->setOperationCode(rescode);
+}
+void setResultDoneCode(const CSMessagePtr& csMsg)
+{
+    OpCode rescode = csMsg->operationCode();
+    switch (csMsg->operationCode()) {
+    case OpCode::Request:
+        rescode = OpCode::RequestResultDone;
+        break;
+    case OpCode::RequestSync:
+        rescode = OpCode::RequestSyncResultDone;
+        break;
+    case OpCode::Register:
+    case OpCode::UnRegister:
+        rescode = OpCode::StatusUpdate;
+        break;
+    default:
+        break;
+    }
+    csMsg->setOperationCode(rescode);
+}
+
+void applyResponseCode(const CSMessagePtr& csMsg, bool done = true)
+{
+    if(done)
+    {
+        setResultDoneCode(csMsg);
+    }
+    else
+    {
+        setResultUpdateCode(csMsg);
+    }
+}
 
 bool ServiceStubBase::onIncomingMessage(const CSMessagePtr &msg)
 {
     thafInfo("Received Incoming Message: " <<
-             "\nCode: " << msg->operationCode() <<
-             "\nID: " << msg->operationID() <<
-             "\nSenderAddress: " << msg->sourceAddress().dump());
+             "\n\tCode: " << msg->operationCode() <<
+             "\n\tID: " << msg->operationID() <<
+             "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
     bool handled = true;
     switch (msg->operationCode())
     {
@@ -21,11 +72,12 @@ bool ServiceStubBase::onIncomingMessage(const CSMessagePtr &msg)
     case OpCode::UnRegister:
         onStatusChangeUnregister(msg);
         break;
-    case OpCode::Get:
     case OpCode::Request:
     case OpCode::RequestSync:
-    case OpCode::Abort:
         onClientRequest(msg);
+        break;
+    case OpCode::Abort:
+        onAbortActionRequest(msg);
         break;
     default:
         handled = false;
@@ -51,16 +103,24 @@ ServiceStubBase::~ServiceStubBase()
 }
 
 
-bool ServiceStubBase::replyToRequest(const CSMessagePtr& msg)
+bool ServiceStubBase::replyToRequest(const CSMessagePtr& csMsg, bool hasDone)
 {
-    auto errCode = DataTransmissionErrorCode::ReceiverUnavailable;
-    auto requestKeeper = removeRequestInfo(msg);
+    //Sync request must always be done at first response from service. do not allow client to be block by many updates
+    if(csMsg->operationCode() == OpCode::RequestSync) { hasDone = true; }
+    auto requestKeeper = pickOutRequestInfo(csMsg, hasDone);
     if(requestKeeper)
     {
-        requestKeeper->invalidate();
-        errCode = _server->sendMessageToClient(msg);
+        if(hasDone)
+        {
+            requestKeeper->invalidate();
+        }
+        applyResponseCode(csMsg, hasDone);
+        return _server->sendMessageToClient(csMsg) == DataTransmissionErrorCode::Success;
     }
-    return errCode == DataTransmissionErrorCode::Success;
+    else
+    {
+        return false;
+    }
 }
 
 bool ServiceStubBase::sendStatusUpdate(const CSMessagePtr &msg)
@@ -87,6 +147,7 @@ bool ServiceStubBase::sendStatusUpdate(const CSMessagePtr &msg)
     }
     else
     {
+        applyResponseCode(msg);
         auto trySendToDestinations = [this, &msg](AddressList& addresses) -> AddressList {
             AddressList busyReceivers;
             for(const auto& addr : addresses)
@@ -146,7 +207,7 @@ void ServiceStubBase::onStatusChangeRegister(const CSMessagePtr &msg)
 
 void ServiceStubBase::onStatusChangeUnregister(const CSMessagePtr &msg)
 {
-    auto requestKeeper = removeRequestInfo(msg);
+    auto requestKeeper = pickOutRequestInfo(msg);
     if(requestKeeper)
     {
         requestKeeper->invalidate();
@@ -178,7 +239,7 @@ ServiceStubBase::RequestKeeperPtr ServiceStubBase::saveRequestInfo(const CSMessa
     return requestKeeper;
 }
 
-ServiceStubBase::RequestKeeperPtr ServiceStubBase::removeRequestInfo(const CSMessagePtr &msg)
+ServiceStubBase::RequestKeeperPtr ServiceStubBase::pickOutRequestInfo(const CSMessagePtr &msg, bool done)
 {
     RequestKeeperPtr keeper;
     auto lock = _requestKeepersMap.a_lock();
@@ -192,7 +253,10 @@ ServiceStubBase::RequestKeeperPtr ServiceStubBase::removeRequestInfo(const CSMes
             if(keeperTmp->valid() && keeperTmp->_csMsg->requestID() == msg->requestID())
             {
                 keeper = keeperTmp;
-                listOfClps.erase(itClp);
+                if(done)
+                {
+                    listOfClps.erase(itClp);
+                }
                 break;
             }
         }
@@ -243,7 +307,7 @@ void ServiceStubBase::removeRegistersOfAddress(const Address &addr)
 
 void ServiceStubBase::onAbortActionRequest(const CSMessagePtr &msg)
 {
-    RequestKeeperPtr clp = removeRequestInfo(msg);
+    RequestKeeperPtr clp = pickOutRequestInfo(msg);
     if(clp)
     {
         clp->invalidate();

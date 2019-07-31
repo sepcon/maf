@@ -22,9 +22,9 @@ namespace messaging {
 //    RequestSync,
 //    Abort,
 ////  Server Response
-//    UpdateStatus,
-//    RequestResult,
-//    SyncRequestResult,
+//    StatusUpdate,
+//    RequestResultUpdate,
+//    RequestSyncResultUpdate,
 //    RequestError,
 //    SyncRequestError,
 ////  Unhandle
@@ -42,9 +42,9 @@ namespace messaging {
 //        "RequestSync",
 //        "Abort",
 //    //  Server Response
-//        "UpdateStatus",
-//        "RequestResult",
-//        "SyncRequestResult",
+//        "StatusUpdate",
+//        "RequestResultUpdate",
+//        "RequestSyncResultUpdate",
 //        "RequestError",
 //        "SyncRequestError",
 //    //  Unhandle

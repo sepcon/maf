@@ -3,7 +3,7 @@
 
 #include "Serializer.h"
 #include "DumpHelper.h"
-#include "SerializableObjMacros.h"
+#include "SerializableObject.mc.h"
 
 /**
  * @brief Use below MACROS to define a serializable object like this:

@@ -4,7 +4,7 @@
 #include "ServiceStatusObserverInterface.h"
 #include "ServiceRequesterInterface.h"
 #include "internal/CSShared.h"
-#include "thaf/utils/cppextension/thaf.h"
+#include "thaf/utils/cppextension/thaf.mc.h"
 #include "thaf/utils/debugging/Debug.h"
 
 namespace thaf {
@@ -42,7 +42,7 @@ std::shared_ptr<Proxy> ClientBase::createProxy(ServiceID sid)
     std::lock_guard lock(creatingMutex);
     auto serviceRequester = getServiceRequester(sid);
 
-    if(serviceRequester && typeid (serviceRequester.get()) != typeid(Proxy*))
+    if(serviceRequester && typeid (*serviceRequester) != typeid(Proxy))
     {
         thafErr("Already had different Proxy type[" << typeid(serviceRequester.get()).name() << "] register to this service id [" << sid << "]!");
         throw std::runtime_error("ClientBase::createProxy -> mismatch between existing Proxy with requested one!");

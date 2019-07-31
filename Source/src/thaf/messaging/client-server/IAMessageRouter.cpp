@@ -49,6 +49,7 @@ DataTransmissionErrorCode IAMessageRouter::sendMessageToClient(const CSMessagePt
 
 DataTransmissionErrorCode IAMessageRouter::sendMessageToServer(const CSMessagePtr &msg)
 {
+    msg->setSourceAddress(Address{"", 0}); //BUG: later must be validated by validator
     if(ServerBase::onIncomingMessage(msg))
     {
         return DataTransmissionErrorCode::Success;
