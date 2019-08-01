@@ -2,6 +2,7 @@
 
 #include "CSDefines.h"
 #include "ServiceProxyBase.h"
+#include "ClientInterface.h"
 #include "thaf/messaging/Component.h"
 #include "thaf/messaging/BasicMessages.h"
 #include "thaf/utils/debugging/Debug.h"
@@ -53,6 +54,7 @@ public:
 
     ~QueueingServiceProxy(){}
     QueueingServiceProxy(ServiceID sid, ClientInterface *client);
+
 protected:
     bool updateServiceStatusToComponent(ComponentRef compref, Availability oldStatus, Availability newStatus);
     void addInterestedComponent(ComponentRef compref);
@@ -64,6 +66,7 @@ protected:
     ListOfInterestedComponents _listComponents;
     Availability _serviceStatus = Availability::Unavailable ;
 };
+
 
 template<class MessageTrait>
 QueueingServiceProxy<MessageTrait>::QueueingServiceProxy(ServiceID sid, ClientInterface* client) :
@@ -78,8 +81,8 @@ template<class MessageTrait>
 void QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
 {
     auto lockListComps(_listComponents.pa_lock()); //Lock must be invoked here to protect both
-
-    if(_serviceStatus == Availability::Available)
+    auto serviceStatus = _client->getServiceStatus(serviceID());
+    if(serviceStatus == Availability::Available)
     {
         thafMsg("\n------------> Update Service status to component <<<<<<<< \n");
         updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
@@ -98,8 +101,7 @@ void QueueingServiceProxy<MessageTrait>::onServerStatusChanged(Availability oldS
     ServiceProxyBase::onServerStatusChanged(oldStatus, newStatus);
     if(newStatus != Availability::Available)
     {
-        onServiceStatusChanged(serviceID(), _serviceStatus, newStatus);
-        _serviceStatus = newStatus;
+        onServiceStatusChanged(serviceID(), oldStatus, newStatus);
     }
 
 }
@@ -117,25 +119,21 @@ bool QueueingServiceProxy<MessageTrait>::updateServiceStatusToComponent(Componen
 }
 
 template<class MessageTrait>
-void QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID /*sid*/, Availability oldStatus, Availability newStatus)
+void QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
-
+    assert(sid == serviceID());
     thafInfo("Service Status Changed: " << static_cast<int>(oldStatus) << " - " << static_cast<int>(newStatus));
-    auto lock(_listComponents.pa_lock()); //this lock is responsible for both _listComponents protection and _serviceStatus
-    if(_serviceStatus != newStatus)
+    auto lock(_listComponents.pa_lock());
+    for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
     {
-        _serviceStatus = newStatus;
-        for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
+        if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))
         {
-            if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))
-            {
-                ++itCompref;
-            }
-            else
-            {
-                thafWarn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
-                itCompref = _listComponents->erase(itCompref);
-            }
+            ++itCompref;
+        }
+        else
+        {
+            thafWarn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
+            itCompref = _listComponents->erase(itCompref);
         }
     }
 }

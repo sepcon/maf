@@ -21,6 +21,7 @@ public:
     virtual bool unregisterServiceRequester(ServiceID sid) = 0;
     virtual bool hasServiceRequester(ServiceID sid) = 0;
     virtual IServiceRequesterPtr getServiceRequester(ServiceID sid) = 0;
+    virtual Availability getServiceStatus(ServiceID sid) = 0;
 };
 
 }

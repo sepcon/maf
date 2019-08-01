@@ -22,6 +22,7 @@ public:
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool hasServiceRequester(ServiceID sid) override;
     IServiceRequesterPtr getServiceRequester(ServiceID sid) override;
+    Availability getServiceStatus(ServiceID sid) override;
     void init();
     void deinit();
     template<class Proxy, std::enable_if_t<std::is_base_of_v<ServiceRequesterInterface, Proxy>, bool> = true>
@@ -31,7 +32,9 @@ protected:
     bool onIncomingMessage(const CSMessagePtr& msg) override;
 
     using Requesters = SMList<ServiceRequesterInterface>;
+    using ServiceStatusMap = nstl::SyncObject<std::map<ServiceID, Availability>>;
     Requesters _requesters;
+    ServiceStatusMap _serviceStatusMap;
 };
 
 template<class Proxy, std::enable_if_t<std::is_base_of_v<ServiceRequesterInterface, Proxy>, bool>>

@@ -28,7 +28,8 @@ public:
 			{
 				_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, 
 					[this](const std::shared_ptr<WeatherStatusResult> result) {
-						thafMsg("Received result update from server of weather status: " << result->props().get_sStatus());
+						static int totalUpdate = 0;
+						thafMsg("Received result update from server of weather status: " << ++totalUpdate);
 					});
 			}
 			else
@@ -38,6 +39,7 @@ public:
 			});
 		_comp.start([this, client, serviceID] {
 			_proxy = client->createProxy<LocalIPCServiceProxy>(serviceID);
+			_proxy->addReference();
 			});
 	}
 private:

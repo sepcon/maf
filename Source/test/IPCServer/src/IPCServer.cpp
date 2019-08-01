@@ -44,7 +44,7 @@ public:
 			result->props().set_sStatus(SStatus);
 			requestKeeper->respond(result);
 
-			for (auto i = 0; i < 100; ++i)
+			for (auto i = 0; i < REQUESTS_PER_CLIENT; ++i)
 			{
 				_stub->sendStatusUpdate(result);
 			}

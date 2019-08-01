@@ -38,9 +38,17 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
     {
         auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
         auto lock(_registedClAddrs.pa_lock());
-        for(auto& addr : *_registedClAddrs)
-        {
-            sendMessageToClient(serviceStatusMsg, addr);;
+        for (auto itAddr = _registedClAddrs->begin(); itAddr != _registedClAddrs->end(); /*intenedTobeEmpy*/) {
+            auto ec = sendMessageToClient(serviceStatusMsg, *itAddr);
+            if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))
+            {
+                //Client has been off, then don't keep their contact anymore
+                itAddr = _registedClAddrs->erase(itAddr);
+            }
+            else
+            {
+                ++itAddr;
+            }
         }
     }
 }
@@ -57,7 +65,7 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
             auto lock(_providers.pa_lock());
             for(auto& provider : *_providers)
             {
-                notifyServiceStatusToClient(provider->serviceID(), Availability::Unavailable, Availability::Available);
+                notifyServiceStatusToClient(csMsg->sourceAddress(), provider->serviceID(), Availability::Unavailable, Availability::Available);
             }
         }
         return true;
@@ -65,6 +73,19 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     else
     {
         return ServerBase::onIncomingMessage(csMsg);
+    }
+}
+
+void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, ServiceID sid, Availability oldStatus, Availability newStatus)
+{
+    if(oldStatus != newStatus)
+    {
+        auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
+        auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
+        if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))
+        {
+            //Don't need to remove client if failed?
+        }
     }
 }
 

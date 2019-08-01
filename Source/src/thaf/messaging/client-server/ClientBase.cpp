@@ -8,6 +8,19 @@ namespace messaging {
 bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
 {
     return addIfNew(_requesters, requester);
+//    if(addIfNew(_requesters, requester))
+//    {
+//        auto serviceStatus = getServiceStatus(requester->serviceID());
+//        if(serviceStatus == Availability::Available)
+//        {
+//            requester->onServiceStatusChanged(requester->serviceID(), Availability::Unavailable, Availability::Available);
+//        }
+//        return true;
+//    }
+//    else
+//    {
+//        return false;
+//    }
 }
 
 bool ClientBase::unregisterServiceRequester(const IServiceRequesterPtr &requester)
@@ -75,6 +88,20 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
 {
     return findByID(_requesters, sid);
+}
+
+Availability ClientBase::getServiceStatus(ServiceID sid)
+{
+    auto lock(_serviceStatusMap.pa_lock());
+    auto itStatus = _serviceStatusMap->find(sid);
+    if(itStatus != _serviceStatusMap->end())
+    {
+        return itStatus->second;
+    }
+    else
+    {
+        return Availability::Unavailable;
+    }
 }
 
 void ClientBase::init()
