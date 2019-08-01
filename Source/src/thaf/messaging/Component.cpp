@@ -80,26 +80,16 @@ void Component::start(std::function<void()> entryPointFunc)
         postMessage<StartupMessage>();
     }
 
-    _workerThread = std::thread {[this] {
-        this->startMessageLoop();
-    }};
-    if(!_detached)
+    if(_detached)
     {
-        if(_workerThread.joinable())
-        {
-            _workerThread.join();
-        }
+        _workerThread = std::thread {[this] {
+            this->startMessageLoop();
+        }};
     }
-//    if(_detached)
-//    {
-//        _workerThread = std::thread {[this] {
-//            this->startMessageLoop();
-//        }};
-//    }
-//    else
-//    {
-//        this->startMessageLoop();
-//    }
+    else
+    {
+        this->startMessageLoop();
+    }
 }
 
 void Component::shutdown()
@@ -145,9 +135,14 @@ ComponentRef Component::getComponentRef()
     }
 }
 
-Component::ComponentID Component::getID() const
+const Component::ComponentName &Component::name() const
 {
-    return _workerThread.get_id();
+    return _name;
+}
+
+void Component::setName(Component::ComponentName name)
+{
+    _name = std::move(name);
 }
 
 void Component::startMessageLoop()

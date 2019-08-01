@@ -15,7 +15,7 @@ using PayloadType = srz::ByteArray;
 class SerializableMessageContentBase : public CSMessageContentBase, public srz::SerializableInterface
 {
 public:
-    srz::ByteArray toBytes() noexcept override { return {}; }
+    srz::ByteArray toBytes() override { return {}; }
     void fromBytes(const srz::ByteArray& /*ba*/) override {}
     void makesureTransferable() override {
         _payload = toBytes();
@@ -32,7 +32,7 @@ class IPCMessage : public CSMessage
 {
 public:
     using CSMessage::CSMessage;
-    srz::ByteArray toBytes() const noexcept;
+    srz::ByteArray toBytes();
     bool fromBytes(const std::shared_ptr<srz::ByteArray>& bytes) noexcept;
 };
 

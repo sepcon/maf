@@ -1,4 +1,4 @@
-#include "thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSender.h"
+#include "thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSenderImpl.h"
 #include "thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiver.h"
 #include "thaf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h"
 #include "thaf/utils/serialization/ByteArray.h"

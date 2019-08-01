@@ -1,8 +1,27 @@
 #pragma once
 
-#if defined (WIN32) || defined(WIN64) || defined(_WIN32) || defined(_WIN64)
-#include "platforms/windows/LocalIPCReceiver.h"
-#elif defined (LINUX)
+#include "thaf/messaging/client-server/ipc/IPCReceiver.h"
 
-#elif defined (MAC)
-#endif
+namespace thaf {
+namespace messaging {
+namespace ipc {
+
+class LocalIPCReceiver : public IPCReceiver, BytesComeObserver
+{
+public:
+    LocalIPCReceiver();
+    ~LocalIPCReceiver() override;
+    bool initConnection(Address address, bool isClientMode = false) override;
+    bool startListening() override;
+    bool stopListening() override;
+    bool listening() const override;
+    const Address& address() const override;
+
+private:
+    void onBytesCome(const std::shared_ptr<srz::ByteArray>& bytes) override;
+    std::unique_ptr<IPCReceiver> _impl;
+};
+} // ipc
+} // messaging
+} // thaf
+

@@ -21,14 +21,7 @@ win32: {
     message(win32)
     LIBS += -lKernel32
 
-    SOURCES += src/thaf/messaging/client-server/ipc/platforms/windows/LocalIPCReceiver.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/LocalIPCSender.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiver.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiverBase.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeSender.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/OverlappedPipeSender.cpp \
-                src/thaf/messaging/client-server/ipc/platforms/windows/OverlappedPipeReceiver.cpp
+    SOURCES +=
 
 
     HEADERS +=    
@@ -49,7 +42,6 @@ win32: {
     LIBS += -lpthread
 }
 
-#    C:/Users/sepcon/Documents/qtproject/untitled2/Untitled2.cpp \
 
 INCLUDEPATH += ./include
 
@@ -71,6 +63,8 @@ SOURCES += \
     src/thaf/messaging/client-server/ipc/BytesCommunicator.cpp \
     src/thaf/messaging/client-server/ipc/IPCClientBase.cpp \
     src/thaf/messaging/client-server/ipc/IPCServerBase.cpp \
+    src/thaf/messaging/client-server/ipc/LocalIPCReceiver.cpp \
+    src/thaf/messaging/client-server/ipc/LocalIPCSender.cpp \
     src/thaf/threading/Thread.cpp \
     src/thaf/threading/threadpool/DynamicCountThreadPool.cpp \
     src/thaf/threading/threadpool/ThreadPoolFactory.cpp \
@@ -143,6 +137,8 @@ HEADERS += \
     include/thaf/messaging/client-server/ipc/LocalIPCServiceStub.h \
     include/thaf/messaging/client-server/ipc/internal/platforms/linux/LocalIPCSender.h \
     include/thaf/messaging/MessageHandler.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCReceiverImpl.h \
+    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSenderImpl.h \
     include/thaf/threading/IThreadPool.h \
     include/thaf/threading/Queue.h \
     include/thaf/threading/Runnable.h \
@@ -182,14 +178,8 @@ HEADERS += \
     include/thaf/messaging/client-server/ipc/MessageValidator.h \
     include/thaf/messaging/client-server/ipc/internal/LocalIPCReceiver.h \
     include/thaf/messaging/client-server/ipc/internal/LocalIPCSender.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCReceiver.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSender.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiver.h \
     include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiverBase.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSender.h \
     include/thaf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/OverlappedPipeReceiver.h \
-    include/thaf/messaging/client-server/ipc/internal/platforms/windows/OverlappedPipeSender.h \
     include/thaf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h
 
 

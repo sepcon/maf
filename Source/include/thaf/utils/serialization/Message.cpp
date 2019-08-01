@@ -44,7 +44,7 @@ namespace Messaging
 			}
 			return *(reinterpret_cast<const Type*>(_bytes.data()));
 		}
-		Message::IDType Message::getID()
+		Message::IDType Message::getName()
 		{
 			if (_bytes.size() < MESSAGE_LEAST_SIZE)
 			{

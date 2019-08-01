@@ -34,7 +34,7 @@ namespace IPC
 
 		void setType(Type type);
 		Type getType();
-		IDType getID();
+		IDType getName();
 		void setID(IDType id);
 		const char* getBytes();
 		void setRawBytes(ByteArray ba);

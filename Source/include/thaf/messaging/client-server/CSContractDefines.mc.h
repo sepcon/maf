@@ -23,7 +23,7 @@
 class OperationName##Type : public thaf::messaging::ipc::SerializableMessageContentBase \
 { \
 public: \
-    thaf::srz::ByteArray toBytes() noexcept override \
+    thaf::srz::ByteArray toBytes() override \
     { \
         thaf::srz::BASerializer sr; \
         sr << _myProperties; \

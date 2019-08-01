@@ -8,7 +8,7 @@ namespace messaging {
 namespace ipc {
 
 
-srz::ByteArray IPCMessage::toBytes() const noexcept
+srz::ByteArray IPCMessage::toBytes()
 {
     BASerializer sr;
     auto ipcContent = std::static_pointer_cast<SerializableMessageContentBase>(content());

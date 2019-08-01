@@ -40,7 +40,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
         auto lock(_registedClAddrs.pa_lock());
         for(auto& addr : *_registedClAddrs)
         {
-            _communicator->send(serviceStatusMsg, addr);;
+            sendMessageToClient(serviceStatusMsg, addr);;
         }
     }
 }

@@ -83,7 +83,7 @@
                    ds >> _myData;                                                                                               \
                }                                                                                                                \
                static thaf::messaging::ipc::OpID ID() { return OpID_##ActionName; }                                             \
-               thaf::messaging::ipc::OpID getID() const override { return ID(); }                                               \
+               thaf::messaging::ipc::OpID getName() const override { return ID(); }                                               \
                                                                                                                                 \
            public:                                                                                                              \
                mc_sbClass(ActionName##Type##Data)

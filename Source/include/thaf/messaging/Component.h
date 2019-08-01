@@ -21,14 +21,14 @@ using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 class Component : pattern::Unasignable
 {
 public:
-    using ComponentID = std::thread::id;
+    using ComponentName = std::string;
     Component(bool detachFromCurrentThread = true);
     ~Component();
 
     static ComponentRef getComponentRef();
 
-    ComponentID getID() const;
-
+    const ComponentName& name() const;
+    void setName(ComponentName name);
     void start(std::function<void()> entryPointFunc = nullptr);
     void shutdown();
     void postMessage(messaging::MessageBasePtr msg);
@@ -54,8 +54,9 @@ protected:
     std::thread _workerThread;
     MessageQueue _msgQueue;
     MsgHandlerMap _msgHandlers;
-    bool _detached;
     TimerMgrPtr _timerMgr;
+    ComponentName _name;
+    bool _detached;
 
     ComponentRef _myPtr;
     static thread_local Component* _tlspInstance;

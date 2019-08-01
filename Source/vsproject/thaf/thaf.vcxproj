@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -71,15 +71,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include</IncludePath>
+    <OutDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include</IncludePath>
+    <OutDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include</IncludePath>
+    <OutDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\include</IncludePath>
+    <OutDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\test\bin.noversion\Libs\msvc\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -134,45 +142,140 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\LocalIPCReceiver.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\LocalIPCSender.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\NamedPipeReceiver.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\NamedPipeReceiverBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\NamedPipeSender.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\NamedPipeSenderBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\OverlappedPipeSender.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\platforms\windows\OverlappedPipeReceiver.cpp" />
-	<ClCompile Include="..\..\src\thaf\main.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\Component.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\Timer.cpp" />
-	<ClCompile Include="..\..\src\thaf\logging\ConsoleLogger.cpp" />
-	<ClCompile Include="..\..\src\thaf\logging\LoggingComponent.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\CSMessage.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\ClientBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\IAMessageRouter.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\IAServiceProxy.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\IAServiceStub.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\RequestKeeper.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\ServerBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\ServiceProxyBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\ServiceStubBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\client-server\Address.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\BytesCommunicator.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\IPCClientBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\IPCServerBase.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\Thread.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\threadpool\DynamicCountThreadPool.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\threadpool\ThreadPoolFactory.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\threadpool\PriorityThreadPool.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\threadpool\StableThreadPool.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\time\TimerManager.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\time\TimerManagerImpl.cpp" />
-	<ClCompile Include="..\..\src\thaf\threading\time\Waiter.cpp" />
-	<ClCompile Include="..\..\src\thaf\utils\IDManager.cpp" />
-	<ClCompile Include="..\..\src\thaf\utils\serialization\Serializer.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\IPCFactory.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\IPCMessage.cpp" />
-	<ClCompile Include="..\..\src\thaf\messaging\ipc\IPCReceiver.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\Component.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\Timer.cpp" />
+    <ClCompile Include="..\..\src\thaf\logging\ConsoleLogger.cpp" />
+    <ClCompile Include="..\..\src\thaf\logging\LoggingComponent.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\CSMessage.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ClientBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\DomainController.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\IAMessageRouter.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\RequestKeeper.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ServerBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ServiceProxyBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ServiceStubBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\Address.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\BytesCommunicator.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\IPCClientBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\IPCServerBase.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\LocalIPCReceiver.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\LocalIPCSender.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\Thread.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\threadpool\DynamicCountThreadPool.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\threadpool\ThreadPoolFactory.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\threadpool\PriorityThreadPool.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\threadpool\StableThreadPool.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\time\TimerManager.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\time\TimerManagerImpl.cpp" />
+    <ClCompile Include="..\..\src\thaf\threading\time\Waiter.cpp" />
+    <ClCompile Include="..\..\src\thaf\utils\IDManager.cpp" />
+    <ClCompile Include="..\..\src\thaf\utils\serialization\Serializer.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\IPCFactory.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\IPCMessage.cpp" />
+    <ClCompile Include="..\..\src\thaf\messaging\client-server\ipc\IPCReceiver.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+	<ClInclude Include="..\..\include\thaf\messaging\BasicMessages.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\Component.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\LocalIPCServer.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\MessageBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\MessageQueue.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\Timer.h" />
+    <ClInclude Include="..\..\include\thaf\logging\ConsoleLogger.h" />
+    <ClInclude Include="..\..\include\thaf\logging\LoggerBase.h" />
+    <ClInclude Include="..\..\include\thaf\logging\LoggerInterface.h" />
+    <ClInclude Include="..\..\include\thaf\logging\LoggingComponent.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\Communicator.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ClientBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ClientServerContract.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\DomainController.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\IAMessageRouter.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\IAServiceProxy.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\IAServiceStub.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\QueueingServiceProxy.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\QueueingServiceStub.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServerBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServerDomainController.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceProxyBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceStubBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\Address.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\CSDefines.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\CSMessage.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\CSMessageReceiver.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\CSStatus.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\CSTypes.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ClientInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\DomainUser.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\RegisterDataStructure.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\RequestKeeper.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServerInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceMessageReceiver.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceProviderInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceProxyInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceRequesterInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceStatusObserverInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceStubHandlerInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ServiceStubInterface.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\internal\CSShared.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\IAMessageTrait.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\Connection.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\BytesCommunicator.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\CSContractBegin.mc.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\CSContractDefines.mc.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\CSContractEnd.mc.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCClientBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCServerBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCTypes.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\LocalIPCClient.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\LocalIPCServer.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\LocalIPCServiceProxy.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\LocalIPCServiceStub.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\linux\LocalIPCSender.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\MessageHandler.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\windows\LocalIPCReceiverImpl.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\windows\LocalIPCSenderImpl.h" />
+    <ClInclude Include="..\..\include\thaf\threading\IThreadPool.h" />
+    <ClInclude Include="..\..\include\thaf\threading\Queue.h" />
+    <ClInclude Include="..\..\include\thaf\threading\Runnable.h" />
+    <ClInclude Include="..\..\include\thaf\threading\Signal.h" />
+    <ClInclude Include="..\..\include\thaf\threading\Thread.h" />
+    <ClInclude Include="..\..\include\thaf\threading\ThreadJoiner.h" />
+    <ClInclude Include="..\..\include\thaf\threading\ThreadPoolFactory.h" />
+    <ClInclude Include="..\..\include\thaf\threading\ThreadSafeQueue.h" />
+    <ClInclude Include="..\..\include\thaf\threading\TimerManager.h" />
+    <ClInclude Include="..\..\include\thaf\threading\Waiter.h" />
+    <ClInclude Include="..\..\include\thaf\threading\internal\DynamicCountThreadPool.h" />
+    <ClInclude Include="..\..\include\thaf\threading\internal\PriorityThreadPool.h" />
+    <ClInclude Include="..\..\include\thaf\threading\internal\StableThreadPool.h" />
+    <ClInclude Include="..\..\include\thaf\threading\internal\ThreadPoolImplBase.h" />
+    <ClInclude Include="..\..\include\thaf\threading\internal\TimerManagerImpl.h" />
+    <ClInclude Include="..\..\include\thaf\utils\TimeMeasurement.h" />
+    <ClInclude Include="..\..\include\thaf\utils\cppextension\Loop.mc.h" />
+    <ClInclude Include="..\..\include\thaf\utils\cppextension\SyncObject.h" />
+    <ClInclude Include="..\..\include\thaf\utils\cppextension\thaf.mc.h" />
+    <ClInclude Include="..\..\include\thaf\utils\debugging\Debug.h" />
+    <ClInclude Include="..\..\include\thaf\utils\IDManager.h" />
+    <ClInclude Include="..\..\include\thaf\patterns\Patterns.h" />
+    <ClInclude Include="..\..\include\thaf\utils\cppextension\TupleManip.h" />
+    <ClInclude Include="..\..\include\thaf\utils\cppextension\TypeTraits.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\ByteArray.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\DumpHelper.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\SerializableInterface.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\SerializableObject.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\SerializableObject.mc.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\SerializationTrait.h" />
+    <ClInclude Include="..\..\include\thaf\utils\serialization\Serializer.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCFactory.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCMessage.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCMessageTrait.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCReceiver.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\IPCSender.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\MessageValidator.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\LocalIPCReceiver.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\LocalIPCSender.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\windows\NamedPipeReceiverBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\windows\NamedPipeSenderBase.h" />
+    <ClInclude Include="..\..\include\thaf\messaging\client-server\ipc\internal\platforms\windows\PipeShared.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

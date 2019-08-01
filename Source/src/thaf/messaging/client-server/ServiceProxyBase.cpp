@@ -160,6 +160,12 @@ CSMessagePtr ServiceProxyBase::sendRequestSync(OpID operationID, const CSMsgCont
 void ServiceProxyBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
     thafInfo("Server Status changed from: " << static_cast<int>(oldStatus) << " to " << static_cast<int>(newStatus));
+    if(newStatus == Availability::Unavailable)
+    {
+        abortAllSyncRequest();
+        clearAllAsyncRequests();
+        clearAllRegisterEntries();
+    }
 }
 
 void ServiceProxyBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
@@ -286,6 +292,21 @@ void ServiceProxyBase::abortAllSyncRequest()
         thafWarn("Aborting " << totalAborted << " Sync requests!");
     }
     _syncRequestEntriesMap->clear();
+}
+
+///
+/// \brief ServiceProxyBase::clearAllRequests clears all requests, useful whenever server is unavalable
+///
+void ServiceProxyBase::clearAllAsyncRequests()
+{
+    auto lock(_requestEntriesMap.pa_lock());
+    _requestEntriesMap->clear();
+}
+
+void ServiceProxyBase::clearAllRegisterEntries()
+{
+    auto lock(_registerEntriesMap.pa_lock());
+    _registerEntriesMap->clear();
 }
 
 bool ServiceProxyBase::sendMessageToServer(const CSMessagePtr &outgoingMsg)

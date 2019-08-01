@@ -61,7 +61,7 @@ namespace messaging {
 //{
 //public:
 //    static OpID ID() { return OpIDInvalid; }
-//    virtual OpID getID() const = 0;
+//    virtual OpID getName() const = 0;
 //    virtual ~SerializableMessageContentBase() = default;
 //    virtual srz::ByteArray toBytes() const = 0;
 //    virtual void fromBytes(const srz::ByteArray& bytes) = 0;

@@ -1,8 +1,29 @@
 #pragma once
 
-#if defined (WIN32) || defined(WIN64) || defined(_WIN32) || defined(_WIN64)
-#include "Platforms/windows/LocalIPCSender.h"
-#elif defined (LINUX)
+#include "thaf/messaging/client-server/ipc/IPCSender.h"
 
-#elif defined (MAC)
-#endif
+
+namespace thaf {
+namespace messaging {
+namespace ipc {
+
+class NamedPipeSender;
+
+class LocalIPCSender : public IPCSender
+{
+public:
+    LocalIPCSender();
+    ~LocalIPCSender() override;
+    void initConnection(const Address &addr) override;
+    DataTransmissionErrorCode send(const thaf::srz::ByteArray &ba) override;
+    const Address &receiverAddress() const override;
+    Availability checkReceiverStatus() const override;
+
+private:
+    std::unique_ptr<IPCSender> _pImpl;
+};
+
+} // ipc
+} // messaging
+} // thaf
+

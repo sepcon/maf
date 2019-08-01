@@ -45,7 +45,7 @@ std::vector<std::string> createList()
     return thelist;
 }
 
-std::shared_ptr<std::vector<std::string>> listOfPlaces = std::make_shared<std::vector<std::string>>(createList<1000>());
+std::shared_ptr<std::vector<std::string>> listOfPlaces = std::make_shared<std::vector<std::string>>(createList<10000>());
 
 template<class Proxy, int ServiceID>
 struct ClientComponent
@@ -56,6 +56,7 @@ struct ClientComponent
     void startTest(ClientBase* client)
     {
         _component = std::make_shared<Component>();
+//        _component->setName("ServiceClient");
         _component->onMessage<ServiceStatusMsg>([this](const std::shared_ptr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available)
             {
@@ -66,14 +67,15 @@ struct ClientComponent
 
                 (*request)->set_command(1);
                 _proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-                    thafMsg("************************************************sending the shutdown request!");
+                    auto size = result->props().get_shared_list_of_places() ? result->props().get_shared_list_of_places()->size() : 0;
+                    thafMsg("Received result from server with size of listPlaces ----> = " << size);
                     thafMsg((*result)->get_the_status());
                 });
             }
         });
         _component->start([this, client] {
             _proxy = client->createProxy<Proxy>(ServiceID);
-            thafMsg("proxy for service 1 ready ! Component  = " << _component->getID());
+            thafMsg("proxy for service 1 ready ! Component  = " << _component->name());
         });
     }
     void stopTest()
@@ -127,7 +129,7 @@ public:
 
                 auto res = std::make_shared<WeatherStatusResult>();
                 res->props().set_shared_list_of_places(listOfPlaces);
-                for(int i = 0; i < 1000; ++i)
+                for(int i = 0; i < 100; ++i)
                 {requestKeeper->update(res);}
                 requestKeeper->respond(res);
             }
@@ -154,7 +156,7 @@ public:
 };
 
 
-template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 10>
+template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 4>
 void test(ClientBase* clientBase, ServerBase* serverBase)
 {
     ClientComponent<Proxy, 0> clients[NClient];
@@ -211,9 +213,7 @@ int main()
             thafMsg("Total test time = " << time << "ms");
         });
 
-//        auto proxy = c.createProxy<LocalIPCServiceProxy>(1);
-//        auto stub = s.createStub<LocalIPCServiceStub>(1);
-//        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>(&c, &s);
+        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>(&c, &s);
         test<IAServiceProxy, IAServiceStub, IARequestMesasge>(&(IAMessageRouter::instance()), &(IAMessageRouter::instance()));
 
         thafMsg("Program ends!");

@@ -39,7 +39,7 @@ public:
             const CSMsgContentPtr& outgoingData,
             PayloadProcessCallback<IncomingMsgContent> callback,
             unsigned long maxWaitTimeMs = THAF_MAX_OPERATION_WAIT_MS
-            );
+            ); 
 
     template<class IncomingMsgContent>
     std::shared_ptr<IncomingMsgContent> sendRequestSync
@@ -56,6 +56,7 @@ public:
 protected:
     bool updateServiceStatusToComponent(ComponentRef compref, Availability oldStatus, Availability newStatus);
     void addInterestedComponent(ComponentRef compref);
+    void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     template<class IncomingMsgContent>
     CSMessageHandlerCallback createMsgHandlerCallback(PayloadProcessCallback<IncomingMsgContent> callback, bool sync = false);
@@ -89,6 +90,18 @@ void QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef com
         _listComponents->insert(compref);
         thafMsg("Component id [" << std::this_thread::get_id() << "] regsitered to listen to service status change");
     }
+}
+
+template<class MessageTrait>
+void QueueingServiceProxy<MessageTrait>::onServerStatusChanged(Availability oldStatus, Availability newStatus)
+{
+    ServiceProxyBase::onServerStatusChanged(oldStatus, newStatus);
+    if(newStatus != Availability::Available)
+    {
+        onServiceStatusChanged(serviceID(), _serviceStatus, newStatus);
+        _serviceStatus = newStatus;
+    }
+
 }
 
 template<class MessageTrait>
