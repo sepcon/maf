@@ -17,6 +17,8 @@ public:
 
     RegID sendStatusChangeRegister(OpID propertyID, CSMessageHandlerCallback callback) override;
     void sendStatusChangeUnregister(RegID regID) override;
+    void sendStatusChangeUnregisterAll(OpID propertyID) override;
+
     RegID sendRequest
         (const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback

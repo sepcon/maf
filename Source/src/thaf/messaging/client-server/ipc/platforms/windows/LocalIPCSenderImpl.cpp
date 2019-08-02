@@ -81,10 +81,6 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba)
                         thafErr("sending bytes failed with error: " << GetLastError());
                     }
                 }
-                else
-                {
-                    thafInfo(ba.size() << " bytes sent to address: " << _pipeName);
-                }
             }
             else if(GetLastError() == ERROR_PIPE_BUSY)
             {

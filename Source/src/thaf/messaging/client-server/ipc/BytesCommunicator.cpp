@@ -71,7 +71,6 @@ DataTransmissionErrorCode BytesCommunicator::send(const std::shared_ptr<IPCMessa
         if(recvAddr != Address::INVALID_ADDRESS) { _pSender->initConnection(recvAddr); }
 		try
 		{
-			auto outgoingBytes = msg->toBytes();
 			return _pSender->send(msg->toBytes());
 		}
 		catch (const std::bad_alloc& e)

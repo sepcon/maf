@@ -9,6 +9,7 @@ namespace messaging {
 bool ServiceProxyBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
     bool handled = true;
+    thafInfo("New Incoming message from server: sid[" << csMsg->serviceID() << "]-opID[" << csMsg->operationID() << "]-opCode[" << csMsg->operationCode() << "]");
     if(csMsg && csMsg->serviceID() == serviceID())
     {
         switch (csMsg->operationCode()) {
@@ -203,6 +204,12 @@ void ServiceProxyBase::sendStatusChangeUnregister(RegID regID)
     {
         thafWarn("Try to Unregister invalid RegID");
     }
+}
+
+void ServiceProxyBase::sendStatusChangeUnregisterAll(OpID propertyID)
+{
+    auto lock(_registerEntriesMap.pa_lock());
+    _registerEntriesMap->erase(propertyID);
 }
 
 void ServiceProxyBase::onPropChangeUpdate(const CSMessagePtr& msg)

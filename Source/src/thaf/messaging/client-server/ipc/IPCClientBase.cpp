@@ -44,12 +44,19 @@ DataTransmissionErrorCode IPCClientBase::sendMessageToServer(const CSMessagePtr 
 
 void IPCClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
+	ClientBase::onServerStatusChanged(oldStatus, newStatus);
     if(newStatus == Availability::Available)
     {
-        auto registeredMsg = messaging::createCSMessage<IPCMessage>(ServiceIDInvalid, OpIDInvalid, OpCode::ServiceStatusUpdate);
-        sendMessageToServer(registeredMsg);
+        auto registeredMsg = messaging::createCSMessage<IPCMessage>(ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
+		if (sendMessageToServer(registeredMsg) == DataTransmissionErrorCode::Success)
+		{
+			thafInfo("Send service status change register to server successfully!");
+		}
+		else
+		{
+			thafInfo("Could not send service status register request to server");
+		}
     }
-    ClientBase::onServerStatusChanged(oldStatus, newStatus);
 }
 
 void IPCClientBase::monitorServerStatus(long long serverStatusCheckPeriodMS)

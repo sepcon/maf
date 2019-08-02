@@ -155,7 +155,7 @@ bool ServiceStubBase::sendStatusUpdate(const CSMessagePtr &msg)
                 auto errCode = _server->sendMessageToClient(msg, addr);
                 if(errCode == DataTransmissionErrorCode::Success)
                 {
-                    thafInfo("Sent message id: " << msg->operationID() << " from server side!");
+//                    thafInfo("Sent message id: " << msg->operationID() << " from server side!");
                 }
                 else if(errCode == DataTransmissionErrorCode::ReceiverBusy)
                 {

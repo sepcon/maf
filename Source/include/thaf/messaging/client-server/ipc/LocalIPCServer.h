@@ -8,11 +8,14 @@ namespace thaf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCServer : public IPCServerBase
+class LocalIPCServer : public IPCServerBase, public pattern::SingletonObject<LocalIPCServer>
 {
 public:
+    LocalIPCServer(Invisible){}
     void init(const Address& addr) { IPCServerBase::init(IPCType::Local, addr); }
 };
+
+
 } // ipc
 } // messaging
 } // thaf

@@ -15,10 +15,9 @@ srz::ByteArray IPCMessage::toBytes()
     srz::ByteArray payload = "";
     if(ipcContent)
     {
-        payload = ipcContent->payload();
+        payload = ipcContent->toBytes();
     }
-
-    sr << serviceID() << operationID() << operationCode() << requestID() << static_cast<const std::string&>(payload) << sourceAddress();
+    sr << serviceID() << operationID() << operationCode() << requestID() << payload << sourceAddress();
 
     return std::move(sr.mutableBytes());
 }
@@ -29,7 +28,8 @@ bool IPCMessage::fromBytes(const std::shared_ptr<srz::ByteArray> &bytes) noexcep
     try
     {
         auto ipcContent = std::make_shared<SerializableMessageContentBase>();
-        ds >> _serviceID >> _operationID >> _operationCode >> _requestID >> ipcContent->payload() >> _sourceAddress;
+		srz::ByteArray payload;
+		ds >> _serviceID >> _operationID >> _operationCode >> _requestID >> ipcContent->payload() >> _sourceAddress;
         setContent(std::static_pointer_cast<CSMessageContentBase>(ipcContent));
         return true;
     }

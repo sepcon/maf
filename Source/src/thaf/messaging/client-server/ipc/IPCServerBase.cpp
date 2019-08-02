@@ -55,7 +55,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
 
 bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    if(csMsg->operationCode() == OpCode::ServiceStatusUpdate)
+    if(csMsg->operationCode() == OpCode::RegisterServiceStatus)
     {
         { //intension for release the lock of _registedClAddrs
             auto lock(_registedClAddrs.pa_lock());
@@ -80,6 +80,7 @@ void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, ServiceID
 {
     if(oldStatus != newStatus)
     {
+        thafInfo("Update service id " << sid << " status to client at address: " << clAddr.dump());
         auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
         auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
         if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))

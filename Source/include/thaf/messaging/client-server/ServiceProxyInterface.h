@@ -11,6 +11,7 @@ class ServiceProxyInterface : public ServiceRequesterInterface
 public:
     virtual RegID sendStatusChangeRegister(OpID propertyID, CSMessageHandlerCallback callback) = 0;
     virtual void sendStatusChangeUnregister(RegID regID) = 0;
+    virtual void sendStatusChangeUnregisterAll(OpID propertyID) = 0;
     virtual RegID sendRequest(const CSMsgContentPtr& msgContent, CSMessageHandlerCallback callback) = 0;
     virtual void sendAbortRequest(const RegID& regID) = 0;
     virtual void sendAbortSyncRequest(const RegID& regID) = 0;

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "QueueingServiceProxy.h"
+#include "SCQServiceProxy.h"
 #include "IAMessageRouter.h"
 #include "IAMessageTrait.h"
 
 namespace thaf {
 namespace messaging {
 
-using IAServiceProxy = QueueingServiceProxy<IAMessageTrait>;
+using IAServiceProxy = SCQServiceProxy<IAMessageTrait, IAMessageRouter>;
 
 } // messaging
 } // thaf

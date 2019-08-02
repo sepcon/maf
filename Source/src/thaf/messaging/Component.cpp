@@ -125,7 +125,7 @@ ComponentRef Component::getComponentRef()
     {
         if(!_tlspInstance->_myPtr)
         {
-            _tlspInstance->_myPtr = std::make_shared<ComponentSyncPtr>(_tlspInstance);
+            _tlspInstance->_myPtr = std::make_shared<ComponentPtrSync>(_tlspInstance);
         }
         return _tlspInstance->_myPtr;
     }

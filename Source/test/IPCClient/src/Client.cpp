@@ -21,25 +21,38 @@ public:
 	{
 	}
 
-	void start(ClientBase* client, ServiceID serviceID)
+	void start(ServiceID serviceID)
 	{
 		_comp.onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
 			if (msg->newStatus == Availability::Available)
 			{
-				_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, 
-					[this](const std::shared_ptr<WeatherStatusResult> result) {
-						static int totalUpdate = 0;
-						thafMsg("Received result update from server of weather status: " << ++totalUpdate);
-					});
+				static bool statusReg = true;
+				if (statusReg)
+				{
+					thafMsg("Send Status change register to server");
+					_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus,
+						[this](const std::shared_ptr<WeatherStatusResult> result) {
+							static int totalUpdate = 0;
+							thafMsg("Received result update from server of weather status: " << ++totalUpdate);
+						});
+				}
+				else
+				{
+					thafMsg("Send request to server");
+					_proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
+						thafMsg("Received update for request of weather status result " << msg->props().get_sStatus());
+						});
+				}
+
+				statusReg = !statusReg;
 			}
 			else
 			{
 				thafMsg("Service is off for sometime, please wait for him to be available again!");
 			}
 			});
-		_comp.start([this, client, serviceID] {
-			_proxy = client->createProxy<LocalIPCServiceProxy>(serviceID);
-			_proxy->addReference();
+		_comp.start([this, serviceID] {
+			_proxy = LocalIPCServiceProxy::createProxy(serviceID);
 			});
 	}
 private:
@@ -55,9 +68,8 @@ int main()
 		});
 	thafMsg("Client is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
-	LocalIPCClient client;
-	client.init(addr, 500);
+	LocalIPCClient::instance().init(addr, 500);
 	ClientCompTest cl;
-	cl.start(&client, SID_WeatherService);
+	cl.start(SID_WeatherService);
 	thafMsg("Client shutdown!");
 }

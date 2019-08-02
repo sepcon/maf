@@ -14,8 +14,8 @@ namespace thaf {
 namespace messaging {
 
 class Component;
-using ComponentSyncPtr = nstl::SyncObject<Component*>;
-using ComponentRef = std::shared_ptr<ComponentSyncPtr>;
+using ComponentPtrSync = nstl::SyncObject<Component*>;
+using ComponentRef = std::shared_ptr<ComponentPtrSync>;
 using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
 class Component : pattern::Unasignable
@@ -91,7 +91,7 @@ Component &Component::onMessage(MessageHandler *handler)
 template<class Msg, typename ...Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool>>
 void Component::postMessage(Args&&... args)
 {
-    postMessage(std::make_shared<Msg>(std::forward<Args>(args)...));
+    postMessage(createMessage<Msg>(std::forward<Args>(args)...));
 }
 
 }

@@ -68,10 +68,6 @@ DataTransmissionErrorCode NamedPipeSender::send(const srz::ByteArray& ba)
                 {
                     thafErr("WriteFile to pipe failed. LastError = " << GetLastError());
                 }
-                else
-                {
-                    thafInfo("Bytes sent to address: " << _pipeName);
-                }
                 break;
             }
 

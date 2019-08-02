@@ -99,6 +99,8 @@ HEADERS += \
     include/thaf/messaging/client-server/IAServiceStub.h \
     include/thaf/messaging/client-server/QueueingServiceProxy.h \
     include/thaf/messaging/client-server/QueueingServiceStub.h \
+    include/thaf/messaging/client-server/SCQServiceProxy.h \
+    include/thaf/messaging/client-server/SSQServiceStub.h \
     include/thaf/messaging/client-server/ServerBase.h \
     include/thaf/messaging/client-server/ServerDomainController.h \
     include/thaf/messaging/client-server/ServiceProxyBase.h \

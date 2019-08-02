@@ -27,7 +27,8 @@ enum class OpCode : unsigned char
     RequestSyncResultDone,              //
     RequestError,                       //
     SyncRequestError,                   //
-    ServiceStatusUpdate,                // registering from client to ask for update status of each service whenever its status has changed
+    RegisterServiceStatus,              // used by client to register for service status change event
+    ServiceStatusUpdate,                // used by server to update service status to client
 //  Unhandle                            // might be use to update client that the action is not applicable
     Invalid                             //
 };
@@ -35,30 +36,11 @@ enum class OpCode : unsigned char
 constexpr OpID OpIDInvalid = static_cast<OpID>(-1);
 constexpr ServiceID ServiceIDInvalid = static_cast<ServiceID>(-1);
 constexpr RequestID RequestIDInvalid = util::IDManager::INVALID_ID;
-constexpr const char* OpCodeString[] =
-{
-    //  Client Request
-        "Register",
-        "UnRegister",
-        "Get",
-        "Set",
-        "Request",
-        "RequestSync",
-        "Abort",
-    //  Server Response
-        "StatusUpdate",
-        "RequestResultUpdate",
-        "RequestSyncResultUpdate",
-        "RequestError",
-        "SyncRequestError",
-    //  Unhandle
-        "Invalid"
-};
 
-
-inline std::ostream& operator<<(std::ostream& ostr, OpCode code)
+template<typename EnumType, std::enable_if_t<std::is_enum_v<EnumType>, bool> = true>
+inline std::ostream& operator<<(std::ostream& ostr, EnumType code)
 {
-    return ostr << OpCodeString[static_cast<int>(code)];
+    return ostr << static_cast<int>(code);
 }
 
 

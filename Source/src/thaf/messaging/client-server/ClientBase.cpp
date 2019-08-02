@@ -8,19 +8,6 @@ namespace messaging {
 bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
 {
     return addIfNew(_requesters, requester);
-//    if(addIfNew(_requesters, requester))
-//    {
-//        auto serviceStatus = getServiceStatus(requester->serviceID());
-//        if(serviceStatus == Availability::Available)
-//        {
-//            requester->onServiceStatusChanged(requester->serviceID(), Availability::Unavailable, Availability::Available);
-//        }
-//        return true;
-//    }
-//    else
-//    {
-//        return false;
-//    }
 }
 
 bool ClientBase::unregisterServiceRequester(const IServiceRequesterPtr &requester)
@@ -35,7 +22,13 @@ bool ClientBase::unregisterServiceRequester(ServiceID sid)
 
 void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
-    auto lock(_requesters.pa_lock());
+    auto lockSSMap(_serviceStatusMap.pa_lock());
+    for(auto& service : *_serviceStatusMap)
+    {
+        service.second = Availability::Unavailable;
+    }
+
+    auto lockRequesters(_requesters.pa_lock());
     for(auto& requester : *_requesters)
     {
         requester->onServerStatusChanged(oldStatus, newStatus);
@@ -44,6 +37,7 @@ void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newS
 
 void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
+    thafInfo("Client receives service status update from server: [" << sid << "-" << static_cast<int>(oldStatus) << "-" << static_cast<int>(newStatus));
     auto requester = findByID(_requesters, sid);
     if(requester)
     {
@@ -64,12 +58,15 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 {
     if(msg->operationCode() == OpCode::ServiceStatusUpdate && msg->serviceID() != ServiceIDInvalid)
     {
+        thafInfo("Receive Service status update from server: sid[" << msg->serviceID() << "]-status[" << msg->operationID() << "]");
         if(msg->operationID() == OpID_ServiceAvailable)
         {
+            storeServiceStatus(msg->serviceID(), Availability::Available);
             onServiceStatusChanged(msg->serviceID(), Availability::Unavailable, Availability::Available);
         }
         else if(msg->operationID() == OpID_ServiceUnavailable)
         {
+            storeServiceStatus(msg->serviceID(), Availability::Unavailable);
             onServiceStatusChanged(msg->serviceID(), Availability::Available, Availability::Unavailable);
         }
         return true;
@@ -83,6 +80,12 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
         }
         return false;
     }
+}
+
+void ClientBase::storeServiceStatus(ServiceID sid, Availability status)
+{
+    auto lock(_serviceStatusMap.pa_lock());
+    (*_serviceStatusMap)[sid] = status;
 }
 
 IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
@@ -111,8 +114,14 @@ void ClientBase::init()
 
 void ClientBase::deinit()
 {
-    auto lock = _requesters.a_lock();
-    _requesters->clear();
+    {
+        auto lock = _requesters.a_lock();
+        _requesters->clear();
+    }
+    {
+        auto lock = _serviceStatusMap.a_lock();
+        _serviceStatusMap->clear();
+    }
 }
 
 }

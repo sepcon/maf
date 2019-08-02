@@ -53,7 +53,7 @@ struct ClientComponent
     std::shared_ptr<Proxy> _proxy;
     std::shared_ptr<Component> _component;
 
-    void startTest(ClientBase* client)
+    void startTest()
     {
         _component = std::make_shared<Component>();
 //        _component->setName("ServiceClient");
@@ -73,8 +73,8 @@ struct ClientComponent
                 });
             }
         });
-        _component->start([this, client] {
-            _proxy = client->createProxy<Proxy>(ServiceID);
+        _component->start([this] {
+            _proxy = Proxy::createProxy(ServiceID);
             thafMsg("proxy for service 1 ready ! Component  = " << _component->name());
         });
     }
@@ -93,7 +93,7 @@ class ServerComponent
     std::shared_ptr<Component> _component;
     Timer _serverTimer;
 public:
-    void startTest(ServerBase* server, bool detached = true)
+    void startTest(bool detached = true)
     {
         _component = std::make_shared<Component>(detached);
         _component->onMessage<RequestMessage>([this](const std::shared_ptr<RequestMessage>& msg) {
@@ -143,8 +143,8 @@ public:
         });
 
         //std::shared_ptr<Stub> stub;
-        _component->start([this, server] {
-            _stub = server->createStub<Stub>(ServiceID);
+        _component->start([this] {
+            _stub = Stub::createStub(ServiceID);
             thafMsg("Stub ready as well");
         });
     }
@@ -157,42 +157,42 @@ public:
 
 
 template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 4>
-void test(ClientBase* clientBase, ServerBase* serverBase)
+void test()
 {
     ClientComponent<Proxy, 0> clients[NClient];
     for (auto i = 0; i < NClient / 4; ++i)
     {
-        clients[i].startTest(clientBase);
+        clients[i].startTest();
     }
     ClientComponent<Proxy, 1> clients1[NClient];
     for (auto i = 0; i < NClient / 4; ++i)
     {
-        clients1[i].startTest(clientBase);
+        clients1[i].startTest();
     }
 
     ClientComponent<Proxy, 2> clients2[NClient];
     for (auto i = 0; i < NClient / 4; ++i)
     {
-        clients2[i].startTest(clientBase);
+        clients2[i].startTest();
     }
 
     ClientComponent<Proxy, 3> clients3[NClient];
     for (auto i = 0; i < NClient / 4; ++i)
     {
-        clients3[i].startTest(clientBase);
+        clients3[i].startTest();
     }
 
     ServerComponent<Stub, RequestMessage, 0> server;
-    server.startTest(serverBase);
+    server.startTest();
 
     ServerComponent<Stub, RequestMessage, 1> server1;
-    server1.startTest(serverBase);
+    server1.startTest();
     
     ServerComponent<Stub, RequestMessage, 2> server2;
-    server2.startTest(serverBase);
+    server2.startTest();
 
     ServerComponent<Stub, RequestMessage, 3> server3;
-    server3.startTest(serverBase, false);
+    server3.startTest(false);
 
     thafMsg("End test");
 }
@@ -205,16 +205,16 @@ int main()
         std::cout << "Total time is: " << t << std::endl;
     });
     Address addr("com.opswat.client", 0);
-    LocalIPCClient c; c.init(addr, 10);
-    LocalIPCServer s; s.init(addr);
+    LocalIPCClient::instance().init(addr, 10);
+    LocalIPCServer::instance().init(addr);
 
     {
         util::TimeMeasurement tm([](long long time) {
             thafMsg("Total test time = " << time << "ms");
         });
 
-        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>(&c, &s);
-        test<IAServiceProxy, IAServiceStub, IARequestMesasge>(&(IAMessageRouter::instance()), &(IAMessageRouter::instance()));
+        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
+        test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
 
         thafMsg("Program ends!");
     }

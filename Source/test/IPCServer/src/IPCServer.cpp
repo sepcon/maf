@@ -36,37 +36,63 @@ public:
 
 	}
 
-	void start(ServerBase* server, ServiceID sid)
+	void start(ServiceID sid)
 	{
 		_comp.onMessage<IPCClientRequestMsg>([this](const MessagePtr<IPCClientRequestMsg>& msg) {
 			auto requestKeeper = msg->getRequestKeeper();
-			auto result = WeatherStatusResult::create();
-			result->props().set_sStatus(SStatus);
-			requestKeeper->respond(result);
-
-			for (auto i = 0; i < REQUESTS_PER_CLIENT; ++i)
+			switch (requestKeeper->getOperationCode())
 			{
-				_stub->sendStatusUpdate(result);
+			case OpCode::Register:
+				sendMassiveUpdate();
+				break;
+			case OpCode::Request:
+				sendMassiveResponse(requestKeeper);
+				break;
+			default:
+				break;
 			}
 
+			auto result = WeatherStatusResult::create();
+			result->props().set_sStatus("FirstUpdate");
+			requestKeeper->respond(result);
+
 			});
 
-		_comp.start([this, server, sid] {
-			_stub = server->createStub<LocalIPCServiceStub>(sid);
+		_comp.start([this, sid] {
+			_stub = LocalIPCServiceStub::createStub(sid);
 			});
 	}
-
+	void sendMassiveResponse(const std::shared_ptr<RequestKeeper<IPCMessageTrait>>& keeper)
+	{
+		auto result = WeatherStatusResult::create();
+		result->props().set_sStatus("Massive status update");
+		for (auto i = 0; i < REQUESTS_PER_CLIENT; ++i)
+		{
+			//thafMsg("Send update to client " << ++(this->_totalUpdate));
+			keeper->update(result);
+		}
+	}
+	void sendMassiveUpdate()
+	{
+		auto result = WeatherStatusResult::create();
+		for (auto i = 0; i < REQUESTS_PER_CLIENT; ++i)
+		{
+			//thafMsg("Send update to client " << ++(this->_totalUpdate));
+			_stub->sendStatusUpdate(result);
+		}
+	}
 private:
 	Component _comp;
 	std::shared_ptr<LocalIPCServiceStub> _stub;
+	size_t _totalUpdate = 0;
+	int _totalRegisters = 0;
 };
 int main()
 {
 	thafMsg("Server is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
-	LocalIPCServer server;
-	server.init(addr);
+	LocalIPCServer::instance().init(addr);
 	ServerTest s;
-	s.start(&server, SID_WeatherService);
+	s.start(SID_WeatherService);
 	thafMsg("Component shutdown!");
 }
