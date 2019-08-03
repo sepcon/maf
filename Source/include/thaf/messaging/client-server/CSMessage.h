@@ -82,6 +82,21 @@ std::shared_ptr<CSMessageDerived> createCSMessage (
     return std::make_shared<CSMessageDerived>(std::move(sID), std::move(opID), std::move(opCode), std::move(reqID), std::move(msgContent), std::move(sourceAddr));
 }
 
+#ifdef ENABLE_IPC_DEBUG
+template <class CSMsg, std::enable_if_t<std::is_base_of_v<CSMessage, CSMsg>, bool> = true>
+std::ostream& operator<<(std::ostream& os, const std::shared_ptr<CSMsg>& msg) {
+    if(msg)
+    {
+        os << "\nServiceID: " << msg->serviceID()
+           << "\nOpCode: " << msg->operationCode()
+           << "\nOpID: " << msg->operationID()
+           << "\nRequestID: " << msg->requestID()
+           << "\nSource Address: " << msg->sourceAddress().dump()
+           << "\n";
+    }
+    return os;
+}
+#endif
 } // messaging
 } // thaf
 

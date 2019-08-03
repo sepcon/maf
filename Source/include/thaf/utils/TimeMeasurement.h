@@ -17,7 +17,7 @@ public:
     }
     ~TimeMeasurement()
     {
-        auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _startTime).count();
+        auto elapsedTime = this->elapsedTime();
         thafInfo("Time measurment stopped, elapsed time = " << elapsedTime);
         if(_onReportCallback)
         {
@@ -25,6 +25,10 @@ public:
         }
     }
 
+	long long elapsedTime() const 
+	{
+		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _startTime).count();
+	}
     std::function<void(long long)> _onReportCallback;
     std::chrono::system_clock::time_point _startTime;
 };

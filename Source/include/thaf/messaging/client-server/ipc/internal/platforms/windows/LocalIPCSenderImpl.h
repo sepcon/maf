@@ -12,10 +12,9 @@ class  LocalIPCSenderImpl: public NamedPipeSenderBase
 public:
     LocalIPCSenderImpl();
     ~LocalIPCSenderImpl() override;
-    DataTransmissionErrorCode send(const thaf::srz::ByteArray &ba) override;
+    DataTransmissionErrorCode send(const thaf::srz::ByteArray &ba, const Address& destination = Address::INVALID_ADDRESS) override;
 
 private:
-    HANDLE openPipe();
     OVERLAPPED _oOverlap;
 };
 

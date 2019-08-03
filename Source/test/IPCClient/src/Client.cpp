@@ -26,8 +26,9 @@ public:
 		_comp.onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
 			if (msg->newStatus == Availability::Available)
 			{
+				thafMsg("Client component recevies status update of service: " << msg->serviceID);
 				static bool statusReg = true;
-				if (statusReg)
+				//if (statusReg)
 				{
 					thafMsg("Send Status change register to server");
 					_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus,
@@ -36,13 +37,14 @@ public:
 							thafMsg("Received result update from server of weather status: " << ++totalUpdate);
 						});
 				}
-				else
+				/*else
 				{
 					thafMsg("Send request to server");
 					_proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
-						thafMsg("Received update for request of weather status result " << msg->props().get_sStatus());
+						static int totalResponse = 0;
+						thafMsg("Received update for request of weather status result " << msg->props().get_sStatus() << " - " << ++totalResponse);
 						});
-				}
+				}*/
 
 				statusReg = !statusReg;
 			}

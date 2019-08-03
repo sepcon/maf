@@ -59,10 +59,11 @@ void applyResponseCode(const CSMessagePtr& csMsg, bool done = true)
 
 bool ServiceStubBase::onIncomingMessage(const CSMessagePtr &msg)
 {
-    thafInfo("Received Incoming Message: " <<
-             "\n\tCode: " << msg->operationCode() <<
-             "\n\tID: " << msg->operationID() <<
-             "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
+    thafInfo(msg);
+//    thafInfo("Received Incoming Message: " <<
+//             "\n\tCode: " << msg->operationCode() <<
+//             "\n\tID: " << msg->operationID() <<
+//             "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
     bool handled = true;
     switch (msg->operationCode())
     {
@@ -115,7 +116,7 @@ bool ServiceStubBase::replyToRequest(const CSMessagePtr& csMsg, bool hasDone)
             requestKeeper->invalidate();
         }
         applyResponseCode(csMsg, hasDone);
-        return _server->sendMessageToClient(csMsg) == DataTransmissionErrorCode::Success;
+        return _server->sendMessageToClient(csMsg, csMsg->sourceAddress()) == DataTransmissionErrorCode::Success;
     }
     else
     {

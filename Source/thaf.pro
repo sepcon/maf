@@ -1,14 +1,14 @@
 
-#TARGET = thaf
-#TEMPLATE = lib
-#CONFIG += staticlib
-
-#QT       -= core gui
-
 TARGET = thaf
-TEMPLATE = app
+TEMPLATE = lib
+CONFIG += staticlib
 
 QT       -= core gui
+
+#TARGET = thaf
+#TEMPLATE = app
+
+#QT       -= core gui
 
 CONFIG += c++17
 
@@ -45,8 +45,8 @@ win32: {
 
 INCLUDEPATH += ./include
 
+#    src/thaf/main.cpp \
 SOURCES += \
-    src/thaf/main.cpp \
     src/thaf/messaging/Component.cpp \
     src/thaf/messaging/Timer.cpp \
     src/thaf/logging/ConsoleLogger.cpp \

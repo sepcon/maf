@@ -21,14 +21,14 @@ BytesCommunicator::BytesCommunicator(CSMessageReceiver *receiver) :
 
 void BytesCommunicator::init(IPCType type, const Address &serverAddress, bool isClient)
 {
-    _address = std::move(serverAddress);
+    _isClient = isClient;
     _pSender = IPCFactory::createSender(type);
     _pReceiver = IPCFactory::createReceiver(type);
 
     assert(_pSender && _pReceiver);
 
-    _pSender->initConnection(_address);
-    _pReceiver->initConnection(_address, isClient);
+    _pSender->initConnection(serverAddress);
+    _pReceiver->initConnection(serverAddress, isClient);
     _pReceiver->registerObserver(this);
     startWaitingMessages();
 }
@@ -68,10 +68,16 @@ DataTransmissionErrorCode BytesCommunicator::send(const std::shared_ptr<IPCMessa
     assert(msg != nullptr);
     if(_pSender)
     {
-        if(recvAddr != Address::INVALID_ADDRESS) { _pSender->initConnection(recvAddr); }
 		try
 		{
-			return _pSender->send(msg->toBytes());
+            if(recvAddr.valid())
+            {
+                return _pSender->send(msg->toBytes(), recvAddr);
+            }
+            else
+            {
+                return _pSender->send(msg->toBytes());
+            }
 		}
 		catch (const std::bad_alloc& e)
 		{
@@ -91,6 +97,10 @@ void BytesCommunicator::onBytesCome(const std::shared_ptr<srz::ByteArray>& bytes
     std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
     if(csMsg->fromBytes(bytes))
     {
+        if(_isClient && csMsg->sourceAddress() != Address::INVALID_ADDRESS)
+        {
+            assert(csMsg->sourceAddress() == _pReceiver->address());
+        }
         _ipcMsgReceiver->onIncomingMessage(csMsg);
     }
     else

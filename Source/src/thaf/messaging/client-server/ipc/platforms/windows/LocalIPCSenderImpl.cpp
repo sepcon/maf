@@ -10,6 +10,7 @@ namespace messaging {
 namespace ipc {
 
 static constexpr int MAX_ATEMPTS = 10;
+static HANDLE openPipe(const std::string& pipeName);
 
 LocalIPCSenderImpl::LocalIPCSenderImpl()
 {
@@ -21,7 +22,7 @@ LocalIPCSenderImpl::~LocalIPCSenderImpl()
 
 }
 
-DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba)
+DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
 {
     auto errCode = DataTransmissionErrorCode::ReceiverUnavailable;
     bool success = false;
@@ -31,25 +32,25 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba)
         while(retryTimes < MAX_ATEMPTS)
         {
             memset(&_oOverlap, 0, sizeof(_oOverlap));
-			AutoCloseHandle pipeHandle = openPipe();
+            AutoCloseHandle pipeHandle = openPipe(destination.valid() ? constructPipeName(destination) : _pipeName);
             bool shouldRetry = false;
             if(pipeHandle != INVALID_HANDLE_VALUE)
             {
                 AutoCloseHandle hEvent = CreateEvent(
-                    nullptr,    // default security attribute
-                    TRUE,       // manual-reset event
-                    TRUE,       // initial state = signaled
-                    nullptr);
+                            nullptr,    // default security attribute
+                            TRUE,       // manual-reset event
+                            TRUE,       // initial state = signaled
+                            nullptr);
 
                 _oOverlap.hEvent = hEvent;
 
                 // Send a message to the pipe server.
                 success = WriteFile(
-                    pipeHandle,                                     // pipe handle
-                    ba.firstpos(),                                  // message
-                    static_cast<DWORD>(ba.length()),                // message length
-                    nullptr,                                        // bytes written
-                    &_oOverlap);                                    // overlapped
+                            pipeHandle,                                     // pipe handle
+                            ba.firstpos(),                                  // message
+                            static_cast<DWORD>(ba.length()),                // message length
+                            nullptr,                                        // bytes written
+                            &_oOverlap);                                    // overlapped
 
                 if (!success)
                 {
@@ -86,21 +87,21 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba)
             {
                 shouldRetry = true;
             }
-			else
-			{
-				thafErr("Connect pipe with error: " << GetLastError());
-			}
+            else
+            {
+                thafErr("Connect pipe with error: " << GetLastError());
+            }
 
             if (success || !shouldRetry)
-			{
-//                FlushFileBuffers(pipeHandle);
-				break;
+            {
+                //                FlushFileBuffers(pipeHandle);
+                break;
             }
             else
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
                 thafWarn("Retry to send " << ba.size() << " bytes " << ++retryTimes << " times to server " << _pipeName);
-			}
+            }
         }
 
         if(success)
@@ -122,24 +123,24 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba)
     }
     else
     {
-//        errCode = DataTransmissionErrorCode::ReceiverUnavailable; //dont need to set here, it must be default failed
+        //        errCode = DataTransmissionErrorCode::ReceiverUnavailable; //dont need to set here, it must be default failed
         thafWarn("Receiver is not available for receiving message, receiver's address = " << _pipeName);
     }
 
     return errCode;
 }
 
-HANDLE LocalIPCSenderImpl::openPipe()
+HANDLE openPipe(const std::string &pipeName)
 {
     return CreateFileA(
-        _pipeName.c_str(),                          // pipe name
-        GENERIC_WRITE |                             // write only
-        FILE_FLAG_OVERLAPPED,
-        0,                                          // no sharing
-        nullptr,                                    // default security attributes
-        OPEN_EXISTING,                              // opens existing pipe
-        0,                                          // write overlapped
-        nullptr);                                   // no template file
+                pipeName.c_str(),                                                                   // pipe name
+                GENERIC_WRITE |                                                                     // write only
+                FILE_FLAG_OVERLAPPED,
+                0,                                                                                  // no sharing
+                nullptr,                                                                            // default security attributes
+                OPEN_EXISTING,                                                                      // opens existing pipe
+                0,                                                                                  // write overlapped
+                nullptr);                                                                           // no template file
 }
 
 

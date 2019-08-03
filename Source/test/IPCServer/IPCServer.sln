@@ -7,6 +7,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IPCServer", "IPCServer.vcxp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "thaf", "..\..\vsproject\thaf\thaf.vcxproj", "{D6C78A10-0D14-4E93-9324-2C3E2611CE3B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "IPCClient", "..\IPCClient\IPCClient.vcxproj", "{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C4BB452-0119-47FC-997E-B4D974ED0D11} = {8C4BB452-0119-47FC-997E-B4D974ED0D11}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +36,14 @@ Global
 		{D6C78A10-0D14-4E93-9324-2C3E2611CE3B}.Release|x64.Build.0 = Release|x64
 		{D6C78A10-0D14-4E93-9324-2C3E2611CE3B}.Release|x86.ActiveCfg = Release|Win32
 		{D6C78A10-0D14-4E93-9324-2C3E2611CE3B}.Release|x86.Build.0 = Release|Win32
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Debug|x64.ActiveCfg = Debug|x64
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Debug|x64.Build.0 = Debug|x64
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Debug|x86.ActiveCfg = Debug|Win32
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Debug|x86.Build.0 = Debug|Win32
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Release|x64.ActiveCfg = Release|x64
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Release|x64.Build.0 = Release|x64
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Release|x86.ActiveCfg = Release|Win32
+		{FFCD3FC4-97F3-4C8C-8B40-A03CD1FD5678}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

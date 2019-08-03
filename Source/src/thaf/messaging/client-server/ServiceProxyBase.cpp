@@ -181,11 +181,14 @@ CSMessagePtr ServiceProxyBase::createCSMessage(OpID opID, OpCode opCode, const C
 
 RegID ServiceProxyBase::sendStatusChangeRegister(OpID propertyID, CSMessageHandlerCallback callback)
 {
-    return storeAndSendRequestToServer(
-        _registerEntriesMap,
-        createCSMessage(propertyID, OpCode::Register),
-        callback
-        );
+    constexpr bool forceSend = false;
+    return storeAndSendRequestToServer
+            (
+                _registerEntriesMap,
+                createCSMessage(propertyID, OpCode::Register),
+                callback,
+                forceSend
+                );
 }
 
 void ServiceProxyBase::sendStatusChangeUnregister(RegID regID)
@@ -236,6 +239,7 @@ void ServiceProxyBase::onPropChangeUpdate(const CSMessagePtr& msg)
 
 void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg, bool done)
 {
+    bool foundRequest = false;
     decltype (RegEntry::callback) callback;
     {
         auto lk = _requestEntriesMap.a_lock();
@@ -243,31 +247,37 @@ void ServiceProxyBase::onRequestResult(const CSMessagePtr& msg, bool done)
         if(it != _requestEntriesMap->end())
         {
             auto& regEntries = it->second;
-            auto itRegEntry = regEntries.begin();
-            for(; itRegEntry != regEntries.end(); ++itRegEntry)
+            for(auto itRegEntry = regEntries.begin(); itRegEntry != regEntries.end(); ++itRegEntry)
             {
                 if(itRegEntry->requestID == msg->requestID())
                 {
+					if (done)
+					{
+						callback = std::move(itRegEntry->callback);
+						regEntries.erase(itRegEntry);
+					}
+					else
+					{
+						callback = itRegEntry->callback;
+					}
+                    foundRequest = true;
                     break;
                 }
-            }
-
-            if(done)
-            {
-                callback = std::move(itRegEntry->callback);
-                regEntries.erase(itRegEntry);
-            }
-            else
-            {
-                callback = itRegEntry->callback;
             }
         }
     }
 
-    if(callback)
+    if(foundRequest)
     {
-        callback(msg);
+        if(callback)
+        {
+            callback(msg);
+        }
     }
+	else
+	{
+		thafWarn("The request entry for requset OpID[" << msg->operationID() << "] - RequestiD[" << msg->requestID() <<"] could not be found!");
+	}
 }
 
 void ServiceProxyBase::onRequestSyncResult(const CSMessagePtr &msg)
@@ -364,17 +374,15 @@ std::shared_ptr<std::promise<CSMessagePtr >> ServiceProxyBase::pickOutSyncRegEnt
 }
 
 RegID ServiceProxyBase::storeAndSendRequestToServer
-    (
-        RegEntriesMap& regEntriesMap,
+    (RegEntriesMap& regEntriesMap,
         const CSMessagePtr& outgoingMsg,
         CSMessageHandlerCallback callback
-        )
+        , bool forceSend)
 {
     RegID regID;
     auto totalSameRequests = storeRegEntry(regEntriesMap, outgoingMsg->operationID(), callback, regID);
     // we have Proxy to reduce the number of requests to server, then in case of Register, if many classes call to register to same property, then only one will be sent
-    bool shouldSendToServer = (outgoingMsg->operationCode() == OpCode::Register && totalSameRequests == 1 ) ||
-                              (totalSameRequests >= 1 && outgoingMsg->operationCode() != OpCode::Register);
+    bool shouldSendToServer = forceSend || totalSameRequests == 1;
 
     if(shouldSendToServer)
     {

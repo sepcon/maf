@@ -55,6 +55,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
 
 bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
+    thafInfo(csMsg);
     if(csMsg->operationCode() == OpCode::RegisterServiceStatus)
     {
         { //intension for release the lock of _registedClAddrs

@@ -15,7 +15,7 @@ class ServerBase : public ServerInterface
 {
 public:
     // Drived class must provide implementation for this method
-    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS)  override = 0;
+    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override = 0;
     virtual void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) = 0;
     bool registerServiceProvider(const IServiceProviderPtr& provider)  override;
     bool unregisterServiceProvider(const IServiceProviderPtr& Provider)  override;

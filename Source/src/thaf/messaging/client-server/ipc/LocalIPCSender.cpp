@@ -25,9 +25,9 @@ void LocalIPCSender::initConnection(const Address& addr)
     _pImpl->initConnection(addr);
 }
 
-DataTransmissionErrorCode LocalIPCSender::send(const thaf::srz::ByteArray& ba)
+DataTransmissionErrorCode LocalIPCSender::send(const thaf::srz::ByteArray& ba, const Address &destination)
 {
-    return _pImpl->send(ba);
+    return _pImpl->send(ba, destination);
 }
 
 const Address &LocalIPCSender::receiverAddress() const

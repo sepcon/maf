@@ -24,7 +24,7 @@ public:
             _pipeName = constructPipeName(addr);
         }
     }
-    DataTransmissionErrorCode send(const thaf::srz::ByteArray &/*ba*/) override
+    DataTransmissionErrorCode send(const thaf::srz::ByteArray &/*ba*/, const Address& /*destination*/) override
     {
         thafErr("Derived class must override this function[NamedPipeSenderBase::send]");
         return DataTransmissionErrorCode::ReceiverUnavailable;

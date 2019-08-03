@@ -25,7 +25,7 @@ public:
     void startWaitingMessages();
     void stopWaitingMessages();
     bool isWaiting() const;
-    DataTransmissionErrorCode send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = {});
+    DataTransmissionErrorCode send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
     ~BytesCommunicator() override; //Not allow to make instance of this class
 
 protected:
@@ -33,7 +33,7 @@ protected:
     std::shared_ptr<IPCSender> _pSender;
     std::shared_ptr<IPCReceiver> _pReceiver;
     CSMessageReceiver* _ipcMsgReceiver;
-    Address _address;
+    bool _isClient = false;
 };
 
 }// ipc

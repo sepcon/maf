@@ -13,7 +13,7 @@ mc_sbClass(Address)
         static constexpr Port INVALID_PORT = -1;
         static const Name INVALID_NAME;
         static const Address INVALID_ADDRESS;
-
+        bool valid() const { return (get_port() != INVALID_PORT) || (get_name() != INVALID_NAME);}
     mc_sbProperties
         (
             (Name, name, INVALID_NAME),

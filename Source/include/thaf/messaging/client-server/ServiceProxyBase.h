@@ -20,7 +20,8 @@ public:
     void sendStatusChangeUnregisterAll(OpID propertyID) override;
 
     RegID sendRequest
-        (const CSMsgContentPtr& msgContent,
+        (
+            const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback
             ) override;
     void sendAbortRequest(const RegID& regID) override;
@@ -69,7 +70,8 @@ protected:
         (
             RegEntriesMap& regEntriesMap,
             const CSMessagePtr& outgoingMsg,
-            CSMessageHandlerCallback callback
+            CSMessageHandlerCallback callback,
+            bool forceSend = true
             );
     size_t storeRegEntry
         (

@@ -66,7 +66,6 @@ protected:
     CSMessageHandlerCallback createMsgHandlerAsyncCallback(PayloadProcessCallback<IncomingMsgContent> callback);
 
     ListOfInterestedComponents _listComponents;
-    Availability _serviceStatus = Availability::Unavailable ;
 };
 
 
@@ -208,7 +207,6 @@ QueueingServiceProxy<MessageTrait>::sendRequest(const CSMsgContentPtr& outgoingD
         );
 
     outgoingData->makesureTransferable();
-    thafInfo("Proxy sends -> " << MessageTrait::dump(outgoingData));
     return _MyBase::sendRequest(outgoingData, createMsgHandlerAsyncCallback(callback));
 }
 
@@ -220,7 +218,6 @@ QueueingServiceProxy<MessageTrait>::sendRequestSync(const CSMsgContentPtr &outgo
            && "Please provide MessageContent that has same id with IncomingMessagecontent");
 
     outgoingData->makesureTransferable();
-    thafInfo("Proxy sends -> " << MessageTrait::dump(outgoingData));
     if(auto csMsg = _MyBase::sendRequestSync(outgoingData, maxWaitTimeMs))
     {
         return MessageTrait::template translate<IncomingMsgContent>(csMsg->content());
@@ -240,7 +237,7 @@ QueueingServiceProxy<MessageTrait>::sendRequestSync(const CSMsgContentPtr &outgo
     assert((outgoingData->operationID() == MessageTrait::template getOperationID<IncomingMsgContent>())
            && "Please provide MessageContent that has same id with IncomingMessagecontent");
     outgoingData->makesureTransferable();
-    thafInfo("Proxy sends -> " << MessageTrait::dump(outgoingData));
+
     auto response = sendRequestSync<IncomingMsgContent>(outgoingData, maxWaitTimeMs);
     if(response)
     {
@@ -281,8 +278,6 @@ QueueingServiceProxy<MessageTrait>::sendRequest(PayloadProcessCallback<IncomingM
 {
     return _MyBase::sendRequest(MessageTrait::template getOperationID<IncomingMsgContent>(), {}, createMsgHandlerAsyncCallback(callback));
 }
-
-
 
 
 }

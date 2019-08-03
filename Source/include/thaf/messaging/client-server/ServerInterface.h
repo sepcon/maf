@@ -15,7 +15,7 @@ class ServerInterface : public CSMessageReceiver, public DomainUser
 {
 public:
     virtual ~ServerInterface() = default;
-    virtual DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) = 0;
+    virtual DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr) = 0;
     virtual bool registerServiceProvider(const IServiceProviderPtr& serviceProvider) = 0;
     virtual bool unregisterServiceProvider(const IServiceProviderPtr& serviceProvider) = 0;
     virtual bool unregisterServiceProvider(ServiceID sid) = 0;

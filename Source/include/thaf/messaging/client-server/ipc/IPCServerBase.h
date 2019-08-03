@@ -14,7 +14,7 @@ public:
     ~IPCServerBase() override;
     void init(IPCType type, const Address& serverAddress);
     void deinit();
-    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS)  override;
+    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override;
     void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 protected:
