@@ -1,11 +1,14 @@
 #pragma once
 
-#include "thaf/Messaging/IPC/cscmbk.h"
-#include "thaf/Messaging/IPC/CSContractMC.h"
+#include <maf/messaging/client-server/CSTypes.h>
+#include <maf/messaging/client-server/CSContractDefines.mc.h>
+#include <maf/messaging/client-server/CSContractBegin.mc.h>
 
-#define REQUESTS_PER_CLIENT 100
-#define SERVER_ADDRESS "\\\\.\\pipe\\mynamedpipe" 
-#define WEATHER_SERVER_PORT 0
+constexpr maf::messaging::Address::Port REQUESTS_PER_CLIENT = 100;
+constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;
+
+constexpr const char* const SERVER_ADDRESS = "nocpes.github.com";
+constexpr const maf::messaging::ServiceID SID_WeatherService = 0;
 
 result_object_s(WeatherStatus)
     enum StatusType{
@@ -35,4 +38,10 @@ result_object_s(PolicyStatus)
         properties((int, compliant_status))
 result_object_e(PolicyStatus)
 
-#include "thaf/Messaging/IPC/cscmrs.h"
+result_object_s(NotificationMessageUpdate)
+	properties((std::string, message, "nothing to show"))
+result_object_e(NotificationMessageUpdate)
+
+result_object_no_props(TheUpdateSignal)
+	
+#include <maf/messaging/client-server/CSContractEnd.mc.h>

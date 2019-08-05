@@ -1,118 +1,77 @@
-#include "thaf/Application/AppComponent.h"
-#include "thaf/Application/IPCClient.h"
-#include "thaf/Application/Timer.h"
-#include "thaf/Application/IPCServer.h"
+#include <maf/messaging/Component.h>
+#include <maf/messaging/client-server/ipc/LocalIPCClient.h>
+#include <maf/messaging/Timer.h>
+#include <maf/utils/TimeMeasurement.h>
+#include <maf/messaging/client-server/ipc/LocalIPCClient.h>
+#include <maf/messaging/client-server/ipc/LocalIPCServiceProxy.h>
 #include "../../IPCServer/src/WeatherContract.h"
 
-
-using namespace thaf::messaging::ipc;
-using namespace thaf::messaging;
-using namespace thaf::app;
-using namespace thaf::srz;
-
+using namespace maf::messaging::ipc;
+using namespace maf::messaging;
+using namespace maf::srz;
+using namespace maf;
  
-struct TimeMeasurement
+
+class ClientCompTest
 {
-	TimeMeasurement()
-	{
-		_start = std::chrono::system_clock::now();
-	}
-	~TimeMeasurement()
-	{
-		thafMsg("Total execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _start).count());
-	}
-	std::chrono::system_clock::time_point _start;
-};
-
-
-
-class ClientComp : public AppComponent
-{
+	using IPCProxyPtr = std::shared_ptr<LocalIPCServiceProxy>;
 public:
-	~ClientComp()
+	ClientCompTest(bool detached = false):
+		_comp(detached)
 	{
-		shutdown();
-		thafMsg("Value of requestDoneCount = " << requestDoneCount);
-	}
-	void shutdown()
-	{
-		cl.stop();
-		AppComponent::shutdown();
 	}
 
-	ClientComp(const Address& addr) : cl(this)
+	void start(ServiceID serviceID)
 	{
-		_detached = false;
-		cl.init(IPCType::LocalScope, addr);
-
-		onMessage<ServerConnectionStatusMsg>([this](auto& msg) {
-			if (msg->newStatus == ConnectionStatus::Available)
+		_comp.onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
+			if (msg->newStatus == Availability::Available)
 			{
-				this->onServerAvailable();
+				mafMsg("Client component recevies status update of service: " << msg->serviceID);
+				static bool statusReg = true;
+				//if (statusReg)
+				{
+					mafMsg("Send Status change register to server");
+					_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus,
+						[this](const std::shared_ptr<WeatherStatusResult> result) {
+							static int totalUpdate = 0;
+							mafMsg("Received result update from server of weather status: " << ++totalUpdate);
+						});
+				}
+				/*else
+				{
+					mafMsg("Send request to server");
+					_proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
+						static int totalResponse = 0;
+						mafMsg("Received update for request of weather status result " << msg->props().get_sStatus() << " - " << ++totalResponse);
+						});
+				}*/
+
+				statusReg = !statusReg;
 			}
 			else
 			{
-				this->onServerUnavailable();
+				mafMsg("Service is off for sometime, please wait for him to be available again!");
 			}
 			});
-
-		start();
-	}
-
-	void onServerUnavailable()
-	{
-		_timer.stop();
-	}
-
-	void getWeatherStatus()
-	{
-		static uint32_t placeid = 0;
-		std::shared_ptr<WeatherStatusRequest> request = WeatherStatusRequest::create();
-		request->props().set_place_id(placeid++ % 3);
-
-		cl.sendActionRequestSync<WeatherStatusResult>(
-			request,
-			[this](const std::shared_ptr<WeatherStatusResult>& result) {
-				++requestDoneCount;
-				thafMsg(std::this_thread::get_id() << ":" << result->props().dump(3));
-				if (requestDoneCount >= REQUESTS_PER_CLIENT)
-				{
-					thafMsg("Posting shutdown request to component");
-					shutdown();
-				}
+		_comp.start([this, serviceID] {
+			_proxy = LocalIPCServiceProxy::createProxy(serviceID);
 			});
-
 	}
-	void onServerAvailable()
-	{
-		_regID = cl.sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, [this](const std::shared_ptr<WeatherStatusResult>& status) {
-			++requestDoneCount;
-			thafMsg(std::this_thread::get_id() << ":" << status->props().dump(3));
-			if (requestDoneCount >= REQUESTS_PER_CLIENT)
-			{
-				thafMsg("Posting shutdown request to component");
-				cl.sendStatusChangeUnregister(_regID);
-				shutdown();
-			}
-			});
-		//for (int i = 0; i < REQUESTS_PER_CLIENT; ++i)
-		//{
-		//	getWeatherStatus();
-		//}
-	}
+private:
 
-	IPCClient cl;
-	IPCClient::RegID _regID;
-	Timer _timer;
-	int requestDoneCount = 0;
-
+	IPCProxyPtr _proxy;
+	messaging::Component _comp;
 };
 
 int main()
 {
-	TimeMeasurement tmeasure;
-	thafMsg("Client is starting up!");
+	maf::util::TimeMeasurement tmeasure([](auto time) {
+		mafMsg("Total execution time = " << time);
+		});
+	mafMsg("Client is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
-	ClientComp c(addr);
-	thafMsg("Client shutdown!");
+	LocalIPCClient::instance().init(addr, 500);
+	ClientCompTest cl;
+	cl.start(SID_WeatherService);
+	mafMsg("Client shutdown!");
 }

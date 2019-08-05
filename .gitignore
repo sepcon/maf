@@ -1,5 +1,5 @@
-*.pro.user
+*.user
 build-*-Debug
 build-*-Release
-bin.noversion
+bin
 .vs
