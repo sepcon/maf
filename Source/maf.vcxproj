@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{AC484854-1767-4EDD-B190-7239F2C7C444}</ProjectGuid>
+    <RootNamespace>maf</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\Objs\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\Objs\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\Objs\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\include</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)\Test\bin\Libs\$(ProjectName)\$(Platform)\$(Configuration)\Objs\</IntDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\include</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\maf\logging\ConsoleLogger.cpp" />
+    <ClCompile Include="src\maf\logging\LoggingComponent.cpp" />
+    <ClCompile Include="src\maf\main.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\Address.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ClientBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\CSMessage.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\IAMessageRouter.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\BytesCommunicator.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\IPCClientBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\IPCFactory.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\IPCMessage.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\IPCReceiver.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\IPCServerBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\LocalIPCReceiver.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ipc\LocalIPCSender.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\RequestKeeper.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ServerBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ServiceProxyBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ServiceStubBase.cpp" />
+    <ClCompile Include="src\maf\messaging\Component.cpp" />
+    <ClCompile Include="src\maf\messaging\Timer.cpp" />
+    <ClCompile Include="src\maf\threading\Thread.cpp" />
+    <ClCompile Include="src\maf\threading\threadpool\DynamicCountThreadPool.cpp" />
+    <ClCompile Include="src\maf\threading\threadpool\PriorityThreadPool.cpp" />
+    <ClCompile Include="src\maf\threading\threadpool\StableThreadPool.cpp" />
+    <ClCompile Include="src\maf\threading\threadpool\ThreadPoolFactory.cpp" />
+    <ClCompile Include="src\maf\threading\time\TimerManager.cpp" />
+    <ClCompile Include="src\maf\threading\time\TimerManagerImpl.cpp" />
+    <ClCompile Include="src\maf\threading\time\Waiter.cpp" />
+    <ClCompile Include="src\maf\utils\IDManager.cpp" />
+    <ClCompile Include="src\maf\utils\serialization\Serializer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\maf\logging\ConsoleLogger.h" />
+    <ClInclude Include="include\maf\logging\LoggerBase.h" />
+    <ClInclude Include="include\maf\logging\LoggerInterface.h" />
+    <ClInclude Include="include\maf\logging\LoggingComponent.h" />
+    <ClInclude Include="include\maf\messaging\BasicMessages.h" />
+    <ClInclude Include="include\maf\messaging\client-server\Address.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ClientBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ClientInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ClientServerContract.h" />
+    <ClInclude Include="include\maf\messaging\client-server\Connection.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSContractBegin.mc.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSContractDefines.mc.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSContractEnd.mc.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSDefines.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSMessage.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSMessageReceiver.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSStatus.h" />
+    <ClInclude Include="include\maf\messaging\client-server\CSTypes.h" />
+    <ClInclude Include="include\maf\messaging\client-server\IAMessageRouter.h" />
+    <ClInclude Include="include\maf\messaging\client-server\IAMessageTrait.h" />
+    <ClInclude Include="include\maf\messaging\client-server\IAServiceProxy.h" />
+    <ClInclude Include="include\maf\messaging\client-server\IAServiceStub.h" />
+    <ClInclude Include="include\maf\messaging\client-server\internal\CSShared.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\BytesCommunicator.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\ClientServerContractMacros.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\LocalIPCReceiver.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\LocalIPCSender.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\linux\LocalIPCSender.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\windows\LocalIPCReceiverImpl.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\windows\LocalIPCSenderImpl.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\windows\NamedPipeReceiverBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\windows\NamedPipeSenderBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\windows\PipeShared.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCClientBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCFactory.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCMessage.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCMessageTrait.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCReceiver.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCSender.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCServerBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\IPCTypes.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\LocalIPCClient.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\LocalIPCServer.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\LocalIPCServiceProxy.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\LocalIPCServiceStub.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ipc\MessageValidator.h" />
+    <ClInclude Include="include\maf\messaging\client-server\QueueingServiceProxy.h" />
+    <ClInclude Include="include\maf\messaging\client-server\QueueingServiceStub.h" />
+    <ClInclude Include="include\maf\messaging\client-server\RegisterDataStructure.h" />
+    <ClInclude Include="include\maf\messaging\client-server\RequestKeeper.h" />
+    <ClInclude Include="include\maf\messaging\client-server\SCQServiceProxy.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServerBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServerInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceMessageReceiver.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceProviderInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceProxyBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceProxyInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceRequesterInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceStatusObserverInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceStubBase.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceStubHandlerInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\ServiceStubInterface.h" />
+    <ClInclude Include="include\maf\messaging\client-server\SSQServiceStub.h" />
+    <ClInclude Include="include\maf\messaging\Communicator.h" />
+    <ClInclude Include="include\maf\messaging\Component.h" />
+    <ClInclude Include="include\maf\messaging\IPCServer.h" />
+    <ClInclude Include="include\maf\messaging\MessageBase.h" />
+    <ClInclude Include="include\maf\messaging\MessageHandler.h" />
+    <ClInclude Include="include\maf\messaging\MessageQueue.h" />
+    <ClInclude Include="include\maf\messaging\Timer.h" />
+    <ClInclude Include="include\maf\patterns\Patterns.h" />
+    <ClInclude Include="include\maf\threading\internal\DynamicCountThreadPool.h" />
+    <ClInclude Include="include\maf\threading\internal\PriorityThreadPool.h" />
+    <ClInclude Include="include\maf\threading\internal\StableThreadPool.h" />
+    <ClInclude Include="include\maf\threading\internal\ThreadPoolImplBase.h" />
+    <ClInclude Include="include\maf\threading\internal\TimerManagerImpl.h" />
+    <ClInclude Include="include\maf\threading\IThreadPool.h" />
+    <ClInclude Include="include\maf\threading\Queue.h" />
+    <ClInclude Include="include\maf\threading\Runnable.h" />
+    <ClInclude Include="include\maf\threading\Signal.h" />
+    <ClInclude Include="include\maf\threading\Thread.h" />
+    <ClInclude Include="include\maf\threading\ThreadJoiner.h" />
+    <ClInclude Include="include\maf\threading\ThreadPoolFactory.h" />
+    <ClInclude Include="include\maf\threading\ThreadSafeQueue.h" />
+    <ClInclude Include="include\maf\threading\TimerManager.h" />
+    <ClInclude Include="include\maf\threading\Waiter.h" />
+    <ClInclude Include="include\maf\utils\cppextension\Loop.mc.h" />
+    <ClInclude Include="include\maf\utils\cppextension\SyncObject.h" />
+    <ClInclude Include="include\maf\utils\cppextension\maf.mc.h" />
+    <ClInclude Include="include\maf\utils\cppextension\TupleManip.h" />
+    <ClInclude Include="include\maf\utils\cppextension\TypeTraits.h" />
+    <ClInclude Include="include\maf\utils\debugging\Debug.h" />
+    <ClInclude Include="include\maf\utils\IDManager.h" />
+    <ClInclude Include="include\maf\utils\serialization\ByteArray.h" />
+    <ClInclude Include="include\maf\utils\serialization\DumpHelper.h" />
+    <ClInclude Include="include\maf\utils\serialization\SerializableInterface.h" />
+    <ClInclude Include="include\maf\utils\serialization\SerializableObject.h" />
+    <ClInclude Include="include\maf\utils\serialization\SerializableObject.mc.h" />
+    <ClInclude Include="include\maf\utils\serialization\SerializationTrait.h" />
+    <ClInclude Include="include\maf\utils\serialization\Serializer.h" />
+    <ClInclude Include="include\maf\utils\TimeMeasurement.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

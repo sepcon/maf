@@ -1,10 +1,10 @@
 //#define SERIALIZATION_NUMBER_USING_STRING
-#include "thaf/Utils/Serialization/SerializableObject.h"
-#include "thaf/Utils/Debugging/Debug.h"
+#include "maf/Utils/Serialization/SerializableObject.h"
+#include "maf/Utils/Debugging/Debug.h"
 #include <chrono>
 #include <fstream>
 
-using namespace thaf::srz;
+using namespace maf::srz;
 using namespace std::chrono;
 
 enum FunctionID
@@ -79,12 +79,12 @@ void deserializeTest(Deserializer& dsrz)
         ++i;
         TheObject to1;
         dsrz >> to1;
-        thafInfo( i << ".   " <<  to1.class_name() << to1.dump(2) );
+        mafInfo( i << ".   " <<  to1.class_name() << to1.dump(2) );
     }
-    thafInfo("");
+    mafInfo("");
 }
 
-void thaf_srz_runTest()
+void maf_srz_runTest()
 {
 #ifdef _WIN32
     const std::string dest = "D:\\binary.dat";
@@ -107,12 +107,12 @@ void thaf_srz_runTest()
     }
     catch (const std::exception& e)
     {
-        thafErr( "Dammaged Serializtion data with exception: " << e.what() );
+        mafErr( "Dammaged Serializtion data with exception: " << e.what() );
     }
     catch(std::ios::iostate state)
     {
-        thafErr( "The stream is not in good state: " << state );
+        mafErr( "The stream is not in good state: " << state );
     }
 
-    thafWarn( "total time: " << duration_cast<milliseconds>(system_clock::now() - startTime).count() );
+    mafWarn( "total time: " << duration_cast<milliseconds>(system_clock::now() - startTime).count() );
 }

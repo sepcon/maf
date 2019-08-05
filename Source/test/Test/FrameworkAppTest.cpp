@@ -1,25 +1,25 @@
-#include "thaf/Application/AppComponent.h"
-#include "thaf/Application/Timer.h"
-#include "thaf/Logging/LoggingComponent.h"
-#include "thaf/Patterns/Patterns.h"
-#include "thaf/Application/Application.h"
+#include "maf/Application/AppComponent.h"
+#include "maf/Application/Timer.h"
+#include "maf/Logging/LoggingComponent.h"
+#include "maf/Patterns/Patterns.h"
+#include "maf/Application/Application.h"
 #include <sstream>
 
 using namespace std::chrono;
-using namespace thaf::app;
-using namespace thaf::messaging;
-using namespace thaf::logging;
+using namespace maf::app;
+using namespace maf::messaging;
+using namespace maf::logging;
 
 #define LOGG(exp) { \
     std::ostringstream oss;  \
     oss << exp; \
-    LoggingComponent::instance().getLogger(thaf::logging::Console)->log(oss.str()); \
+    LoggingComponent::instance().getLogger(maf::logging::Console)->log(oss.str()); \
     }
 
 class PrintLogMessage : public InternalMessage {};
 class StopTimer : public InternalMessage{};
 
-class ThreatDetector : public thaf::app::AppComponent
+class ThreatDetector : public maf::app::AppComponent
 {
 public:
     class ScanThreatRequestMsg : public InternalMessage {
@@ -71,7 +71,7 @@ private:
     {
         LOGG( "Do scan threat with command " << command );
     }
-    thaf::app::Timer _t;
+    maf::app::Timer _t;
 };
 
 
@@ -81,7 +81,7 @@ static void startApplication()
     Timer timer1;
     LoggingComponent::instance().init();
     ThreatDetector _threatDetector;
-    Application::instance().setLogger(LoggingComponent::instance().getLogger(thaf::logging::Console));
+    Application::instance().setLogger(LoggingComponent::instance().getLogger(maf::logging::Console));
     Application::instance().onSignal<PrintLogMessage>([]{ LOGG("Logging new message!"); });
     Application::instance().onSignal<StopTimer>([&timer1, &timer]{ timer1.stop(); timer.stop(); });
     auto startTime = system_clock::now();
@@ -94,7 +94,7 @@ static void startApplication()
     LOGG(std::chrono::duration_cast<milliseconds>(system_clock::now() - startTime).count());
 }
 
-void thaf_fwapp_runTest()
+void maf_fwapp_runTest()
 {
     startApplication();
 }
