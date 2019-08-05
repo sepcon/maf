@@ -1,1 +1,1 @@
-# C11Concurrent
+# Messaging Application Framework
