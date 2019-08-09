@@ -59,14 +59,21 @@ public:
 			case OpCode::Request:
 				sendMassiveResponse(requestKeeper);
 				break;
+			case OpCode::Abort:
+				if (msg->getRequestKeeper() && msg->getRequestKeeper()->getOperationID() == CSC_OpID_WeatherStatus)
+				{
+					mafMsg("Receive abort request from clients, but currently no handler");
+				}
+				break;
 			default:
 				break;
 			}
 
-			auto result = WeatherStatusResult::create();
-			result->props().set_sStatus("FirstUpdate");
-			requestKeeper->respond(result);
-
+			requestKeeper->abortedBy([this] {
+				mafMsg("Receive abort request from clients!");
+				_updateTimer.stop();
+				_totalUpdate = 0;
+				});
 			});
 
 		_comp.start([this, sid] {
@@ -79,16 +86,21 @@ public:
 			mafMsg("Time to done function sendMassiveResponse = " << elapsedTime);
 			});
 
-		auto result = WeatherStatusResult::create();
-		result->props().set_sStatus("Massive status update");
-		result->props().set_sStatus(SStatus);
+		
 		mafMsg("Time to create message = " << t.elapsedTime());
-
-		for (auto i = 0; i < REQUESTS_PER_CLIENT; ++i)
-		{
-			//mafMsg("Send update to client " << ++(this->_totalUpdate));
+		_updateTimer.setCyclic(true);
+		_updateTimer.start(100, [keeper, this] {
+			auto result = WeatherStatusResult::create();
+			result->props().set_sStatus(std::to_string(_totalUpdate++));
 			keeper->update(result);
-		}
+			if (_totalUpdate == 100)
+			{
+				_totalUpdate = 0;
+				result->props().set_sStatus("100");
+				keeper->respond(result);
+				_updateTimer.stop();
+			}
+			});
 	}
 	void sendMassiveUpdate()
 	{
@@ -108,9 +120,12 @@ public:
 private:
 	Component _comp;
 	std::shared_ptr<LocalIPCServiceStub> _stub;
-	size_t _totalUpdate = 0;
+	Timer _updateTimer;
+	int _totalUpdate = 0;
 	int _totalRegisters = 0;
+	
 };
+#include <maf/messaging/client-server/ipc/LocalIPCServiceProxy.h>
 int main()
 {
 	mafMsg("Server is starting up!");

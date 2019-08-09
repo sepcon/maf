@@ -36,6 +36,7 @@ public:
 							static int totalUpdate = 0;
 							mafMsg("Received result update from server of weather status: " << ++totalUpdate);
 						});
+
 				}
 				/*else
 				{
@@ -65,6 +66,7 @@ private:
 
 int main()
 {
+	auto proxy = LocalIPCServiceProxy::createProxy(1);
 	maf::util::TimeMeasurement tmeasure([](auto time) {
 		mafMsg("Total execution time = " << time);
 		});

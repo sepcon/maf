@@ -230,6 +230,18 @@ void ServiceStubBase::forwardToStubHandler(const ServiceStubBase::RequestKeeperP
     }
 }
 
+void ServiceStubBase::forwardToStubHandler(RequestKeeperBase::AbortCallback callback)
+{
+    if (_stubHandler)
+    {
+        _stubHandler->onClientAbortRequest(callback);
+    }
+    else
+    {
+        mafWarn("hasn't set stub handler for this service stub yet!");
+    }
+}
+
 ServiceStubBase::RequestKeeperPtr ServiceStubBase::saveRequestInfo(const CSMessagePtr &msg)
 {
     auto requestKeeper = RequestKeeperBase::create(msg, this);
@@ -312,7 +324,15 @@ void ServiceStubBase::onAbortActionRequest(const CSMessagePtr &msg)
     if(clp)
     {
         clp->invalidate();
-        forwardToStubHandler(clp);
+        if( clp->getAbortCallback() && _stubHandler)
+        {
+            forwardToStubHandler(clp->getAbortCallback());
+        }
+        else
+        {
+            clp->_csMsg = msg;
+            forwardToStubHandler(clp);
+        }
     }
 }
 

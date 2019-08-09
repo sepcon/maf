@@ -24,6 +24,9 @@
   <ItemGroup>
     <ClInclude Include="src\WeatherContract.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{8C4BB452-0119-47FC-997E-B4D974ED0D11}</ProjectGuid>

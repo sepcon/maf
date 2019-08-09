@@ -27,6 +27,7 @@ protected:
     void onStatusChangeRegister(const CSMessagePtr& msg);
     void onStatusChangeUnregister(const CSMessagePtr& msg);
     void forwardToStubHandler(const RequestKeeperPtr& requestKeeper);
+    void forwardToStubHandler(RequestKeeperBase::AbortCallback callback);
 
     RequestKeeperPtr saveRequestInfo(const CSMessagePtr& msg);
     RequestKeeperPtr pickOutRequestInfo(const CSMessagePtr &msgContent, bool done = true);

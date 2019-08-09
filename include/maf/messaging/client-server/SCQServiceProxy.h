@@ -18,7 +18,7 @@ public:
     static std::shared_ptr<SCQServiceProxy> createProxy(ServiceID sid) maf_throws(std::runtime_error)
     {
         static std::mutex creatingMutex;
-        std::lock_guard lock(creatingMutex);
+        std::lock_guard<std::mutex> lock(creatingMutex);
         auto serviceRequester = SingletonClient::instance().getServiceRequester(sid);
 
         if(serviceRequester && typeid (*serviceRequester) != typeid(SCQServiceProxy))

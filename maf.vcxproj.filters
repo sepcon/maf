@@ -105,9 +105,6 @@
     <ClCompile Include="src\maf\utils\IDManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\maf\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\maf\logging\ConsoleLogger.h">

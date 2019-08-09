@@ -56,9 +56,9 @@ protected:
     MsgHandlerMap _msgHandlers;
     TimerMgrPtr _timerMgr;
     ComponentName _name;
+    ComponentRef _myPtr;
     bool _detached;
 
-    ComponentRef _myPtr;
     static thread_local Component* _tlspInstance;
 
     friend class Timer;

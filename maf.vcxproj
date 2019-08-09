@@ -140,7 +140,6 @@
   <ItemGroup>
     <ClCompile Include="src\maf\logging\ConsoleLogger.cpp" />
     <ClCompile Include="src\maf\logging\LoggingComponent.cpp" />
-    <ClCompile Include="src\maf\main.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\Address.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\ClientBase.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\CSMessage.cpp" />

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <maf/messaging/client-server/CSTypes.h>
-#include <maf/messaging/client-server/CSContractDefines.mc.h>
 #include <maf/messaging/client-server/CSContractBegin.mc.h>
+#include <maf/messaging/client-server/CSContractDefines.mc.h>
 
 constexpr maf::messaging::Address::Port REQUESTS_PER_CLIENT = 100;
 constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;

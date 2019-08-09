@@ -14,6 +14,11 @@ RequestKeeperBase::RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, ServiceSt
     assert(_csMsg);
 }
 
+RequestKeeperBase::AbortCallback &RequestKeeperBase::getAbortCallback()
+{
+    return _abortCallback;
+}
+
 std::shared_ptr<RequestKeeperBase> RequestKeeperBase::create(std::shared_ptr<CSMessage> csMsg, ServiceStubBase *svStub)
 {
     std::shared_ptr<RequestKeeperBase> instance(new RequestKeeperBase(std::move(csMsg), svStub));
@@ -72,6 +77,11 @@ void RequestKeeperBase::update(const CSMsgContentPtr &answer)
 CSMsgContentPtr RequestKeeperBase::getRequestContent()
 {
     return _csMsg->content();
+}
+
+void RequestKeeperBase::abortedBy(AbortCallback abortCallback)
+{
+    _abortCallback = std::move(abortCallback);
 }
 
 void RequestKeeperBase::invalidate()

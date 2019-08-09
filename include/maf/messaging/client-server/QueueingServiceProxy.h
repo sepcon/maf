@@ -73,16 +73,22 @@ template<class MessageTrait>
 void
 QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
 {
-    auto lockListComps(_listComponents.pa_lock()); //Lock must be invoked here to protect both
-    auto serviceStatus = _client->getServiceStatus(serviceID());
-    if(serviceStatus == Availability::Available)
+    if(compref && compref->get())
     {
-        updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
-    }
-    auto comprefLock(compref->pa_lock());
-    if(compref->get())
-    {
-        _listComponents->insert(compref);
+        auto lockListComps(_listComponents.pa_lock()); //Lock must be invoked here to protect both
+        auto insertResult = _listComponents->insert(compref);
+        if(insertResult.second) // means that insertion took place
+        {
+            if(_client->getServiceStatus(serviceID()) == Availability::Available)
+            {
+                updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
+            }
+        }
+        else // Component had already been registered to Proxy
+        {
+            auto comprefLock(compref->pa_lock());
+            mafWarn("The component: " << compref->get()->name() << " had already got one instance of proxy for service id [" << serviceID() <<"]");
+        }
     }
     else
     {

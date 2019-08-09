@@ -18,26 +18,17 @@ DEFINES += ENABLE_IPC_DEBUG=2
 
 win32: {
     INCLUDEPATH += $(VC_IncludePath) $(WindowsSDK_IncludePath)
-    message(win32)
     LIBS += -lKernel32
 
-    SOURCES +=
-
-
-    HEADERS +=    
-
     mingw {
-        message(Mingw)
         QMAKE_CXXFLAGS += -std=c++17 -O0
         LIBS += -lpthread
     }
     msvc {
-        CONFIG += console
         QMAKE_CXXFLAGS += /std:c++17
     }
 
 } else {
-    message(Not win32)
     QMAKE_CXXFLAGS += -std=c++17
     LIBS += -lpthread
 }

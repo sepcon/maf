@@ -53,7 +53,8 @@ public:
 protected:
     QueueingServiceStub(ServiceID sid, ServerInterface* server);
     void onClientRequest(const std::shared_ptr<RequestKeeperBase>& requestKeeper) override;
-
+    void onClientAbortRequest(RequestKeeperBase::AbortCallback callback) override;
+    void onComponentUnavailable();
     ComponentRef _compref;
 };
 
@@ -92,9 +93,29 @@ void QueueingServiceStub<MessageTrait>::onClientRequest(const std::shared_ptr<Re
     }
     else
     {
-        mafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
-        _server->unregisterServiceProvider(this->serviceID());
+        onComponentUnavailable();
     }
+}
+
+template<class MessageTrait>
+void QueueingServiceStub<MessageTrait>::onClientAbortRequest(RequestKeeperBase::AbortCallback callback)
+{
+    auto lock(_compref->pa_lock());
+    if(_compref->get())
+    {
+        _compref->get()->postMessage<CallbackExcMsg>(std::move(callback));
+    }
+    else
+    {
+        onComponentUnavailable();
+    }
+}
+
+template<class MessageTrait>
+void QueueingServiceStub<MessageTrait>::onComponentUnavailable()
+{
+    mafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
+    _server->unregisterServiceProvider(this->serviceID());
 }
 
 }
