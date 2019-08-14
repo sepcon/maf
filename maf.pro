@@ -82,7 +82,6 @@ HEADERS += \
     include/maf/logging/LoggingComponent.h \
     include/maf/messaging/Communicator.h \
     include/maf/messaging/client-server/ClientBase.h \
-    include/maf/messaging/client-server/ClientServerContract.h \
     include/maf/messaging/client-server/IAMessageRouter.h \
     include/maf/messaging/client-server/IAServiceProxy.h \
     include/maf/messaging/client-server/IAServiceStub.h \

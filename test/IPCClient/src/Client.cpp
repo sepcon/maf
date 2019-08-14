@@ -29,23 +29,28 @@ public:
 				mafMsg("Client component recevies status update of service: " << msg->serviceID);
 				static bool statusReg = true;
 				//if (statusReg)
-				{
-					mafMsg("Send Status change register to server");
-					_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus,
-						[this](const std::shared_ptr<WeatherStatusResult> result) {
-							static int totalUpdate = 0;
-							mafMsg("Received result update from server of weather status: " << ++totalUpdate);
-						});
+				//{
+				//	mafMsg("Send Status change register to server");
+				//	_proxy->sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus,
+				//		[this](const std::shared_ptr<WeatherStatusResult> result) {
+				//			static int totalUpdate = 0;
+				//			mafMsg("Received result update from server of weather status: " << ++totalUpdate);
+				//		});
 
-				}
-				/*else
+				//}
+				//else
 				{
 					mafMsg("Send request to server");
-					_proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
+					auto regid = _proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
 						static int totalResponse = 0;
 						mafMsg("Received update for request of weather status result " << msg->props().get_sStatus() << " - " << ++totalResponse);
 						});
-				}*/
+					_timer.start(20, [this, regid] {
+						mafMsg("send abort the request immediately");
+						//_proxy->sendAbortRequest(regid);
+						_proxy->sendRequest<ShutDownServerRequestResult>();
+						});
+				}
 
 				statusReg = !statusReg;
 			}
@@ -59,7 +64,7 @@ public:
 			});
 	}
 private:
-
+	Timer _timer;
 	IPCProxyPtr _proxy;
 	messaging::Component _comp;
 };

@@ -13,7 +13,7 @@ class ServiceStubBase : public ServiceStubInterface
     using RequestKeeperPtr = std::shared_ptr<RequestKeeperBase>;
     using OpID2RequestKeeperMap = nstl::SyncObject<std::map<OpID, std::list<RequestKeeperPtr>>>;
     using Address2OpIDsMap = nstl::SyncObject<std::map<Address, std::set<OpID>>>;
-
+    friend class RequestKeeperBase;
 public:
     ServiceStubBase(ServiceID sid, ServerInterface* server, ServiceStubHandlerInterface* stubHandler = nullptr);
     ~ServiceStubBase() override;
@@ -23,6 +23,7 @@ public:
     bool sendStatusUpdate(const CSMessagePtr& csMsg) override;
 
 protected:
+    bool feedbackToClient(const CSMessagePtr &csMsg, bool hasDone = true);
     bool onIncomingMessage(const CSMessagePtr& msg) override;
     void onStatusChangeRegister(const CSMessagePtr& msg);
     void onStatusChangeUnregister(const CSMessagePtr& msg);
@@ -30,7 +31,7 @@ protected:
     void forwardToStubHandler(RequestKeeperBase::AbortCallback callback);
 
     RequestKeeperPtr saveRequestInfo(const CSMessagePtr& msg);
-    RequestKeeperPtr pickOutRequestInfo(const CSMessagePtr &msgContent, bool done = true);
+    RequestKeeperPtr pickOutRequestInfo(const CSMessagePtr &msgContent, bool remove = true);
     void invalidateAndRemoveAllRequestKeepers();
 
     void saveRegisterInfo(const CSMessagePtr& msg);
@@ -46,7 +47,7 @@ protected:
     Address2OpIDsMap _regEntriesMap;
     OpID2RequestKeeperMap _requestKeepersMap;
     ServerInterface* _server;
-    util::IDManager _idMgr;
+    std::atomic_bool _stopped;
 };
 
 }// messaging

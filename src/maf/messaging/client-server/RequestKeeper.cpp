@@ -14,8 +14,9 @@ RequestKeeperBase::RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, ServiceSt
     assert(_csMsg);
 }
 
-RequestKeeperBase::AbortCallback &RequestKeeperBase::getAbortCallback()
+RequestKeeperBase::AbortCallback RequestKeeperBase::getAbortCallback()
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     return _abortCallback;
 }
 
@@ -27,6 +28,7 @@ std::shared_ptr<RequestKeeperBase> RequestKeeperBase::create(std::shared_ptr<CSM
 
 OpCode RequestKeeperBase::getOperationCode() const
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     if(_csMsg->operationCode() == OpCode::RequestSync)
     {
         return OpCode::Request; // Currently there's no need to diffrentiate between sync/async request
@@ -39,22 +41,76 @@ OpCode RequestKeeperBase::getOperationCode() const
 
 OpID RequestKeeperBase::getOperationID() const
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     return _csMsg->operationID();
 }
 
 bool RequestKeeperBase::valid() const
 {
-    return _valid.load(std::memory_order_acquire);
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _valid;
 }
 
-bool RequestKeeperBase::respond(const CSMsgContentPtr& answer, RequestResultStatus status)
+bool RequestKeeperBase::respond(const CSMsgContentPtr& answer)
 {
-    if(valid()) //BUG: must use mutex to prevent _svStub from being destroyed after checking valid
+    constexpr bool DONE = true;
+    std::lock_guard<std::mutex> lock(_mutex);
+    // remove keeper from tracked list of stub
+    if(_svStub) { _svStub->pickOutRequestInfo(_csMsg); }
+
+    return sendMsgToClient(answer, DONE);
+}
+
+bool RequestKeeperBase::update(const CSMsgContentPtr &answer)
+{
+    constexpr bool NOT_DONE = false;
+    std::lock_guard<std::mutex> lock(_mutex);
+    return sendMsgToClient(answer, NOT_DONE);
+}
+
+CSMsgContentPtr RequestKeeperBase::getRequestContent()
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    return _csMsg->content();
+}
+
+void RequestKeeperBase::abortedBy(AbortCallback abortCallback)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if(!_valid)
+    {
+        abortCallback();
+    }
+    else
+    {
+        _abortCallback = std::move(abortCallback);
+    }
+}
+
+
+bool RequestKeeperBase::invalidateIfValid()
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if(_valid)
+    {
+        _valid = false;
+        _svStub = nullptr;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool RequestKeeperBase::sendMsgToClient(const CSMsgContentPtr &answer, bool done)
+{
+    if(_valid)
     {
         if(answer->operationID() == _csMsg->operationID())
         {
             _csMsg->setContent(answer);
-            return _svStub->replyToRequest(_csMsg, status == RequestResultStatus::Complete);
+            return _svStub->feedbackToClient(_csMsg, done);
         }
         else
         {
@@ -67,26 +123,6 @@ bool RequestKeeperBase::respond(const CSMsgContentPtr& answer, RequestResultStat
         mafErr("IPCReplyHelper is no longer valid, might be the operation id [" << _csMsg->operationID() << "]");
         return false;
     }
-}
-
-void RequestKeeperBase::update(const CSMsgContentPtr &answer)
-{
-    respond(answer, RequestResultStatus::Incomplete);
-}
-
-CSMsgContentPtr RequestKeeperBase::getRequestContent()
-{
-    return _csMsg->content();
-}
-
-void RequestKeeperBase::abortedBy(AbortCallback abortCallback)
-{
-    _abortCallback = std::move(abortCallback);
-}
-
-void RequestKeeperBase::invalidate()
-{
-    _valid.store(false, std::memory_order_release);
 }
 
 
