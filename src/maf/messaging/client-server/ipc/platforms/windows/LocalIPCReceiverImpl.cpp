@@ -18,7 +18,35 @@ namespace ipc {
 using PipeInstances = LocalIPCReceiverImpl::PipeInstances;
 
 static bool connectToNewClient(HANDLE, LPOVERLAPPED);
+static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED& overlapStructure, char* buffer, size_t buffSize)
+{
+    bool fSuccess = false;
+    size_t totalBytesRead = 0;
+    do
+    {
+        DWORD bytesRead = 0;
+        fSuccess = ReadFile(
+            pipeHandle,
+            buffer + totalBytesRead,
+            buffSize - totalBytesRead,
+            &bytesRead,
+            &overlapStructure);
 
+        if (fSuccess && bytesRead != 0)
+        {
+			totalBytesRead += bytesRead;
+            break;
+        }
+        else
+        {
+            fSuccess = GetOverlappedResult(pipeHandle, &overlapStructure, &bytesRead, true);
+			totalBytesRead += bytesRead;
+        }
+
+    } while(!fSuccess && GetLastError() == ERROR_MORE_DATA);
+
+    return totalBytesRead ;
+}
 LocalIPCReceiverImpl::LocalIPCReceiverImpl()
 {
 }
@@ -129,30 +157,32 @@ void LocalIPCReceiverImpl::listningThreadFunction()
 bool LocalIPCReceiverImpl::readOnPipe(size_t index)
 {
     bool fSuccess = false;
-    do
+    auto& incommingBA = _pipeInstances[index]->ba;
+    DWORD bytesRead = 0;
+    if(incommingBA.empty()) // read the written bytes count first
     {
-        DWORD bytesRead = 0;
-        auto currentSize = _pipeInstances[index]->ba.size();
-        _pipeInstances[index]->ba.resize(BUFFER_SIZE + currentSize);
-
-        fSuccess = ReadFile(
+        uint32_t totalComingBytes = 0;
+        bytesRead = fillbuffer(
             _pipeInstances[index]->hPipeInst,
-            _pipeInstances[index]->ba.firstpos() + currentSize,
-            BUFFER_SIZE,
-            &bytesRead,
-            &_pipeInstances[index]->oOverlap);
+            _pipeInstances[index]->oOverlap,
+            reinterpret_cast<char*>(&totalComingBytes),
+            sizeof(totalComingBytes)
+            );
 
-        if (fSuccess && bytesRead != 0)
+        if(bytesRead == sizeof(totalComingBytes) )
         {
-            break;
+            incommingBA.resize(totalComingBytes);
+            bytesRead = fillbuffer(
+                _pipeInstances[index]->hPipeInst,
+                _pipeInstances[index]->oOverlap,
+                incommingBA.firstpos(),
+                incommingBA.size()
+                );
+            fSuccess = (incommingBA.size() == bytesRead);
         }
-        else
-        {
-            fSuccess = GetOverlappedResult(_pipeInstances[index]->hPipeInst, &_pipeInstances[index]->oOverlap, &bytesRead, true);
-        }
+    }
 
-    } while(!fSuccess && GetLastError() == ERROR_MORE_DATA);
-    return fSuccess ;
+    return fSuccess;
 }
 
 // DisconnectAndReconnect(DWORD)
