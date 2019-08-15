@@ -59,11 +59,10 @@ void applyResponseCode(const CSMessagePtr& csMsg, bool done = true)
 
 bool ServiceStubBase::onIncomingMessage(const CSMessagePtr &msg)
 {
-    mafInfo(msg);
-//    mafInfo("Received Incoming Message: " <<
-//             "\n\tCode: " << msg->operationCode() <<
-//             "\n\tID: " << msg->operationID() <<
-//             "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
+    mafInfo("Received Incoming Message: " <<
+             "\n\tCode: " << msg->operationCode() <<
+             "\n\tID: " << msg->operationID() <<
+             "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
     bool handled = true;
     switch (msg->operationCode())
     {
@@ -90,7 +89,8 @@ bool ServiceStubBase::onIncomingMessage(const CSMessagePtr &msg)
 
 ServiceStubBase::ServiceStubBase(ServiceID sid, ServerInterface *server, ServiceStubHandlerInterface *stubHandler) :
     _stubHandler(stubHandler),
-    _server(server)
+    _server(server),
+    _stopped(false)
 {
     assert(_server && "Server must not be null");
     setServiceID(sid);
@@ -99,6 +99,7 @@ ServiceStubBase::ServiceStubBase(ServiceID sid, ServerInterface *server, Service
 
 ServiceStubBase::~ServiceStubBase()
 {
+    _stopped.store(true, std::memory_order_release);
     removeAllRegisterInfo();
     invalidateAndRemoveAllRequestKeepers();
 }
@@ -113,10 +114,9 @@ bool ServiceStubBase::replyToRequest(const CSMessagePtr& csMsg, bool hasDone)
     {
         if(hasDone)
         {
-            requestKeeper->invalidate();
+            requestKeeper->invalidateIfValid();
         }
-        applyResponseCode(csMsg, hasDone);
-        return _server->sendMessageToClient(csMsg, csMsg->sourceAddress()) == DataTransmissionErrorCode::Success;
+        return feedbackToClient(csMsg, hasDone);
     }
     else
     {
@@ -185,6 +185,12 @@ bool ServiceStubBase::sendStatusUpdate(const CSMessagePtr &msg)
     return success;
 }
 
+bool ServiceStubBase::feedbackToClient(const CSMessagePtr &csMsg, bool hasDone)
+{
+    applyResponseCode(csMsg, hasDone);
+    return _server->sendMessageToClient(csMsg, csMsg->sourceAddress()) == DataTransmissionErrorCode::Success;
+}
+
 
 void ServiceStubBase::onStatusChangeRegister(const CSMessagePtr &msg)
 {
@@ -211,7 +217,7 @@ void ServiceStubBase::onStatusChangeUnregister(const CSMessagePtr &msg)
     auto requestKeeper = pickOutRequestInfo(msg);
     if(requestKeeper)
     {
-        requestKeeper->invalidate();
+        requestKeeper->invalidateIfValid();
     }
 
     removeRegisterInfo(msg);
@@ -234,7 +240,7 @@ void ServiceStubBase::forwardToStubHandler(RequestKeeperBase::AbortCallback call
 {
     if (_stubHandler)
     {
-        _stubHandler->onClientAbortRequest(callback);
+        _stubHandler->onClientAbortRequest(std::move(callback));
     }
     else
     {
@@ -252,29 +258,33 @@ ServiceStubBase::RequestKeeperPtr ServiceStubBase::saveRequestInfo(const CSMessa
     return requestKeeper;
 }
 
-ServiceStubBase::RequestKeeperPtr ServiceStubBase::pickOutRequestInfo(const CSMessagePtr &msg, bool done)
+ServiceStubBase::RequestKeeperPtr ServiceStubBase::pickOutRequestInfo(const CSMessagePtr &msg, bool remove)
 {
     RequestKeeperPtr keeper;
-    auto lock = _requestKeepersMap.a_lock();
-    auto itListOfClps = _requestKeepersMap->find(msg->operationID());
-    if(itListOfClps != _requestKeepersMap->end())
+    // Using _stopped flag to prevent RequestKeeper from removing itself from the map while destructing ServiceStubBase object
+    // By that deadlock situation will not occurr
+    if(!_stopped.load(std::memory_order_acquire))
     {
-        auto& listOfClps = itListOfClps->second;
-        for(auto itClp = listOfClps.begin(); itClp != listOfClps.end(); ++itClp)
+        auto lock = _requestKeepersMap.a_lock();
+        auto itKeeperList = _requestKeepersMap->find(msg->operationID());
+        if(itKeeperList != _requestKeepersMap->end())
         {
-            RequestKeeperPtr&  keeperTmp = *itClp;
-            if(keeperTmp->valid() && keeperTmp->_csMsg->requestID() == msg->requestID())
+            auto& listOfClps = itKeeperList->second;
+            for(auto itClp = listOfClps.begin(); itClp != listOfClps.end(); ++itClp)
             {
-                keeper = keeperTmp;
-                if(done)
+                RequestKeeperPtr&  keeperTmp = *itClp;
+                if(keeperTmp->_csMsg->requestID() == msg->requestID())
                 {
-                    listOfClps.erase(itClp);
+                    keeper = keeperTmp;
+                    if(remove)
+                    {
+                        listOfClps.erase(itClp);
+                    }
+                    break;
                 }
-                break;
             }
         }
     }
-
     return keeper;
 }
 
@@ -284,9 +294,9 @@ void ServiceStubBase::invalidateAndRemoveAllRequestKeepers()
     for(auto& reqTrackersPair : *_requestKeepersMap)
     {
         auto& requestKeepers = reqTrackersPair.second;
-        for(auto& tracker : requestKeepers)
+        for(auto& keeper : requestKeepers)
         {
-            tracker->invalidate();
+            keeper->invalidateIfValid();
         }
     }
     _regEntriesMap->clear();
@@ -320,26 +330,26 @@ void ServiceStubBase::removeRegistersOfAddress(const Address &addr)
 
 void ServiceStubBase::onAbortActionRequest(const CSMessagePtr &msg)
 {
-    RequestKeeperPtr clp = pickOutRequestInfo(msg);
-    if(clp)
+    RequestKeeperPtr keeper = pickOutRequestInfo(msg);
+    if(keeper && (keeper->invalidateIfValid()))
     {
-        clp->invalidate();
-        if( clp->getAbortCallback() && _stubHandler)
+        auto abortCallback = keeper->getAbortCallback();
+        if (abortCallback && _stubHandler)
         {
-            forwardToStubHandler(clp->getAbortCallback());
+            forwardToStubHandler(std::move(abortCallback));
         }
         else
         {
-            clp->_csMsg = msg;
-            forwardToStubHandler(clp);
+            keeper->_csMsg = msg;
+            forwardToStubHandler(keeper);
         }
     }
 }
 
 void ServiceStubBase::onClientRequest(const CSMessagePtr &msg)
 {
-    auto clp = saveRequestInfo(msg);
-    forwardToStubHandler(clp);
+    auto keeper = saveRequestInfo(msg);
+    forwardToStubHandler(keeper);
 }
 
 void ServiceStubBase::setStubHandler(ServiceStubHandlerInterface *stubHandler)

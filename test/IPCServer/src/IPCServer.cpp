@@ -37,7 +37,7 @@ std::string createBigString(size_t size, const std::string& tobeCloned)
 	return s;
 }
 std::vector<std::string> extraInfomation = createBigExtraInfomation(1000);
-std::string SStatus = createBigString(100000, "Hello world");//"{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"dlp_info\":{},\"file_info\":{\"display_name\":\"componentsplugin4.dll\",\"file_size\":100864,\"file_type\":\"application/x-dosexec\",\"file_type_description\":\"Dynamic Link Library\",\"md5\":\"c713c6f0ea073c1822933aa5be4f1794\",\"sha1\":\"70a4cdf21b39bae2721a0fa84716eca6229ff946\",\"sha256\":\"4644c6f5556414d92eecd3792358fa2ca80a0988469a82f33e928be237420881\",\"upload_timestamp\":\"2019-07-19T03:01:13.471Z\"},\"process_info\":{\"blocked_reason\":\"\",\"file_type_skipped_scan\":false,\"post_processing\":{\"actions_failed\":\"\",\"actions_ran\":\"\",\"converted_destination\":\"\",\"converted_to\":\"\",\"copy_move_destination\":\"\"},\"processing_time\":76,\"profile\":\"File process\",\"progress_percentage\":100,\"queue_time\":7,\"result\":\"Allowed\",\"user_agent\":\"MetaAccess\"},\"scan_results\":{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"progress_percentage\":100,\"scan_all_result_a\":\"No Threat Detected\",\"scan_all_result_i\":0,\"scan_details\":{\"Ahnlab\":{\"def_time\":\"2019-07-19T00:00:00.000Z\",\"eng_id\":\"ahnlab_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":21,\"threat_found\":\"\",\"wait_time\":7},\"Avira\":{\"def_time\":\"2019-07-17T00:00:00.000Z\",\"eng_id\":\"avira_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":7,\"threat_found\":\"\",\"wait_time\":7},\"ClamAV\":{\"def_time\":\"2019-07-18T08:12:00.000Z\",\"eng_id\":\"clamav_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":23,\"threat_found\":\"\",\"wait_time\":11},\"ESET\":{\"def_time\":\"2019-07-18T00:00:00.000Z\",\"eng_id\":\"eset_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":17,\"threat_found\":\"\",\"wait_time\":11}},\"start_time\":\"2019-07-19T03:01:13.478Z\",\"total_avs\":4,\"total_time\":69},\"vulnerability_info\":{\"verdict\":0},\"yara_info\":{}}";
+std::string SStatus = createBigString(1000000, "Hello world");//"{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"dlp_info\":{},\"file_info\":{\"display_name\":\"componentsplugin4.dll\",\"file_size\":100864,\"file_type\":\"application/x-dosexec\",\"file_type_description\":\"Dynamic Link Library\",\"md5\":\"c713c6f0ea073c1822933aa5be4f1794\",\"sha1\":\"70a4cdf21b39bae2721a0fa84716eca6229ff946\",\"sha256\":\"4644c6f5556414d92eecd3792358fa2ca80a0988469a82f33e928be237420881\",\"upload_timestamp\":\"2019-07-19T03:01:13.471Z\"},\"process_info\":{\"blocked_reason\":\"\",\"file_type_skipped_scan\":false,\"post_processing\":{\"actions_failed\":\"\",\"actions_ran\":\"\",\"converted_destination\":\"\",\"converted_to\":\"\",\"copy_move_destination\":\"\"},\"processing_time\":76,\"profile\":\"File process\",\"progress_percentage\":100,\"queue_time\":7,\"result\":\"Allowed\",\"user_agent\":\"MetaAccess\"},\"scan_results\":{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"progress_percentage\":100,\"scan_all_result_a\":\"No Threat Detected\",\"scan_all_result_i\":0,\"scan_details\":{\"Ahnlab\":{\"def_time\":\"2019-07-19T00:00:00.000Z\",\"eng_id\":\"ahnlab_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":21,\"threat_found\":\"\",\"wait_time\":7},\"Avira\":{\"def_time\":\"2019-07-17T00:00:00.000Z\",\"eng_id\":\"avira_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":7,\"threat_found\":\"\",\"wait_time\":7},\"ClamAV\":{\"def_time\":\"2019-07-18T08:12:00.000Z\",\"eng_id\":\"clamav_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":23,\"threat_found\":\"\",\"wait_time\":11},\"ESET\":{\"def_time\":\"2019-07-18T00:00:00.000Z\",\"eng_id\":\"eset_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":17,\"threat_found\":\"\",\"wait_time\":11}},\"start_time\":\"2019-07-19T03:01:13.478Z\",\"total_avs\":4,\"total_time\":69},\"vulnerability_info\":{\"verdict\":0},\"yara_info\":{}}";
 
 class ServerTest
 {
@@ -68,12 +68,6 @@ public:
 			default:
 				break;
 			}
-
-			requestKeeper->abortedBy([this] {
-				mafMsg("Receive abort request from clients!");
-				_updateTimer.stop();
-				_totalUpdate = 0;
-				});
 			});
 
 		_comp.start([this, sid] {
@@ -82,16 +76,23 @@ public:
 	}
 	void sendMassiveResponse(const std::shared_ptr<RequestKeeper<IPCMessageTrait>>& keeper)
 	{
-		maf::util::TimeMeasurement t([](auto elapsedTime) {
-			mafMsg("Time to done function sendMassiveResponse = " << elapsedTime);
-			});
-
-		
-		mafMsg("Time to create message = " << t.elapsedTime());
+		if (keeper->getOperationID() == CSC_OpID_ShutDownServerRequest)
+		{
+			this->_comp.shutdown();
+			mafMsg("Server already shutdown");
+			return;
+		}
 		_updateTimer.setCyclic(true);
-		_updateTimer.start(100, [keeper, this] {
+
+		keeper->abortedBy([this] {
+			mafMsg("Receive abort request from clients!");
+			_updateTimer.stop();
+			_totalUpdate = 0;
+			});
+		auto updateFunction = [keeper, this] {
 			auto result = WeatherStatusResult::create();
 			result->props().set_sStatus(std::to_string(_totalUpdate++));
+			mafMsg("Send update to client " << _totalUpdate);
 			keeper->update(result);
 			if (_totalUpdate == 100)
 			{
@@ -100,7 +101,10 @@ public:
 				keeper->respond(result);
 				_updateTimer.stop();
 			}
-			});
+		};
+
+		updateFunction();
+		_updateTimer.start(2, updateFunction);
 	}
 	void sendMassiveUpdate()
 	{
@@ -134,4 +138,5 @@ int main()
 	ServerTest s;
 	s.start(SID_WeatherService);
 	mafMsg("Component shutdown!");
+	//std::cin.get();
 }

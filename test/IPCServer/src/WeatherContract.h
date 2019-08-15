@@ -42,6 +42,6 @@ result_object_s(NotificationMessageUpdate)
 	properties((std::string, message, "nothing to show"))
 result_object_e(NotificationMessageUpdate)
 
-result_object_no_props(TheUpdateSignal)
+result_object_no_props(ShutDownServerRequest)
 	
 #include <maf/messaging/client-server/CSContractEnd.mc.h>

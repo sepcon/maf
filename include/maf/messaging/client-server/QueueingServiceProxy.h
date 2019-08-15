@@ -29,12 +29,12 @@ public:
     RegID sendRequest
     (
             const CSMsgContentPtr& outgoingData,
-            PayloadProcessCallback<IncomingMsgContent> callback
+            PayloadProcessCallback<IncomingMsgContent> callback = {}
             );
     template<class IncomingMsgContent>
     RegID sendRequest
     (
-            PayloadProcessCallback<IncomingMsgContent> callback
+            PayloadProcessCallback<IncomingMsgContent> callback = {}
             );
 
     template<class IncomingMsgContent>
@@ -92,7 +92,7 @@ QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
     }
     else
     {
-        mafErr("Trying to get reference to service stub from non-Component thread: ServiceID: " << serviceID());
+        mafErr("Trying to get reference to service proxy from non-component thread: ServiceID: " << serviceID());
     }
 }
 
@@ -153,6 +153,7 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(PayloadProcess
 	auto compref = Component::getComponentRef();
     if(compref && callback)
     {
+
         CSMessageHandlerCallback ipcMessageHandlerCB =
                 [this, callback, compref](const CSMessagePtr& msg){
             if(MessageTrait::template getOperationID<IncomingMsgContent>() == msg->operationID())
@@ -197,7 +198,7 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(PayloadProcess
     }
     else
     {
-        mafErr("Trying to create callback with no running component");
+        if(!compref) { mafErr("Trying to create callback with no running component"); }
     }
     return nullptr;
 }
