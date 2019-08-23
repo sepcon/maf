@@ -20,7 +20,8 @@ result_object_s(WeatherStatus)
         (
             (StatusType, status),
             (std::string, sStatus),
-            (std::vector<std::string>, extra_information)
+            (std::vector<std::string>, extra_information),
+			(int, index)
         )
 result_object_e(WeatherStatus)
 

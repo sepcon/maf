@@ -12,19 +12,37 @@
     constexpr const char* class_name() const { return #ClassName; } \
     mc_constructors_(ClassName)
 
-#define mc_serializable_object_end_(ClassName) };
+#define mc_serializable_object_end_(ClassName) \
+public: \
+    static std::shared_ptr<ClassName> create(data_type data) { \
+        auto p = std::make_shared<ClassName>(); \
+        p->_data = std::move(data); \
+        return p; \
+    } \
+    static std::shared_ptr<ClassName> create() { \
+        return std::make_shared<ClassName>(); \
+    } \
+};
 
+#define mc_serializable_object_has_base_(ClassName, BaseClassName) \
+    struct ClassName : public BaseClassName { \
+    static_assert(std::is_default_constructible_v<BaseClassName>, "The class `"  #BaseClassName "` which is specified as base of `" #ClassName "` must be has default constructor" ); \
+    friend struct maf::srz::SerializationTrait<ClassName>; \
+    constexpr const char* class_name() const { return #ClassName; } \
+    mc_constructors_(ClassName)
+
+#define mc_serializable_object_has_base_end_(ClassName) mc_serializable_object_end_(ClassName)
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 /// ----------------------------Declare std::tuple<...> for storing properties of class----------------------------------------------------
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 #define mc_properties_map_(...) \
     public: \
-    using value_type = std::tuple< mc_remove_first_arg( mc_for_each(mc_take_only_first_arg, __VA_ARGS__) )>; \
+    using data_type = std::tuple< mc_remove_first_arg( mc_for_each(mc_take_only_first_arg, __VA_ARGS__) )>; \
     mc_for_each_with_index( mc_declare_get_set_funcs_with_index, __VA_ARGS__) \
     msvc_expand_va_args( define_dump_function(__VA_ARGS__) ) \
     private: \
-    value_type _data = std::tuple< mc_remove_first_arg( mc_for_each(mc_take_only_first_arg, __VA_ARGS__ ) )>( mc_remove_first_arg( mc_for_each( mc_get_default_value, __VA_ARGS__ ) ) );
+    data_type _data = data_type( mc_remove_first_arg( mc_for_each( mc_get_default_value, __VA_ARGS__ ) ) );
 
 
 #define mc_take_2_first_params_param_(first, second, ...) /*(*/ first, second /*)*/
@@ -58,6 +76,7 @@
     mc_dump_each_property( mc_take_2_first_params_param( mc_strip_parentheses(TypeName) ), index)
 
 
+#ifdef MAF_ENABLE_DUMP
 #define define_dump_function(...) \
     void dump(int level, std::string& strOut) const { \
         strOut += "{"; \
@@ -72,7 +91,11 @@
         dump(level, output); \
         return output; \
     }
-
+#else
+#define define_dump_function(...) \
+    void dump(int /*level*/, std::string& /*strOut*/) const { } \
+    std::string dump(int /*level*/ = 0) const { return ""; }
+#endif
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 /// ----------------------------Generate get/set fucntions for each property---------------------------------------------------------------
@@ -82,7 +105,7 @@
 
 #define mc_declare_get_function(...) msvc_expand_va_args( mc_declare_get_set_funcs_(__VA_ARGS__) )
 
-#define mc_value_at_r(index) std::get< std::tuple_size_v<value_type> - index>(_data)
+#define mc_value_at_r(index) std::get< std::tuple_size_v<data_type> - index>(_data)
 #define mc_declare_get_set_funcs_(Type, Name, index) \
     public: \
     void set_##Name(const Type& value) { mc_value_at_r(index) = value; } \

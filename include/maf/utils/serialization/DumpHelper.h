@@ -46,6 +46,9 @@ struct hlp
     static std::string quote(const std::string& str) { return '"' + str + '"'; }
 };
 
+template <class JsonClass>
+struct JsonTrait;
+
 template<typename NonDeterminedType>
 struct DumpHelper
 {
@@ -62,6 +65,8 @@ struct DumpHelper
 #define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
 #define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
 #define mc_enable_if_is_enum_(EnumType) template<typename EnumType, std::enable_if_t<std::is_enum_v<EnumType>, bool> = true>
+#define mc_enable_if_is_json_(JsonType) template<typename JsonType, std::enable_if_t<std::is_class_v<JsonType>, bool> = true>
+
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static void dump(const TupleWrap& value, int level, std::string& strOut) noexcept
@@ -95,9 +100,14 @@ struct DumpHelper
             inline static void dump(const SmartPtrType& value, int level, std::string& strOut) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
-            return DumpHelper<PtrType>::dump(value.get(), level, strOut);
+            DumpHelper<PtrType>::dump(value.get(), level, strOut);
         }
 
+        mc_enable_if_is_json_(JsonType)
+            inline static void dump(const JsonType& value, int /*level*/, std::string& strOut) noexcept
+        {
+            strOut += JsonTrait<JsonType>::marshall(value);
+        }
     };
 
 #undef mc_enable_if_is_tuplewrap_
@@ -105,7 +115,17 @@ struct DumpHelper
 #undef mc_enable_if_is_smartptr_
 #undef mc_enable_if_is_ptr_
 #undef mc_enable_if_is_enum_
+#undef mc_enable_if_is_json_
 
+};
+
+template <class JsonClass>
+struct DumpHelper<JsonTrait<JsonClass>>
+{
+    inline static void dump(const bool& value, int /*level*/, std::string& strOut) noexcept
+    {
+        strOut += value ? "true" : "false";
+    }
 };
 
 template <>

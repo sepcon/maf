@@ -1,6 +1,5 @@
 #pragma once
 
-#include "maf/utils/debugging/Debug.h"
 #include <functional>
 #include <chrono>
 
@@ -18,7 +17,6 @@ public:
     ~TimeMeasurement()
     {
         auto elapsedTime = this->elapsedTime();
-        mafInfo("Time measurment stopped, elapsed time = " << elapsedTime);
         if(_onReportCallback)
         {
             _onReportCallback(elapsedTime);

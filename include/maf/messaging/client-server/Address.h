@@ -1,7 +1,7 @@
 #pragma once
 
 #include "maf/utils/serialization/Serializer.h"
-#include "maf/utils/serialization/SerializableObject.h"
+#include "maf/utils/serialization/SBObjectDefHlp.mc.h"
 
 namespace maf {
 namespace messaging {
