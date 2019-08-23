@@ -48,6 +48,16 @@ public:
         _o = std::move(obj);
     }
 
+    operator ProtectedObject&()
+    {
+        return _o;
+    }
+
+    operator ProtectedObject&() const
+    {
+        return _o;
+    }
+
     ProtectedObject& get()
     {
         return _o;

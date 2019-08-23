@@ -75,6 +75,7 @@ HEADERS += \
     include/maf/messaging/LocalIPCServer.h \
     include/maf/messaging/MessageBase.h \
     include/maf/messaging/MessageQueue.h \
+    include/maf/messaging/MsgDefHelper.mc.h \
     include/maf/messaging/Timer.h \
     include/maf/logging/ConsoleLogger.h \
     include/maf/logging/LoggerBase.h \
@@ -113,10 +114,10 @@ HEADERS += \
     include/maf/messaging/client-server/internal/CSShared.h \
     include/maf/messaging/client-server/IAMessageTrait.h \
     include/maf/messaging/client-server/Connection.h \
+    include/maf/messaging/client-server/CSContractBegin.mc.h \
+    include/maf/messaging/client-server/CSContractDefines.mc.h \
+    include/maf/messaging/client-server/CSContractEnd.mc.h \
     include/maf/messaging/client-server/ipc/BytesCommunicator.h \
-    include/maf/messaging/client-server/ipc/CSContractBegin.mc.h \
-    include/maf/messaging/client-server/ipc/CSContractDefines.mc.h \
-    include/maf/messaging/client-server/ipc/CSContractEnd.mc.h \
     include/maf/messaging/client-server/ipc/IPCClientBase.h \
     include/maf/messaging/client-server/ipc/IPCServerBase.h \
     include/maf/messaging/client-server/ipc/IPCTypes.h \
@@ -154,9 +155,10 @@ HEADERS += \
     include/maf/utils/cppextension/TypeTraits.h \
     include/maf/utils/serialization/ByteArray.h \
     include/maf/utils/serialization/DumpHelper.h \
+    include/maf/utils/serialization/JsonTrait.h \
+    include/maf/utils/serialization/SBObjDef.mc.h \
+    include/maf/utils/serialization/SBObjectDefHlp.mc.h \
     include/maf/utils/serialization/SerializableInterface.h \
-    include/maf/utils/serialization/SerializableObject.h \
-    include/maf/utils/serialization/SerializableObject.mc.h \
     include/maf/utils/serialization/SerializationTrait.h \
     include/maf/utils/serialization/Serializer.h \
     include/maf/messaging/client-server/ipc/IPCFactory.h \
@@ -170,5 +172,7 @@ HEADERS += \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiverBase.h \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h
+
+DISTFILES +=
 
 

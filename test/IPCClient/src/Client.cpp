@@ -44,8 +44,9 @@ public:
 					auto regid = _proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
 						static int totalResponse = 0;
 						mafMsg("Received update for request of weather status result " << msg->props().get_sStatus() << " - " << ++totalResponse);
+						mafMsg(msg->props().dump());
 						});
-					_timer.start(20, [this, regid] {
+					_timer.start(500, [this, regid] {
 						mafMsg("send abort the request immediately");
 						//_proxy->sendAbortRequest(regid);
 						_proxy->sendRequest<ShutDownServerRequestResult>();

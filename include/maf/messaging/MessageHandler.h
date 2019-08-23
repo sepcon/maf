@@ -14,7 +14,7 @@ class MessageHandler
 {
 public:
     virtual void onMessage(messaging::CMessageBasePtr msg) = 0;
-    virtual ~MessageHandler(){}
+    virtual ~MessageHandler() = default;
 };
 
 }

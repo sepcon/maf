@@ -2,6 +2,7 @@
 
 #include "maf/utils/cppextension/TupleManip.h"
 #include "maf/utils/cppextension/TypeTraits.h"
+#include "JsonTrait.h"
 #include "ByteArray.h"
 #include <functional>
 #include <tuple>
@@ -66,6 +67,19 @@ inline void makeSureDeserializable(const char** startp, const char** lastp, Size
     }
 }
 
+namespace internal
+{
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
+inline SizeType jsonSerializeSizeOf(const JsonType &value) noexcept;
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
+inline SizeType jsonSerialize(char *startp, const JsonType &value) noexcept;
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
+inline JsonType jsonDeserialize(const char **startp, const char **lastp, RequestMoreBytesCallback requestMoreBytes);
+
+}
 
 /**
  * Basic utility for serialization framework, that provide 3 main functionalities:
@@ -113,31 +127,31 @@ struct SerializationTrait
     struct prv
     {
 
-#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<nstl::is_tuple_v<typename TypeName::value_type>, bool> = true>
+#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<nstl::is_tuple_v<typename TypeName::data_type>, bool> = true>
 #define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
 #define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
 #define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
 #define mc_enable_if_is_a_char_string(CharString) template <typename CharString, std::enable_if_t<std::is_base_of_v<std::string, CharString> && !std::is_same_v<std::string, CharString>, bool> = true>
 #define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
-
+#define mc_enable_if_is_json_(JsonType) template<typename JsonType, std::enable_if_t< std::is_default_constructible_v<JsonTrait<JsonType>> && std::is_class_v<JsonTrait<JsonType>>, bool> = true>
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static SizeType serializeSizeOf(const TupleWrap& value) noexcept
         {
-            return SerializationTrait<typename TupleWrap::value_type>::serializeSizeOf(value._data);
+            return SerializationTrait<typename TupleWrap::data_type>::serializeSizeOf(value._data);
         }
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static SizeType serialize(char* startp, const TupleWrap& value) noexcept
         {
-            return SerializationTrait<typename TupleWrap::value_type>::serialize(startp, value._data);
+            return SerializationTrait<typename TupleWrap::data_type>::serialize(startp, value._data);
         }
 
         mc_enable_if_is_tuplewrap_(TupleWrap)
             inline static TupleWrap deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             TupleWrap value;
-            value._data = SerializationTrait<typename TupleWrap::value_type>::deserialize(startp, lastp, requestMoreBytes);
+            value._data = SerializationTrait<typename TupleWrap::data_type>::deserialize(startp, lastp, requestMoreBytes);
             return value;
         }
 
@@ -197,7 +211,7 @@ struct SerializationTrait
         mc_enable_if_is_ptr_(PointerType)
         inline static PointerType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
-            mc_must_default_constructible(PointerType);
+            mc_must_default_constructible(PointerType)
             using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
 
             makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
@@ -232,13 +246,33 @@ struct SerializationTrait
             using PtrType = typename SmartPtrType::element_type*;
             return SmartPtrType(SerializationTrait<PtrType>::deserialize(startp, lastp, requestMoreBytes));
         }
-    };
+
+        mc_enable_if_is_json_(JsonType)
+            inline static SizeType serializeSizeOf(const JsonType& value) noexcept
+        {
+            return internal::jsonSerializeSizeOf<JsonType>(value);
+        }
+
+        mc_enable_if_is_json_(JsonType)
+            inline static SizeType serialize(char* startp, const JsonType& value) noexcept
+        {
+            return internal::jsonSerialize<JsonType>(startp, value);
+        }
+
+        mc_enable_if_is_json_(JsonType)
+            inline static JsonType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        {
+            return internal::jsonDeserialize<JsonType>(startp, lastp, requestMoreBytes);
+        }
 
 #undef mc_enable_if_is_tuplewrap_
 #undef mc_enable_if_is_number_or_enum_
 #undef mc_enable_if_is_smartptr_
 #undef mc_enable_if_is_ptr_
-#undef mc_must_default_constructible_
+#undef mc_enable_if_is_a_char_string
+#undef mc_must_default_constructible
+#undef mc_enable_if_is_json_
+    };
 
 };
 
@@ -440,6 +474,33 @@ SPECIALIZE_SEQUENCE_SERIALIZATION(std::list)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::map)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::unordered_map)
 SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::multimap)
+
+namespace internal
+{
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool>>
+inline SizeType jsonSerializeSizeOf(const JsonType &value) noexcept
+{
+    return static_cast<SizeType>(JsonTrait<JsonType>::marshallSize(value))
+           +
+           SerializationTrait<SizeType>::serializeSizeOf(sizeof(SizeType));
+}
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool>>
+inline SizeType jsonSerialize(char *startp, const JsonType &value) noexcept
+{
+    std::string str = JsonTrait<JsonType>::marshall(value);
+    return SerializationTrait<std::string>::serialize(startp, str);
+}
+
+template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool>>
+inline JsonType jsonDeserialize(const char **startp, const char **lastp, RequestMoreBytesCallback requestMoreBytes)
+{
+    auto str = SerializationTrait<std::string>::deserialize(startp, lastp, requestMoreBytes);
+    return JsonTrait<JsonType>::unmarshall(str);
+}
+
+}
 
 
 }// srz

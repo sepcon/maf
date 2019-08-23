@@ -51,7 +51,33 @@ public:
         {
             MT_ALOCK(_mt);
             _queue.emplace(data);
-            _condVar.notify_all();
+            _condVar.notify_one();
+        }
+    }
+
+    bool waitFor(value_type& value, long duration)
+    {
+        std::unique_lock<std::mutex> lock(_mt);
+        std::cv_status waitResult = std::cv_status::no_timeout;
+        if( !isClosed() && _queue.empty())
+        {
+			if (!_condVar.wait_for(lock, std::chrono::milliseconds(duration), [this] {
+				return !_queue.empty();
+				}))
+			{
+				return false;
+			}
+        }
+
+        if(waitResult == std::cv_status::no_timeout && !isClosed())
+        {
+            value = _queue.front();
+            _queue.pop();
+            return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
