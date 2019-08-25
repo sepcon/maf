@@ -19,13 +19,12 @@ class MessageBase
 {
 public:
     using Type = std::type_index;
-    virtual ~MessageBase() = default;
-
-    virtual Type id() const { return typeid (*this); }
+    virtual ~MessageBase();
+    virtual Type id() const;
     template<typename T> static Type idof() { return typeid (T); }
     template<typename T> static Type idof(const T& obj) { return typeid (obj); }
-    int priority() const { return _priority; }
-    void setPriority(int p) { _priority = p; }
+    int priority() const;
+    void setPriority(int p);
 
     struct PriorityComp
     {

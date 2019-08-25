@@ -3,6 +3,9 @@
 #include "ServiceStubInterface.h"
 #include "ServerInterface.h"
 #include "maf/utils/cppextension/SyncObject.h"
+#include <map>
+#include <set>
+#include <list>
 
 namespace maf {
 namespace messaging {

@@ -4,6 +4,22 @@
 #   include "./platforms/windows/LocalIPCSenderImpl.cpp"
 #elif defined(LINUX)
 #   include "./platforms/linux/LocalIPCSenderImpl.cpp"
+#else
+namespace maf {
+namespace messaging {
+namespace ipc {
+
+class LocalIPCSenderImpl : public IPCSender
+{
+public:
+    virtual void initConnection(const Address&) {}
+    virtual DataTransmissionErrorCode send(const srz::ByteArray&, const Address& = Address::INVALID_ADDRESS)
+    { return {}; }
+    virtual Availability checkReceiverStatus() const { return {}; }
+    virtual const Address& receiverAddress() const { return Address::INVALID_ADDRESS; }
+};
+
+}}}
 #endif
 
 namespace maf {

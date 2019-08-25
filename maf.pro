@@ -39,6 +39,7 @@ INCLUDEPATH += ./include
 #    src/maf/main.cpp \
 SOURCES += \
     src/maf/messaging/Component.cpp \
+    src/maf/messaging/MessageBase.cpp \
     src/maf/messaging/Timer.cpp \
     src/maf/logging/ConsoleLogger.cpp \
     src/maf/logging/LoggingComponent.cpp \
@@ -91,7 +92,6 @@ HEADERS += \
     include/maf/messaging/client-server/SCQServiceProxy.h \
     include/maf/messaging/client-server/SSQServiceStub.h \
     include/maf/messaging/client-server/ServerBase.h \
-    include/maf/messaging/client-server/ServerDomainController.h \
     include/maf/messaging/client-server/ServiceProxyBase.h \
     include/maf/messaging/client-server/ServiceStubBase.h \
     include/maf/messaging/client-server/Address.h \
@@ -153,11 +153,11 @@ HEADERS += \
     include/maf/patterns/Patterns.h \
     include/maf/utils/cppextension/TupleManip.h \
     include/maf/utils/cppextension/TypeTraits.h \
+    include/maf/utils/serialization/3rdparty/Json11Trait.h \
+    include/maf/utils/serialization/BasicTypes.h \
     include/maf/utils/serialization/ByteArray.h \
     include/maf/utils/serialization/DumpHelper.h \
     include/maf/utils/serialization/JsonTrait.h \
-    include/maf/utils/serialization/SBObjDef.mc.h \
-    include/maf/utils/serialization/SBObjectDefHlp.mc.h \
     include/maf/utils/serialization/SerializableInterface.h \
     include/maf/utils/serialization/SerializationTrait.h \
     include/maf/utils/serialization/Serializer.h \
@@ -171,7 +171,9 @@ HEADERS += \
     include/maf/messaging/client-server/ipc/internal/LocalIPCSender.h \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiverBase.h \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h \
-    include/maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h
+    include/maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h \
+    include/maf/utils/serialization/Tplkdef.mc.h \
+    include/maf/utils/serialization/TupleLikeObject.mc.h
 
 DISTFILES +=
 

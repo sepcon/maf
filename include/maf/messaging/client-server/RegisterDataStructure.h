@@ -8,6 +8,7 @@
 #include <future>
 #include <map>
 #include <list>
+#include <set>
 
 namespace maf {
 namespace messaging {

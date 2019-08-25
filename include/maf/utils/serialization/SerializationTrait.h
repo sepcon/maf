@@ -2,22 +2,28 @@
 
 #include "maf/utils/cppextension/TupleManip.h"
 #include "maf/utils/cppextension/TypeTraits.h"
+#include "BasicTypes.h"
 #include "JsonTrait.h"
 #include "ByteArray.h"
 #include <functional>
 #include <tuple>
 #include <string>
 #include <cstring>
-#include <vector>
-#include <set>
-#include <list>
-#include <unordered_set>
-#include <unordered_map>
-#include <map>
 #include <cassert>
+
+#define mc_enable_if_is_tuplelike_(TypeName) template<typename TypeName, std::enable_if_t<is_tuple_like_v<TypeName>, bool> = true>
+#define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
+#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
+#define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+#define mc_enable_if_is_a_char_string(CharString) template <typename CharString, std::enable_if_t<std::is_base_of_v<std::string, CharString> && !std::is_same_v<std::string, CharString>, bool> = true>
+#define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
+#define mc_enable_if_is_json_(JsonType) template<typename JsonType, std::enable_if_t< is_maf_compatible_json<JsonType>::value , bool> = true>
+#define mc_enable_if_is_iterable_(Container) template<typename Container, std::enable_if_t<nstl::is_iterable_v<Container>, bool> = true>
+
 
 namespace maf {
 namespace srz {
+
 
 /**
  * @brief SizeType represent container's size type:
@@ -32,8 +38,8 @@ constexpr SizeType SIZETYPE_WIDE = sizeof(SizeType);
 
 using RequestMoreBytesCallback = std::function<void(const char** startp, const char** lastp, SizeType neededBytes)>;
 
-#define PURE_TYPE(value) typename std::decay<decltype(value)>::type
-#define PURE_TYPE_OF_TYPE(Type) typename std::decay<Type>::type
+using namespace nstl;
+
 
 inline SizeType byteCountInRangeOf(const char* const first, const char* const last)
 {
@@ -79,6 +85,18 @@ inline SizeType jsonSerialize(char *startp, const JsonType &value) noexcept;
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
 inline JsonType jsonDeserialize(const char **startp, const char **lastp, RequestMoreBytesCallback requestMoreBytes);
 
+template <class Container, typename = void>
+struct ContainerReserver
+{
+    static void reserve(Container& /*c*/, SizeType /*size*/){}
+};
+
+template<typename Container>
+struct ContainerReserver<Container, nstl::to_void<decltype (std::declval<Container>().reserve(0))>>
+{
+    static void reserve(Container& c, SizeType size){ c.reserve(static_cast<size_t>(size)); }
+};
+
 }
 
 /**
@@ -87,7 +105,7 @@ inline JsonType jsonDeserialize(const char **startp, const char **lastp, Request
  * 2. Serialize the object in to byte_array
  * 3. Deserialize to re-structure the object from byte_array
  */
-template<typename T>
+template<typename T, typename = void>
 struct SerializationTrait
 {
     /**
@@ -97,7 +115,7 @@ struct SerializationTrait
      */
     inline static SizeType serializeSizeOf(const T& value) noexcept
     {
-        return prv::template serializeSizeOf<T>(value);
+        return Impl::template serializeSizeOf<T>(value);
     }
 
     /**
@@ -108,7 +126,7 @@ struct SerializationTrait
      */
     inline static SizeType serialize(char* startp, const T& value) noexcept
     {
-        return prv::template serialize<T>(startp, value);
+        return Impl::template serialize<T>(startp, value);
     }
     /**
      * @brief deserialize: re-structure the object from byte_array, thows the std::length_error if not enough bytes for re-constructing object
@@ -121,37 +139,28 @@ struct SerializationTrait
      */
     inline static T deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
     {
-        return prv::template deserialize<T>(startp, lastp, requestMoreBytes);
+        return Impl::template deserialize<T>(startp, lastp, requestMoreBytes);
     }
 
-    struct prv
+    struct Impl
     {
-
-#define mc_enable_if_is_tuplewrap_(TypeName) template<typename TypeName, std::enable_if_t<nstl::is_tuple_v<typename TypeName::data_type>, bool> = true>
-#define mc_enable_if_is_number_or_enum_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type<NumberType>::value || std::is_enum_v<NumberType>, bool> = true>
-#define mc_enable_if_is_smartptr_(SmartPtrType) template<typename SmartPtrType, std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
-#define mc_enable_if_is_ptr_(PointerType) template<typename PointerType, std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
-#define mc_enable_if_is_a_char_string(CharString) template <typename CharString, std::enable_if_t<std::is_base_of_v<std::string, CharString> && !std::is_same_v<std::string, CharString>, bool> = true>
-#define mc_must_default_constructible(PointerType) static_assert (std::is_default_constructible_v<std::remove_pointer_t<PointerType> >, "");
-#define mc_enable_if_is_json_(JsonType) template<typename JsonType, std::enable_if_t< std::is_default_constructible_v<JsonTrait<JsonType>> && std::is_class_v<JsonTrait<JsonType>>, bool> = true>
-
-        mc_enable_if_is_tuplewrap_(TupleWrap)
-            inline static SizeType serializeSizeOf(const TupleWrap& value) noexcept
+        mc_enable_if_is_tuplelike_(TupleLike)
+            inline static SizeType serializeSizeOf(const TupleLike& value) noexcept
         {
-            return SerializationTrait<typename TupleWrap::data_type>::serializeSizeOf(value._data);
+            return SerializationTrait<typename TupleLike::data_type>::serializeSizeOf(value._data);
         }
 
-        mc_enable_if_is_tuplewrap_(TupleWrap)
-            inline static SizeType serialize(char* startp, const TupleWrap& value) noexcept
+        mc_enable_if_is_tuplelike_(TupleLike)
+            inline static SizeType serialize(char* startp, const TupleLike& value) noexcept
         {
-            return SerializationTrait<typename TupleWrap::data_type>::serialize(startp, value._data);
+            return SerializationTrait<typename TupleLike::data_type>::serialize(startp, value._data);
         }
 
-        mc_enable_if_is_tuplewrap_(TupleWrap)
-            inline static TupleWrap deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        mc_enable_if_is_tuplelike_(TupleLike)
+            inline static TupleLike deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
-            TupleWrap value;
-            value._data = SerializationTrait<typename TupleWrap::data_type>::deserialize(startp, lastp, requestMoreBytes);
+            TupleLike value;
+            value._data = SerializationTrait<typename TupleLike::data_type>::deserialize(startp, lastp, requestMoreBytes);
             return value;
         }
 
@@ -165,14 +174,14 @@ struct SerializationTrait
         inline static SizeType serialize(char* startp, const NumberOrEnum& value) noexcept
         {
             auto serializedCount = serializeSizeOf(value);
-            *reinterpret_cast<PURE_TYPE_OF_TYPE(NumberOrEnum)*>(startp) = value;
+            *reinterpret_cast<pure_type_t<NumberOrEnum>*>(startp) = value;
             return serializedCount;
         }
         mc_enable_if_is_number_or_enum_(NumberOrEnum)
             inline static NumberOrEnum deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
             makeSureDeserializable(startp, lastp, sizeof(NumberOrEnum), requestMoreBytes);
-            auto value = *(reinterpret_cast<const PURE_TYPE_OF_TYPE(NumberOrEnum)*>(*startp));
+            auto value = *(reinterpret_cast<const pure_type_t<NumberOrEnum>*>(*startp));
             *startp += serializeSizeOf(value);
             return value;
         }
@@ -265,75 +274,123 @@ struct SerializationTrait
             return internal::jsonDeserialize<JsonType>(startp, lastp, requestMoreBytes);
         }
 
-#undef mc_enable_if_is_tuplewrap_
-#undef mc_enable_if_is_number_or_enum_
-#undef mc_enable_if_is_smartptr_
-#undef mc_enable_if_is_ptr_
-#undef mc_enable_if_is_a_char_string
-#undef mc_must_default_constructible
-#undef mc_enable_if_is_json_
+        mc_enable_if_is_iterable_(Container)
+            inline static SizeType serializeSizeOf(const Container& c) noexcept
+        {
+            SizeType contentSize = 0;
+            for (const auto& e : c) {
+                contentSize += SerializationTrait<typename Container::value_type>::serializeSizeOf(e);
+            }
+            return SIZETYPE_WIDE + contentSize;
+        }
+        mc_enable_if_is_iterable_(Container)
+            inline static SizeType serialize(char* startp, const Container& c) noexcept
+        {
+            SizeType serializedCount = 0;
+            SizeType numberOfElems = static_cast<SizeType>(c.size());
+            serializedCount += SerializationTrait<SizeType>::serialize(startp, numberOfElems);
+            for (const auto& elem : c) {
+                serializedCount += SerializationTrait<typename Container::value_type>::serialize(startp + serializedCount, elem);
+            }
+            return serializedCount;
+        }
+
+        template<typename Container, std::enable_if_t<nstl::is_iterable_v<Container> && nstl::is_back_insertible_v<Container>, bool> = true>
+        inline static Container deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+            using SizeTypeSerializer = SerializationTrait<SizeType>;
+            using ElemSerializer = SerializationTrait<typename Container::value_type>;
+            Container c;
+            auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
+            if (size > 0) {
+                internal::ContainerReserver<Container>::reserve(c, size);
+                for (SizeType i = 0; i < size; ++i) {
+                    c.push_back(ElemSerializer::deserialize(startp, lastp, requestMoreBytes));
+                }
+            }
+            return c;
+        }
+
+        template<typename Container, std::enable_if_t<nstl::is_iterable_v<Container> && nstl::is_position_independent_insertible_v<Container>, bool> = true>
+        inline static Container deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+            using SizeTypeSerializer = SerializationTrait<SizeType>;
+            using ElemSerializer = SerializationTrait<typename Container::value_type>;
+            Container c;
+            auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
+            if (size > 0) {
+                internal::ContainerReserver<Container>::reserve(c, size);
+                for (SizeType i = 0; i < size; ++i) {
+                    c.insert(ElemSerializer::deserialize(startp, lastp, requestMoreBytes));
+                }
+            }
+            return c;
+        }
+
     };
 
 };
 
-template <typename T1, typename T2>
-struct SerializationTrait<std::pair<T1, T2>>
+template <typename Pair>
+struct SerializationTrait<Pair,
+                          nstl::to_void<typename Pair::first_type, typename Pair::second_type>>
 {
-    using DType = std::pair<T1, T2>;
+    using DType = Pair;
+    using NCDType = std::pair<std::remove_const_t<typename DType::first_type>,
+                              std::remove_const_t<typename DType::second_type>>;
+
     inline static SizeType serializeSizeOf(const DType& p)  noexcept
     {
-        return SerializationTrait<PURE_TYPE(p.first)>::serializeSizeOf(p.first) +
-            SerializationTrait<PURE_TYPE(p.second)>::serializeSizeOf(p.second);
+        return SerializationTrait<pure_type_t<decltype(p.first)>>::serializeSizeOf(p.first) +
+            SerializationTrait<pure_type_t<decltype(p.second)>>::serializeSizeOf(p.second);
     }
 
     inline static SizeType serialize(char* startp, const DType& p) noexcept
     {
         SizeType bytesCount = 0;
-        bytesCount += SerializationTrait<PURE_TYPE(p.first)>::serialize(startp, p.first);
-        bytesCount += SerializationTrait<PURE_TYPE(p.second)>::serialize(startp + bytesCount, p.second);
+        bytesCount += SerializationTrait<pure_type_t<decltype(p.first)>>::serialize(startp, p.first);
+        bytesCount += SerializationTrait<pure_type_t<decltype(p.second)>>::serialize(startp + bytesCount, p.second);
         return bytesCount;
     }
-    inline static DType deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+    inline static NCDType deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
     {
-        DType p;
-        p.first = SerializationTrait<PURE_TYPE(p.first)>::deserialize(startp, lastp, requestMoreBytes);
-        p.second = SerializationTrait<PURE_TYPE(p.second)>::deserialize(startp, lastp, requestMoreBytes);
+        NCDType p;
+        p.first = SerializationTrait<typename NCDType::first_type>::deserialize(startp, lastp, requestMoreBytes);
+        p.second = SerializationTrait<typename NCDType::second_type>::deserialize(startp, lastp, requestMoreBytes);
         return p;
     }
 };
 
-template<typename ... ElemType >
-struct SerializationTrait<std::tuple<ElemType...> >
+template<typename Tuple>
+struct SerializationTrait<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>>
 {
     using SizeTypeSerializer = SerializationTrait<SizeType>;
 
-    inline static SizeType serializeSizeOf(const std::tuple<ElemType...>& tp) noexcept {
+    inline static SizeType serializeSizeOf(const Tuple& tp) noexcept {
         SizeType contentSize = 0;
         nstl::tuple_for_each(tp, [&contentSize](const auto& elem) {
-            contentSize += SerializationTrait<PURE_TYPE(elem)>::serializeSizeOf(elem);
+            contentSize += SerializationTrait<pure_type_t<decltype(elem)>>::serializeSizeOf(elem);
         });
         return contentSize;
     }
 
-    inline static SizeType serialize(char* startp, const std::tuple<ElemType...>& tp) noexcept {
+    inline static SizeType serialize(char* startp, const Tuple& tp) noexcept {
         SizeType serializedCount = 0;
         nstl::tuple_for_each(tp, [&serializedCount, &startp](const auto& elem) {
-            serializedCount += SerializationTrait<PURE_TYPE(elem)>::serialize(startp + serializedCount, elem);
+            serializedCount += SerializationTrait<pure_type_t<decltype(elem)>>::serialize(startp + serializedCount, elem);
         });
         return serializedCount;
     }
 
-    inline static std::tuple<ElemType...> deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
-        std::tuple<ElemType...> tp;
+    inline static Tuple deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+        Tuple tp;
         nstl::tuple_for_each(tp, [&startp, &lastp, requestMoreBytes](auto& elem) {
-            elem = SerializationTrait<PURE_TYPE(elem)>::deserialize(startp, lastp, requestMoreBytes);
+            elem = SerializationTrait<pure_type_t<decltype(elem)>>::deserialize(startp, lastp, requestMoreBytes);
         });
         return tp;
     }
 };
 
 template<typename CharT, class Trait, class Allocator>
-struct SerializationTrait<std::basic_string<CharT, Trait, Allocator> >
+struct SerializationTrait<std::basic_string<CharT, Trait, Allocator>, void>
 {
     using SizeTypeSerializer = SerializationTrait<SizeType>;
     using ValueType = std::basic_string<CharT>;
@@ -363,8 +420,15 @@ struct SerializationTrait<std::basic_string<CharT, Trait, Allocator> >
     }
 };
 
-template<>
-struct SerializationTrait<ByteArray>
+template<typename StringDerived>
+struct SerializationTrait<StringDerived,
+                          std::enable_if_t
+                          <
+                              std::is_base_of_v<std::string, StringDerived>
+                                && !std::is_same_v<std::string, StringDerived>,
+                              void
+                              >
+                          >
 {
     using SizeTypeSerializer = SerializationTrait<SizeType>;
     using ValueType = ByteArray;
@@ -384,96 +448,6 @@ struct SerializationTrait<ByteArray>
         return value;
     }
 };
-
-template <class Container>
-struct Reserver
-{
-    static void reserve(Container& /*c*/, SizeType /*size*/){}
-};
-
-template<typename T>
-struct Reserver<std::vector<T>>
-{
-    static void reserve(std::vector<T>& c, SizeType size){ c.reserve(static_cast<size_t>(size)); }
-};
-
-template<class Sequence>
-struct SequenceSC
-{
-    inline static SizeType serializeSizeOf(const Sequence& c) noexcept
-    {
-        SizeType contentSize = 0;
-        for (const auto& e : c) {
-            contentSize += SerializationTrait<typename Sequence::value_type>::serializeSizeOf(e);
-        }
-        return SIZETYPE_WIDE + contentSize;
-    }
-};
-template <class Sequence>
-struct SequenceSz
-{
-    inline static SizeType serialize(char* startp, const Sequence& c) noexcept
-    {
-        SizeType serializedCount = 0;
-        SizeType numberOfElems = static_cast<SizeType>(c.size());
-        serializedCount += SerializationTrait<SizeType>::serialize(startp, numberOfElems);
-        for (const auto& elem : c) {
-            serializedCount += SerializationTrait<typename Sequence::value_type>::serialize(startp + serializedCount, elem);
-        }
-        return serializedCount;
-    }
-};
-template <class Sequence>
-struct SequenceDsz
-{
-    using SizeTypeSerializer = SerializationTrait<SizeType>;
-    using ElemSerializer = SerializationTrait<typename Sequence::value_type>;
-    inline static Sequence deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
-        Sequence c;
-        auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
-        if (size > 0) {
-            Reserver<Sequence>::reserve(c, size);
-            for (SizeType i = 0; i < size; ++i) {
-                c.insert(c.end(), ElemSerializer::deserialize(startp, lastp, requestMoreBytes));
-            }
-        }
-        return c;
-    }
-};
-template<class Associative>
-struct AssociativeDsz
-{
-    using KeyType = typename Associative::key_type;
-    using ValueType = typename Associative::mapped_type;
-    inline static Associative deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
-        Associative m;
-        SizeType size = SerializationTrait<SizeType>::deserialize(startp, lastp, requestMoreBytes);
-        for (SizeType i = 0; i < size; ++i)
-        {
-            auto key = SerializationTrait<PURE_TYPE_OF_TYPE(KeyType)>::deserialize(startp, lastp, requestMoreBytes);
-            auto value = SerializationTrait<PURE_TYPE_OF_TYPE(ValueType)>::deserialize(startp, lastp, requestMoreBytes);
-            m.emplace(std::move(key), std::move(value));
-        }
-        return m;
-    }
-};
-
-template<class Containter>
-struct SequenceSerializer : public SequenceSC<Containter>, public SequenceSz<Containter>, public SequenceDsz<Containter> {};
-template<class Containter>
-struct AssociativeSerializer : public SequenceSC<Containter>, public SequenceSz<Containter>, public AssociativeDsz<Containter> {};
-
-#define SPECIALIZE_SEQUENCE_SERIALIZATION(Container) template<typename ElemType > struct SerializationTrait< Container<ElemType> > : public SequenceSerializer< Container<ElemType> >{};
-#define SPECIALIZE_ASSOCIATIVE_SERIALIZATION(Container) template<typename Key, typename Value > struct SerializationTrait< Container<Key, Value> > : public AssociativeSerializer< Container<Key, Value> >{};
-
-SPECIALIZE_SEQUENCE_SERIALIZATION(std::vector)
-SPECIALIZE_SEQUENCE_SERIALIZATION(std::set)
-SPECIALIZE_SEQUENCE_SERIALIZATION(std::multiset)
-SPECIALIZE_SEQUENCE_SERIALIZATION(std::unordered_set)
-SPECIALIZE_SEQUENCE_SERIALIZATION(std::list)
-SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::map)
-SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::unordered_map)
-SPECIALIZE_ASSOCIATIVE_SERIALIZATION(std::multimap)
 
 namespace internal
 {
@@ -505,3 +479,12 @@ inline JsonType jsonDeserialize(const char **startp, const char **lastp, Request
 
 }// srz
 }// maf
+
+#undef mc_enable_if_is_tuplelike_
+#undef mc_enable_if_is_number_or_enum_
+#undef mc_enable_if_is_smartptr_
+#undef mc_enable_if_is_ptr_
+#undef mc_enable_if_is_a_char_string
+#undef mc_must_default_constructible
+#undef mc_enable_if_is_json_
+#undef mc_enable_if_is_iterable_

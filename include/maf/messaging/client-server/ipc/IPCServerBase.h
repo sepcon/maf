@@ -2,6 +2,8 @@
 
 #include "maf/messaging/client-server/ServerBase.h"
 #include "IPCTypes.h"
+#include <set>
+
 
 namespace maf {
 namespace messaging {

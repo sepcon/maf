@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include "ServerInterface.h"
 #include "ServiceProviderInterface.h"
 #include "internal/CSShared.h"

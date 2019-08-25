@@ -15,6 +15,19 @@ struct type_name_traits;
     static constexpr const char* const name = #T; \
 }; } }
 
+/// Remove constness and reference from type T
+/// e.g: pure_type<const int&>::type == int
+template<typename T>
+struct pure_type
+{
+    using type = typename std::remove_const_t<std::remove_reference_t<T>>;
+};
+
+/// Remove constness and reference from type T
+/// e.g: pure_type_t<const int&> == int
+template <typename T>
+using pure_type_t = typename pure_type<T>::type;
+
 template <typename T>
 struct is_number_type
 {
@@ -52,6 +65,32 @@ struct is_smart_ptr<std::unique_ptr<T>> : std::true_type{};
 
 template <typename T>
 static constexpr bool is_smart_ptr_v = is_smart_ptr<T>::value;
+
+template <class ...>
+using to_void = void;
+
+template <typename T, typename = void>
+struct is_iterable : std::false_type {};
+template <typename T>
+struct is_iterable<T, to_void<decltype(std::declval<T>().begin()),
+                                  decltype(std::declval<T>().end())>>
+    : std::true_type {};
+template<typename T>
+static constexpr bool is_iterable_v = is_iterable<T>::value;
+
+template <typename T, typename = void>
+struct is_back_insertible : std::false_type{};
+template <typename T>
+struct is_back_insertible<T, to_void<decltype(std::declval<T>().push_back({}))>> : std::true_type{};
+template <typename T>
+static constexpr bool is_back_insertible_v = is_back_insertible<T>::value;
+
+template <typename T, typename = void>
+struct is_position_independent_insertible : std::false_type{};
+template <typename T>
+struct is_position_independent_insertible<T, to_void<decltype(std::declval<T>().insert({}))>> : std::true_type{};
+template <typename T>
+static constexpr bool is_position_independent_insertible_v = is_position_independent_insertible<T>::value;
 
 
 template <typename Container>

@@ -1,9 +1,8 @@
-#ifndef SERIALIZABLEOBJECT_H
-#define SERIALIZABLEOBJECT_H
+#pragma once
 
 #include "Serializer.h"
 #include "DumpHelper.h"
-#include "SBObjDef.mc.h"
+#include "Tplkdef.mc.h"
 
 /**
  * @brief Use below MACROS to define a serializable object like this:
@@ -42,15 +41,13 @@
  * */
 
 
-#define mc_sbClass(ClassName) mc_serializable_object_(ClassName)
+#define mc_sbClass(ClassName) mc_tuple_like_object_(ClassName)
 
-#define mc_sbClass_end(ClassName) mc_serializable_object_end_(ClassName)
+#define mc_sbClass_end(ClassName) mc_tuple_like_object_end_(ClassName)
 
-#define mc_sbClass_hasbase(ClassName, BaseClassName) mc_serializable_object_has_base_(ClassName, BaseClassName)
+#define mc_sbClass_hasbase(ClassName, BaseClassName) mc_tuple_like_object_has_base_(ClassName, BaseClassName)
 
-#define mc_sbClass_hasbase_end(ClassName) mc_serializable_object_has_base_end_(ClassName)
+#define mc_sbClass_hasbase_end(ClassName) mc_tuple_like_object_has_base_end_(ClassName)
 
 #define mc_sbProperties(...) mc_properties_map_(__VA_ARGS__)
 
-
-#endif // SERIALIZABLEOBJECT_H
