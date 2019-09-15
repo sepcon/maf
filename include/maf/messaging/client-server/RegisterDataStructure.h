@@ -1,8 +1,8 @@
 #ifndef IPCINFO_H
 #define IPCINFO_H
 
-#include "maf/utils/cppextension/SyncObject.h"
-#include "maf/utils/IDManager.h"
+#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/IDManager.h>
 #include "CSMessage.h"
 #include "Address.h"
 #include <future>

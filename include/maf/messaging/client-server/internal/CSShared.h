@@ -1,8 +1,8 @@
 #pragma once
 
-#include "maf/utils/cppextension/SyncObject.h"
-#include "maf/messaging/client-server/CSStatus.h"
-#include "maf/messaging/client-server/CSMessage.h"
+#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/messaging/client-server/CSStatus.h>
+#include <maf/messaging/client-server/CSMessage.h>
 #include <algorithm>
 
 

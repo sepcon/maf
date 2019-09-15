@@ -3,7 +3,7 @@
 #include "ServerInterface.h"
 #include "ServiceProviderInterface.h"
 #include "internal/CSShared.h"
-#include "maf/utils/cppextension/maf.mc.h"
+#include <maf/utils/cppextension/Maf.mc.h>
 
 
 namespace maf {

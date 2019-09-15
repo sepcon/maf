@@ -8,12 +8,13 @@
 namespace maf {
 namespace messaging {
 
-using MessageHandlerFunc = std::function<void(messaging::CMessageBasePtr)>;
+template <typename Message>
+using MessageHandlerFunc = std::function<void(CMessagePtr<Message>&)>;
 using SignalMsgHandlerFunc = std::function<void()>;
 class MessageHandler
 {
 public:
-    virtual void onMessage(messaging::CMessageBasePtr msg) = 0;
+    virtual void onMessage(CMessageBasePtr msg) = 0;
     virtual ~MessageHandler() = default;
 };
 

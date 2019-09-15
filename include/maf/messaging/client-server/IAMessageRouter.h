@@ -2,7 +2,7 @@
 
 #include "ClientInterface.h"
 #include "ServerInterface.h"
-#include "maf/patterns/Patterns.h"
+#include <maf/patterns/Patterns.h>
 #include "IAMessageTrait.h"
 #include "ClientBase.h"
 #include "ServerBase.h"

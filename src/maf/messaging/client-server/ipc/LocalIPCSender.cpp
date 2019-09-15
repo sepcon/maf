@@ -1,5 +1,5 @@
 
-#include "maf/messaging/client-server/ipc/internal/LocalIPCSender.h"
+#include "platforms/LocalIPCSender.h"
 #if defined(_WIN32) || defined(_WIN64)
 #   include "./platforms/windows/LocalIPCSenderImpl.cpp"
 #elif defined(LINUX)

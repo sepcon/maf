@@ -1,6 +1,6 @@
-#include "maf/messaging/client-server/ServiceProxyBase.h"
-#include "maf/messaging/client-server/ClientInterface.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/client-server/ServiceProxyBase.h>
+#include <maf/messaging/client-server/ClientInterface.h>
+#include <maf/utils/debugging/Debug.h>
 
 
 namespace maf {
@@ -126,13 +126,13 @@ CSMessagePtr ServiceProxyBase::sendRequestSync(OpID operationID, const CSMsgCont
     RegID regID;
     auto csMsg = this->createCSMessage(operationID, OpCode::RequestSync, msgContent);
     auto resultFuture = storeSyncRegEntry(csMsg, regID);
-    if(resultFuture && sendMessageToServer(csMsg))
+    if(sendMessageToServer(csMsg))
     {
         try
         {
-            if(resultFuture->wait_for(std::chrono::milliseconds(maxWaitTimeMs)) == std::future_status::ready)
+            if(resultFuture.wait_for(std::chrono::milliseconds(maxWaitTimeMs)) == std::future_status::ready)
             {
-                if(auto msg = resultFuture->get())
+                if(auto msg = resultFuture.get())
                 {
                     return msg;
                 }
@@ -154,6 +154,10 @@ CSMessagePtr ServiceProxyBase::sendRequestSync(OpID operationID, const CSMsgCont
         {
             mafErr("Unknown exception when sending sync request to server");
         }
+    }
+    else
+    {
+        pickOutSyncRegEntry(regID);
     }
     return {};
 }
@@ -331,18 +335,18 @@ bool ServiceProxyBase::sendMessageToServer(const CSMessagePtr &outgoingMsg)
     return (_client->sendMessageToServer(outgoingMsg) == DataTransmissionErrorCode::Success);
 }
 
-std::shared_ptr<std::future<CSMessagePtr > > ServiceProxyBase::storeSyncRegEntry(const CSMessagePtr &outgoingMsg, RegID &regID)
+std::future<CSMessagePtr > ServiceProxyBase::storeSyncRegEntry(const CSMessagePtr &outgoingMsg, RegID &regID)
 {
     regID.requestID = _idMgr.allocateNewID();
     regID.opID = outgoingMsg->operationID();
 
-    std::shared_ptr<std::future<CSMessagePtr > > resultFuture;
+    std::future<CSMessagePtr > resultFuture;
 
     { // using {block} to unlock the mutex of _syncRequestEntriesMap
         auto lk = _syncRequestEntriesMap.a_lock();
         auto& listOfRequests = (*_syncRequestEntriesMap)[outgoingMsg->operationID()];
         std::promise<CSMessagePtr> prm;
-        resultFuture = std::make_shared<std::future<CSMessagePtr >>(prm.get_future());
+        resultFuture = prm.get_future();
         SyncRegEntry regEntry = { regID.requestID, std::move(prm) };
         listOfRequests.push_back(std::move(regEntry));
     }

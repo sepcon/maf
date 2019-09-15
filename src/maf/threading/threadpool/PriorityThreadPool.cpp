@@ -1,6 +1,6 @@
-#include "maf/threading/internal/PriorityThreadPool.h"
-#include "maf/threading/internal/ThreadPoolImplBase.h"
-#include "maf/threading/Queue.h"
+#include <maf/threading/ThreadPoolImplBase.h>
+#include <maf/threading/Queue.h>
+#include "PriorityThreadPool.h"
 
 namespace maf {
 namespace threading {

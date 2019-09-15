@@ -1,4 +1,4 @@
-#include "maf/threading/internal/DynamicCountThreadPool.h"
+#include "DynamicCountThreadPool.h"
 
 namespace maf {
 namespace threading {

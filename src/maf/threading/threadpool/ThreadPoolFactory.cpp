@@ -1,7 +1,7 @@
-#include "maf/threading/ThreadPoolFactory.h"
-#include "maf/threading/internal/PriorityThreadPool.h"
-#include "maf/threading/internal/StableThreadPool.h"
-#include "maf/threading/internal/DynamicCountThreadPool.h"
+#include <maf/threading/ThreadPoolFactory.h>
+#include "PriorityThreadPool.h"
+#include "StableThreadPool.h"
+#include "DynamicCountThreadPool.h"
 
 namespace maf {
 namespace threading {

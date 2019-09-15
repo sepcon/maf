@@ -1,7 +1,7 @@
 #ifndef MESSAGEVALIDATOR_H
 #define MESSAGEVALIDATOR_H
 
-#include "maf/messaging/client-server/Address.h"
+#include <maf/messaging/client-server/Address.h>
 
 namespace maf {
 namespace messaging {

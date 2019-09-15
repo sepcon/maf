@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IPCMessage.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace messaging {

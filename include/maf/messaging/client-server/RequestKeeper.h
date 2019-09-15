@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CSMessage.h"
-#include "maf/patterns/Patterns.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/patterns/Patterns.h>
+#include <maf/utils/debugging/Debug.h>
 #include <mutex>
 
 namespace maf {
@@ -10,7 +10,7 @@ namespace messaging {
 
 class CSMessage;
 class ServiceStubBase;
-
+class ServiceStubBaseImpl;
 class RequestKeeperBase : public pattern::UnCopyable
 {
 public:
@@ -24,15 +24,15 @@ public:
     void abortedBy(AbortCallback abortCallback);
 
 protected:
-    friend class ServiceStubBase;
-    static std::shared_ptr<RequestKeeperBase> create(std::shared_ptr<CSMessage> csMsg, ServiceStubBase* svStub);
-    RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, messaging::ServiceStubBase* svStub);
+    friend class ServiceStubBaseImpl;
+    static std::shared_ptr<RequestKeeperBase> create(std::shared_ptr<CSMessage> csMsg, ServiceStubBaseImpl* svStub);
+    RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, ServiceStubBaseImpl* svStub);
     AbortCallback getAbortCallback();
     bool invalidateIfValid();
     bool sendMsgToClient(const CSMsgContentPtr& answer, bool done);
 
     std::shared_ptr<CSMessage> _csMsg;
-    ServiceStubBase* _svStub;
+    ServiceStubBaseImpl* _svStub;
     AbortCallback _abortCallback;
     mutable std::mutex _mutex;
     bool _valid;

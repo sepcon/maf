@@ -1,5 +1,5 @@
-#include "maf/threading/internal/TimerManagerImpl.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/utils/debugging/Debug.h>
+#include "TimerManagerImpl.h"
 #include <algorithm>
 
 using namespace std::chrono;
@@ -194,7 +194,7 @@ void TimerManagerImpl::setCyclic(TimerManagerImpl::JobID jid, bool cyclic)
     }
 }
 
-void TimerManagerImpl::shutdown()
+void TimerManagerImpl::stop()
 {
     set(_shutdowned, true);
     _condvar.notify_one();

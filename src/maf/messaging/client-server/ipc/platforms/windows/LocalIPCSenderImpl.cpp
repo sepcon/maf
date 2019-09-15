@@ -1,7 +1,7 @@
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSenderImpl.h"
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h"
-#include "maf/utils/TimeMeasurement.h"
-#include "maf/utils/debugging/Debug.h"
+#include "LocalIPCSenderImpl.h"
+#include "PipeShared.h"
+#include <maf/utils/TimeMeasurement.h>
+#include <maf/utils/debugging/Debug.h>
 #include <thread>
 #include <atomic>
 

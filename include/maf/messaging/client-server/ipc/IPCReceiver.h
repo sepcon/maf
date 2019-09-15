@@ -1,8 +1,8 @@
 #ifndef IPCRECEIVER_H
 #define IPCRECEIVER_H
 
-#include "maf/messaging/client-server/Connection.h"
-#include "maf/messaging/client-server/Address.h"
+#include <maf/messaging/client-server/Connection.h>
+#include <maf/messaging/client-server/Address.h>
 #include <memory>
 #include <list>
 

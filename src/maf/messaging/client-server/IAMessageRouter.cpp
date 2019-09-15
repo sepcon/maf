@@ -1,7 +1,7 @@
-#include "maf/messaging/client-server/IAMessageRouter.h"
-#include "maf/messaging/client-server/ServiceRequesterInterface.h"
-#include "maf/messaging/client-server/ServiceProviderInterface.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/client-server/IAMessageRouter.h>
+#include <maf/messaging/client-server/ServiceRequesterInterface.h>
+#include <maf/messaging/client-server/ServiceProviderInterface.h>
+#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace messaging {
@@ -25,7 +25,6 @@ bool IAMessageRouter::registerServiceRequester(const std::shared_ptr<ServiceRequ
     {
         if(ServerBase::hasServiceProvider(requester->serviceID()))
         {
-            mafMsg("\n------------IAMessageRouter::registerServiceRequester--------------------\n");
             requester->onServiceStatusChanged(requester->serviceID(), Availability::Unavailable, Availability::Available);
         }
         return true;

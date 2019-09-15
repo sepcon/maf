@@ -1,25 +1,89 @@
-#include "maf/messaging/Component.h"
-#include "maf/messaging/BasicMessages.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/MessageQueue.h>
+#include <maf/messaging/Component.h>
+#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/threading/TimerManager.h>
+#include <maf/messaging/BasicMessages.h>
+#include <maf/utils/debugging/Debug.h>
+#include <thread>
+#include <memory>
+#include <map>
 
 
 namespace maf {
 namespace messaging {
 
-thread_local Component* Component::_tlspInstance = nullptr;
+using MsgHandlerMap = nstl::SyncObject<std::map<MessageBase::Type, MessageHandlerFunc<MessageBase>>>;
+using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
-Component::Component(bool detachFromCurrentThread) :
-    _detached(detachFromCurrentThread)
+static thread_local ComponentRef _tlwpInstance;
+
+struct Component::ComponentImpl
 {
-    onMessage<TimeoutMessage>([](CMessagePtr<TimeoutMessage> msg) {
-        msg->execute();
+public:
+    ComponentImpl();
+    ~ComponentImpl();
+    void run(ComponentRef compref, LaunchMode LaunchMode, std::function<void()> onEntry, std::function<void()> onExit);
+    void stop();
+    void postMessage(MessageBasePtr msg);
+    void registerMessageHandler(MessageBase::Type msgType, MessageHandler* handler);
+    void registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc);
+    TimerMgrPtr getTimerManager();
+    void startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit);
+private:
+    ComponentRef _compref;
+    std::thread _workerThread;
+    MessageQueue _msgQueue;
+    MsgHandlerMap _msgHandlers;
+    TimerMgrPtr _timerMgr;
+};
+
+
+Component::ComponentImpl::ComponentImpl()
+{
+    registerMessageHandler(MessageBase::idof<TimeoutMessage>(), [](const auto& msg) {
+        auto timeoutMsg = std::static_pointer_cast<TimeoutMessage>(msg);
+        timeoutMsg->execute();
     });
-    onMessage<CallbackExcMsg>([](CMessagePtr<CallbackExcMsg> msg) {
-        msg->execute();
+    registerMessageHandler(MessageBase::idof<CallbackExcMsg>(), [](const auto& msg) {
+        auto cbExcMsg = std::static_pointer_cast<CallbackExcMsg>(msg);
+        cbExcMsg->execute();
     });
 }
 
-void Component::postMessage(MessageBasePtr msg)
+Component::ComponentImpl::~ComponentImpl()
+{
+    stop();
+}
+
+void Component::ComponentImpl::run(ComponentRef compref, LaunchMode LaunchMode, std::function<void()> onEntry, std::function<void()> onExit)
+{
+    if(LaunchMode == LaunchMode::Async)
+    {
+        _workerThread = std::thread {
+            [this, compref, onEntry, onExit] {
+            this->startMessageLoop(compref, onEntry, onExit);
+        }};
+    }
+    else
+    {
+        this->startMessageLoop(compref, onEntry, onExit);
+    }
+}
+
+void Component::ComponentImpl::stop()
+{
+    _msgQueue.close();
+	if (_timerMgr) { _timerMgr->stop(); _timerMgr.reset(); }
+    if(std::this_thread::get_id() != _workerThread.get_id())
+    {
+        if(_workerThread.joinable())
+        {
+            _workerThread.join();
+        }
+    }
+}
+
+void Component::ComponentImpl::postMessage(MessageBasePtr msg)
 {
     try
     {
@@ -39,7 +103,7 @@ void Component::postMessage(MessageBasePtr msg)
     }
 }
 
-void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler *handler)
+void Component::ComponentImpl::registerMessageHandler(MessageBase::Type msgType, MessageHandler *handler)
 {
     if(handler)
     {
@@ -47,7 +111,7 @@ void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler
     }
 }
 
-void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandlerFunc onMessageFunc)
+void Component::ComponentImpl::registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc)
 {
     if(onMessageFunc)
     {
@@ -56,109 +120,34 @@ void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler
     }
 }
 
-TimerMgrPtr Component::getTimeManager()
+TimerMgrPtr Component::ComponentImpl::getTimerManager()
 {
-    if(_tlspInstance)
+    if(!_timerMgr)
     {
-        if(!_tlspInstance->_timerMgr)
-        {
-            _tlspInstance->_timerMgr = std::make_shared<threading::TimerManager>();
-        }
-        return _tlspInstance->_timerMgr; // at this point, the timer object will never be destroyed if still have someone holding its reference(shared_ptr)
+        _timerMgr = std::make_shared<threading::TimerManager>();
     }
-    else
-    {
-        return {};
-    }
+    return _timerMgr; // at this point, the timer object will never be destroyed if still have someone holding its reference(shared_ptr)
 }
 
-void Component::start(std::function<void()> entryPointFunc)
+void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit)
 {
-    if(entryPointFunc)
+    _compref = _tlwpInstance = compref;
+    if(onEntry)
     {
-        onSignal<StartupMessage>(entryPointFunc);
-        postMessage<StartupMessage>();
+        if(auto component = _compref.lock()) onEntry();
     }
-
-    if(_detached)
-    {
-        _workerThread = std::thread {[this] {
-            this->startMessageLoop();
-        }};
-    }
-    else
-    {
-        this->startMessageLoop();
-    }
-}
-
-void Component::shutdown()
-{
-    _msgQueue.close();
-    if(std::this_thread::get_id() != _workerThread.get_id())
-    {
-        if(_workerThread.joinable())
-        {
-            _workerThread.join();
-        }
-    }
-}
-
-Component::~Component()
-{
-    if (_timerMgr)
-    {
-        _timerMgr.reset();
-    }
-    shutdown();
-
-    if(_myPtr)
-    {
-        auto lock(_myPtr->pa_lock());
-        _myPtr->reset(); //To tell others who are holding this reference that the component is already destroyed!
-    }
-}
-
-ComponentRef Component::getComponentRef()
-{
-    if(_tlspInstance)
-    {
-        if(!_tlspInstance->_myPtr)
-        {
-            _tlspInstance->_myPtr = std::make_shared<ComponentPtrSync>(_tlspInstance);
-        }
-        return _tlspInstance->_myPtr;
-    }
-    else
-    {
-        return {};
-    }
-}
-
-const Component::ComponentName &Component::name() const
-{
-    return _name;
-}
-
-void Component::setName(Component::ComponentName name)
-{
-    _name = std::move(name);
-}
-
-void Component::startMessageLoop()
-{
-    _tlspInstance = this;
 
     MessageBasePtr msg;
     while(_msgQueue.wait(msg))
     {
         if(!msg)
         {
+            mafErr("Got nullptr message");
             continue;
         }
         else
         {
-            MessageHandlerFunc handlerFunc;
+            BaseMessageHandlerFunc handlerFunc;
             {
                 auto lock = _msgHandlers.a_lock();
                 auto itHandler = _msgHandlers->find(MessageBase::idof(*msg));
@@ -172,10 +161,7 @@ void Component::startMessageLoop()
             {
                 try
                 {
-                    if(handlerFunc)
-                    {
-                        handlerFunc(msg);
-                    }
+                    handlerFunc(msg);
                 }
                 catch(const std::exception& e)
                 {
@@ -191,6 +177,38 @@ void Component::startMessageLoop()
                 mafWarn("There's no handler for message " << MessageBase::idof(*msg).name());
             }
         }
+    }
+
+    if(onExit)
+    {
+        if(auto component = _compref.lock()) onExit();
+    }
+}
+
+Component::Component() : _pImpl{ new ComponentImpl } {}
+Component::~Component() { if(_pImpl) delete _pImpl; }
+
+std::shared_ptr<Component> Component::create() { return std::shared_ptr<Component>{ new Component};}
+const std::string &Component::name() const { return _name; }
+void Component::setName(std::string name) { _name = std::move(name); }
+void Component::run(LaunchMode LaunchMode, std::function<void()> onEntry, std::function<void()> onExit) { _pImpl->run(weak_from_this(), LaunchMode, onEntry, onExit); }
+void Component::stop(){ _pImpl->stop();}
+void Component::postMessage(MessageBasePtr msg) { _pImpl->postMessage(msg); }
+void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler *handler) { _pImpl->registerMessageHandler(msgType, handler); }
+void Component::registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _pImpl->registerMessageHandler(msgType, std::move(onMessageFunc)); }
+ComponentRef Component::getActiveWeakPtr() { return _tlwpInstance; }
+std::shared_ptr<Component> Component::getActiveSharedPtr(){ return _tlwpInstance.lock(); }
+
+TimerMgrPtr Component::getTimerManager()
+{
+    auto spInstance = _tlwpInstance.lock();
+    if(spInstance)
+    {
+        return spInstance->_pImpl->getTimerManager();
+    }
+    else
+    {
+        return {};
     }
 }
 

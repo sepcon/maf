@@ -1,6 +1,6 @@
-#include "maf/threading/TimerManager.h"
-#include "maf/threading/internal/TimerManagerImpl.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/threading/TimerManager.h>
+#include <maf/utils/debugging/Debug.h>
+#include "TimerManagerImpl.h"
 
 namespace maf {
 namespace threading {
@@ -16,7 +16,7 @@ TimerManager::~TimerManager()
     {
         try
         {
-            _pImpl->shutdown();
+            _pImpl->stop();
             delete _pImpl;
         }
         catch (const std::exception& e)
@@ -67,6 +67,11 @@ void TimerManager::stop(TimerManager::JobID jid)
         _idManager.reclaimUsedID(jid);
         _pImpl->stop(jid);
     }
+}
+
+void TimerManager::stop()
+{
+	_pImpl->stop();
 }
 
 bool TimerManager::isRunning(TimerManager::JobID jid)

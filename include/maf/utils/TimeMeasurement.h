@@ -9,17 +9,16 @@ namespace util {
 class TimeMeasurement
 {
 public:
-    TimeMeasurement(std::function<void(long long)>&& onReportCallback = {}) :
+    TimeMeasurement(std::function<void(long long)> onReportCallback) :
         _onReportCallback(std::move(onReportCallback))
     {
         _startTime = std::chrono::system_clock::now();
     }
     ~TimeMeasurement()
     {
-        auto elapsedTime = this->elapsedTime();
         if(_onReportCallback)
         {
-            _onReportCallback(elapsedTime);
+            _onReportCallback(this->elapsedTime());
         }
     }
 

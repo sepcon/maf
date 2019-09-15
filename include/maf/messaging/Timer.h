@@ -1,7 +1,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "maf/patterns/Patterns.h"
+#include <maf/patterns/Patterns.h>
 #include <functional>
 #include <memory>
 

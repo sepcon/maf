@@ -1,6 +1,6 @@
-#include "maf/messaging/client-server/ipc/IPCFactory.h"
-#include "maf/messaging/client-server/ipc/internal/LocalIPCReceiver.h"
-#include "maf/messaging/client-server/ipc/internal/LocalIPCSender.h"
+#include <maf/messaging/client-server/ipc/IPCFactory.h>
+#include "platforms/LocalIPCReceiver.h"
+#include "platforms/LocalIPCSender.h"
 
 namespace maf {
 namespace messaging {

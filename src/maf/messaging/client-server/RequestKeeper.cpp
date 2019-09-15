@@ -1,13 +1,14 @@
-#include "maf/messaging/client-server/RequestKeeper.h"
-#include "maf/messaging/client-server/ServiceStubBase.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/client-server/RequestKeeper.h>
+#include <maf/messaging/client-server/ServiceStubBase.h>
+#include <maf/utils/debugging/Debug.h>
+#include "ServiceStubBaseImpl.h"
 
 
 namespace maf {
 namespace messaging {
 
 
-RequestKeeperBase::RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, ServiceStubBase *svStub) :
+RequestKeeperBase::RequestKeeperBase(std::shared_ptr<CSMessage> csMsg, ServiceStubBaseImpl *svStub) :
     _csMsg(std::move(csMsg)), _svStub(std::move(svStub)), _valid(true)
 {
     assert(_svStub);
@@ -20,7 +21,7 @@ RequestKeeperBase::AbortCallback RequestKeeperBase::getAbortCallback()
     return _abortCallback;
 }
 
-std::shared_ptr<RequestKeeperBase> RequestKeeperBase::create(std::shared_ptr<CSMessage> csMsg, ServiceStubBase *svStub)
+std::shared_ptr<RequestKeeperBase> RequestKeeperBase::create(std::shared_ptr<CSMessage> csMsg, ServiceStubBaseImpl *svStub)
 {
     std::shared_ptr<RequestKeeperBase> instance(new RequestKeeperBase(std::move(csMsg), svStub));
     return instance;

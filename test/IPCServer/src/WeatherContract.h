@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAF_ENABLE_DUMP
+
 #include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/CSContractBegin.mc.h>
 #include <maf/messaging/client-server/CSContractDefines.mc.h>
@@ -44,5 +46,6 @@ result_object_s(NotificationMessageUpdate)
 result_object_e(NotificationMessageUpdate)
 
 result_object_no_props(ShutDownServerRequest)
-	
+
 #include <maf/messaging/client-server/CSContractEnd.mc.h>
+

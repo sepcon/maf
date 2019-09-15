@@ -1,7 +1,7 @@
 #pragma once
 
-#include "maf/utils/cppextension/TupleManip.h"
-#include "maf/utils/cppextension/TypeTraits.h"
+#include <maf/utils/cppextension/TupleManip.h>
+#include <maf/utils/cppextension/TypeTraits.h>
 #include "BasicTypes.h"
 #include "JsonTrait.h"
 #include "ByteArray.h"

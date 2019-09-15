@@ -1,8 +1,8 @@
-#include "maf/messaging/Timer.h"
-#include "maf/threading/TimerManager.h"
-#include "maf/messaging/Component.h"
-#include "maf/messaging/BasicMessages.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/Timer.h>
+#include <maf/threading/TimerManager.h>
+#include <maf/messaging/Component.h>
+#include <maf/messaging/BasicMessages.h>
+#include <maf/utils/debugging/Debug.h>
 #include <cassert>
 
 namespace maf {
@@ -26,23 +26,24 @@ void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
     {
         mafErr("[Timer]: Please specify not null callback");
     }
-    else if((_myMgr = Component::getTimeManager()))
+    else if((_myMgr = Component::getTimerManager()))
     {
         if(running())
         {
             mafInfo("Timer is still running, then stop!");
             stop();
         }
-        auto componentRef = Component::getComponentRef();
+        auto componentRef = Component::getActiveWeakPtr();
         auto onTimeout = [componentRef, callback, this]()
         {
             auto msg = std::make_shared<TimeoutMessage>();
             msg->timerID = _id;
             msg->callback = callback;
-            auto lock(componentRef->pa_lock());
-            if(componentRef->get())
+
+            auto component = componentRef.lock();
+            if(component)
             {
-                componentRef->get()->postMessage(msg);
+                component->postMessage(msg);
             }
             else
             {

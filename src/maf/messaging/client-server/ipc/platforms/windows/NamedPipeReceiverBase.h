@@ -1,8 +1,8 @@
 #pragma once
 
-#include "maf/messaging/client-server/ipc/IPCReceiver.h"
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h"
-#include "maf/utils/debugging/Debug.h"
+#include "PipeShared.h"
+#include <maf/messaging/client-server/ipc/IPCReceiver.h>
+#include <maf/utils/debugging/Debug.h>
 #include <thread>
 #include <windows.h>
 #include <string>
