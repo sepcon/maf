@@ -4,6 +4,23 @@
     #include "./platforms/windows/LocalIPCReceiverImpl.cpp"
 #elif defined(LINUX)
     #include "./platforms/linux/LocalIPCReceiverImpl.cpp"
+#else
+namespace maf {
+namespace messaging {
+namespace ipc {
+
+class LocalIPCReceiverImpl : public LocalIPCReceiver
+{
+public:
+    virtual bool initConnection(Address, bool = false)  { return false; }
+    virtual bool startListening()  { return false; }
+    virtual bool stopListening()  { return false; }
+    virtual bool listening() const  { return false; }
+    virtual const Address& address() const  { return Address::INVALID_ADDRESS; }
+};
+}
+}
+}
 #endif
 
 namespace maf {

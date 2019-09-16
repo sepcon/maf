@@ -37,7 +37,7 @@ public:
             static std::atomic<uint16_t> receiverCount(0);
             receiverCount += 1;
             uint16_t randomPort = receiverCount;
-            _myaddr = Address(address.get_name() + std::to_string(GetCurrentProcessId()), randomPort);
+            _myaddr = Address(address.name() + std::to_string(GetCurrentProcessId()), randomPort);
         }
         else
         {

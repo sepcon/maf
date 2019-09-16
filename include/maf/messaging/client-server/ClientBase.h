@@ -5,6 +5,7 @@
 #include "ServiceRequesterInterface.h"
 #include "internal/CSShared.h"
 #include "maf/utils/debugging/Debug.h"
+#include <map>
 
 namespace maf {
 namespace messaging {

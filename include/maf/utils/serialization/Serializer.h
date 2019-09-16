@@ -101,9 +101,8 @@ private:
 template <typename SerializableObject, std::enable_if_t<std::is_class_v<SerializationTrait<SerializableObject>>, bool>>
 Serializer& Serializer::operator<<(const SerializableObject& obj)
 {
-    using SZTrait = SerializationTrait<SerializableObject>;
-    auto valueSize = SZTrait::serializeSizeOf(obj);
-    SZTrait::serialize(getNextWriteArea(valueSize), obj);
+    auto valueSize = maf::srz::serializeSizeOf(obj);
+    maf::srz::serialize(getNextWriteArea(valueSize), obj);
     sync();
     return *this;
 }
@@ -112,8 +111,7 @@ template <typename T, std::enable_if_t<std::is_class_v<SerializationTrait<T>>, b
 Deserializer& Deserializer::operator>>(T& obj)
 {
 //    assert((_curpos != ByteArray::InvalidPos) && (_lastpos != ByteArray::InvalidPos));
-    using SZTrait = SerializationTrait<T>;
-    obj = SZTrait::deserialize(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
+    obj = maf::srz::deserialize<T>(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
         this->fetchMoreBytes(startp, lastp, neededBytes);
     });
     return *this;

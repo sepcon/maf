@@ -8,11 +8,11 @@ namespace srz {
 
 struct ByteArray : public std::string
 {
-    using               Byte                    = char;
-    using               WBytePos                 = Byte*;
-    using               RBytePos                = const Byte*;
-    static constexpr    WBytePos InvalidPos      = nullptr;
-    using std::string::string;
+    using               Byte                        = char;
+    using               WBytePos                    = Byte*;
+    using               RBytePos                    = const Byte*;
+    static constexpr    WBytePos InvalidPos         = nullptr;
+    using               std::string::string;
     ByteArray(const std::string& s) : std::string(s){}
     ByteArray(std::string&& s) : std::string(std::move(s)){}
     ByteArray(size_t capacity = 0)

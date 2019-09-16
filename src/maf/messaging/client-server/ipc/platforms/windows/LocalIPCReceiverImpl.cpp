@@ -15,8 +15,9 @@ namespace maf {
 namespace messaging {
 namespace ipc {
 
-using PipeInstances = LocalIPCReceiverImpl::PipeInstances;
+#define _2dw(value) static_cast<DWORD>(value)
 
+using PipeInstances = LocalIPCReceiverImpl::PipeInstances;
 static bool connectToNewClient(HANDLE, LPOVERLAPPED);
 static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED& overlapStructure, char* buffer, size_t buffSize)
 {
@@ -28,7 +29,7 @@ static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED& overlapStructure, char* 
         fSuccess = ReadFile(
             pipeHandle,
             buffer + totalBytesRead,
-            buffSize - totalBytesRead,
+            _2dw(buffSize - totalBytesRead),
             &bytesRead,
             &overlapStructure);
 
@@ -158,7 +159,7 @@ bool LocalIPCReceiverImpl::readOnPipe(size_t index)
 {
     bool fSuccess = false;
     auto& incommingBA = _pipeInstances[index]->ba;
-    DWORD bytesRead = 0;
+    size_t bytesRead = 0;
     if(incommingBA.empty()) // read the written bytes count first
     {
         uint32_t totalComingBytes = 0;
