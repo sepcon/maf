@@ -49,50 +49,50 @@ struct JsonTrait;
 template<typename NonDeterminedType, typename = void>
 struct DumpHelper
 {
-    inline static void dump(const NonDeterminedType& value, int level, std::string& strOut) noexcept
+    inline static void dump(const NonDeterminedType& value, int indentLevel, std::string& strOut) noexcept
     {
-        return prv::template dump<NonDeterminedType>(value, level, strOut);
+        return prv::template dump<NonDeterminedType>(value, indentLevel, strOut);
     }
 
     struct prv
     {
         mc_enable_if_is_tuplelike_(TupleLike)
-            inline static void dump(const TupleLike& value, int level, std::string& strOut) noexcept
+            inline static void dump(const TupleLike& value, int indentLevel, std::string& strOut) noexcept
         {
-            value.dump(level, strOut);
+            value.dump(indentLevel, strOut);
         }
 
         mc_enable_if_is_number_(NumberType)
-            inline static void dump(const NumberType& value, int /*level*/, std::string& strOut) noexcept
+            inline static void dump(const NumberType& value, int /*indentLevel*/, std::string& strOut) noexcept
         {
             strOut += std::to_string(value);
         }
 
         mc_enable_if_is_enum_(EnumType)
-            inline static void dump(const EnumType& value, int /*level*/, std::string& strOut) noexcept
+            inline static void dump(const EnumType& value, int /*indentLevel*/, std::string& strOut) noexcept
         {
             strOut += std::to_string(static_cast<uint32_t>(value));
         }
 
         mc_enable_if_is_ptr_(PointerType)
-            inline static void dump(const PointerType& value, int level, std::string& strOut) noexcept
+            inline static void dump(const PointerType& value, int indentLevel, std::string& strOut) noexcept
         {
             if(value)
             {
                 using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
-                DumpHelper<NormalTypeOfPointerType>::dump(*value, level, strOut);
+                DumpHelper<NormalTypeOfPointerType>::dump(*value, indentLevel, strOut);
             }
         }
 
         mc_enable_if_is_smartptr_(SmartPtrType)
-            inline static void dump(const SmartPtrType& value, int level, std::string& strOut) noexcept
+            inline static void dump(const SmartPtrType& value, int indentLevel, std::string& strOut) noexcept
         {
             using PtrType = typename SmartPtrType::element_type*;
-            DumpHelper<PtrType>::dump(value.get(), level, strOut);
+            DumpHelper<PtrType>::dump(value.get(), indentLevel, strOut);
         }
 
         mc_enable_if_is_json_(JsonType)
-            inline static void dump(const JsonType& value, int /*level*/, std::string& strOut) noexcept
+            inline static void dump(const JsonType& value, int /*indentLevel*/, std::string& strOut) noexcept
         {
             strOut += JsonTrait<JsonType>::marshall(value);
         }
@@ -102,7 +102,7 @@ struct DumpHelper
 template <class JsonClass>
 struct DumpHelper<JsonTrait<JsonClass>, void>
 {
-    inline static void dump(const bool& value, int /*level*/, std::string& strOut) noexcept
+    inline static void dump(const bool& value, int /*indentLevel*/, std::string& strOut) noexcept
     {
         strOut += value ? "true" : "false";
     }
@@ -111,7 +111,7 @@ struct DumpHelper<JsonTrait<JsonClass>, void>
 template <>
 struct DumpHelper<bool, void>
 {
-    inline static void dump(const bool& value, int /*level*/, std::string& strOut) noexcept
+    inline static void dump(const bool& value, int /*indentLevel*/, std::string& strOut) noexcept
     {
         strOut += value ? "true" : "false";
     }
@@ -122,35 +122,35 @@ struct DumpHelper<std::pair<T1, T2>, void>
 {
     using DType = std::pair<T1, T2>;
 
-    inline static void dump(const DType& p, int level, std::string& strOut) noexcept
+    inline static void dump(const DType& p, int indentLevel, std::string& strOut) noexcept
     {
-        DumpHelper<pure_type_t<decltype(p.first)>>::dump(p.first, level, strOut);
+        DumpHelper<pure_type_t<decltype(p.first)>>::dump(p.first, indentLevel, strOut);
         strOut += " : ";
-        DumpHelper<pure_type_t<decltype(p.second)>>::dump(p.second , level, strOut);
+        DumpHelper<pure_type_t<decltype(p.second)>>::dump(p.second , indentLevel, strOut);
     }
 };
 
 template<typename Tuple>
 struct DumpHelper<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>>
 {
-    inline static void dump(const Tuple& tp, int level, std::string& strOut) noexcept {
+    inline static void dump(const Tuple& tp, int indentLevel, std::string& strOut) noexcept {
         constexpr bool newLine = true;
         strOut += "[";
-        nstl::tuple_for_each(tp, [level, &strOut, &newLine](const auto& elem) {
-            strOut += getIndent(level + 1, newLine);
-            DumpHelper<pure_type_t<decltype(elem)>>::dump(elem, level + 1, strOut);
+        nstl::tuple_for_each(tp, [indentLevel, &strOut, &newLine](const auto& elem) {
+            strOut += getIndent(indentLevel + 1, newLine);
+            DumpHelper<pure_type_t<decltype(elem)>>::dump(elem, indentLevel + 1, strOut);
             strOut += ",";
         });
 
         strOut.resize(strOut.size() - 1); // remove the last ',' character
-        strOut += getIndent(level, newLine) + "]";
+        strOut += getIndent(indentLevel, newLine) + "]";
     }
 };
 
 template<>
 struct DumpHelper<std::string, void>
 {
-    inline static void dump(const std::string& value, int /*level*/, std::string& strOut) noexcept {
+    inline static void dump(const std::string& value, int /*indentLevel*/, std::string& strOut) noexcept {
         //must be taken care for case of wstring
         strOut += hlp::quote(value);
     }
@@ -161,7 +161,7 @@ struct DumpHelper<StringDerived,
                   std::enable_if_t<std::is_base_of_v<std::string, StringDerived>, void>>
 {
 
-    inline static void dump(const StringDerived& value, int /*level*/, std::string& strOut) noexcept {
+    inline static void dump(const StringDerived& value, int /*indentLevel*/, std::string& strOut) noexcept {
         //must be taken care for case of wstring
         strOut += hlp::quote(static_cast<const std::string&>(value));
     }
@@ -170,7 +170,7 @@ struct DumpHelper<StringDerived,
 template<>
 struct DumpHelper<const char*, void>
 {
-    inline static void dump(const char* value, int /*level*/, std::string& strOut) noexcept {
+    inline static void dump(const char* value, int /*indentLevel*/, std::string& strOut) noexcept {
         //must be taken care for case of wstring
         strOut += hlp::quote(value);
     }
@@ -180,7 +180,7 @@ template<>
 struct DumpHelper<std::wstring, void>
 {
 
-    inline static void dump(const std::wstring& /*value*/, int /*level*/, std::string& strOut) noexcept {
+    inline static void dump(const std::wstring& /*value*/, int /*indentLevel*/, std::string& strOut) noexcept {
         strOut += "??? please enable logging wstring mode???";
     }
 };
@@ -188,13 +188,13 @@ struct DumpHelper<std::wstring, void>
 template<typename Iterable, typename = void>
 struct Packager
 {
-    inline static void openBox(int /*level*/, std::string& strOut)
+    inline static void openBox(int /*indentLevel*/, std::string& strOut)
     {
         strOut += " [";
     }
-    inline static void closeBox(int level, std::string& strOut)
+    inline static void closeBox(int indentLevel, std::string& strOut)
     {
-        strOut += getIndent(level, true) + "]";
+        strOut += getIndent(indentLevel, true) + "]";
     }
 };
 
@@ -202,13 +202,13 @@ template<typename AssociateContainer>
 struct Packager<AssociateContainer,
                 nstl::to_void<typename AssociateContainer::key_type, typename AssociateContainer::mapped_type>>
 {
-    inline static void openBox(int /*level*/, std::string& strOut)
+    inline static void openBox(int /*indentLevel*/, std::string& strOut)
     {
         strOut += "{";
     }
-    inline static void closeBox(int level, std::string& strOut)
+    inline static void closeBox(int indentLevel, std::string& strOut)
     {
-        strOut += getIndent(level, true) + "}";
+        strOut += getIndent(indentLevel, true) + "}";
     }
 };
 
@@ -216,23 +216,26 @@ struct Packager<AssociateContainer,
 template<class Container>
 struct DumpHelper<Container, std::enable_if_t<nstl::is_iterable_v<Container>, void>>
 {
-    inline static void dump(const Container& seq, int level, std::string& strOut) noexcept
+    inline static void dump(const Container& seq, int indentLevel, std::string& strOut) noexcept
     {
         constexpr bool NEWLINE = true;
-        auto elemPreSeparator = getIndent(level + 1, NEWLINE);
-        Packager<Container>::openBox(level, strOut);
+        auto elemPreSeparator = getIndent(indentLevel + 1, NEWLINE);
+        Packager<Container>::openBox(indentLevel, strOut);
         for (const auto& elem : seq) {
             strOut += elemPreSeparator;
-            DumpHelper<typename Container::value_type>::dump(elem, level + 1, strOut);
+            DumpHelper<typename Container::value_type>::dump(elem, indentLevel + 1, strOut);
             strOut += ",";
         }
         if(!seq.empty())
         {
             strOut.resize(strOut.size() - 1); // remove the last ',' character
         }
-        Packager<Container>::closeBox(level, strOut);
+        Packager<Container>::closeBox(indentLevel, strOut);
     }
 };
+
+template <typename T>
+void dump(const T& val, int indentLevel, std::string& strOut) { DumpHelper<std::decay_t<decltype (val)>>::dump(val, indentLevel, strOut); }
 
 }// srz
 }// maf

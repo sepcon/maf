@@ -80,9 +80,9 @@ private: \
     template<typename T> \
     static void dump(const char* valName, const T& val, int level, std::string& strOut) { \
         strOut += maf::srz::getIndent(level, true); \
-        maf::srz::DumpHelper<T>::dump(valName, level, strOut); \
+        maf::srz::dump(valName, level, strOut); \
         strOut += " : "; \
-        maf::srz::DumpHelper<T>::dump(val, level, strOut); \
+        maf::srz::dump(val, level, strOut); \
         strOut += ","; \
     }
 

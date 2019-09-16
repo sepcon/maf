@@ -24,57 +24,24 @@
 namespace maf {
 namespace srz {
 
-
-/**
- * @brief SizeType represent container's size type:
- * In the effort to make compatible between 32 and 64 bit applications, the size of container types
- * is always declared as size_t with the widths(4byte/32bit - 8byte/64bit) differ on different
- * application types then it makes data serialized by 32bit apps cannot be read by 64bit apps.
- * Then by force use of SizeType as uint32_t the issue can be overcome by declaring variables to be serialized as specific type like
- * uint8_t, int8_t, uint16_t, uint32_t...
- */
-using SizeType = uint32_t;
-constexpr SizeType SIZETYPE_WIDE = sizeof(SizeType);
-
-using RequestMoreBytesCallback = std::function<void(const char** startp, const char** lastp, SizeType neededBytes)>;
-
-using namespace nstl;
+using       SizeType                    = uint32_t;
+constexpr   SizeType SIZETYPE_WIDE      = sizeof(SizeType);
+using       RequestMoreBytesCallback    = std::function<void(const char** startp, const char** lastp, SizeType neededBytes)>;
 
 
-inline SizeType byteCountInRangeOf(const char* const first, const char* const last)
-{
-    if ((first && last) && (last >= first))
-    {
-        return static_cast<SizeType>(last - first + 1) * sizeof(char);
-    }
-    else
-    {
-        return 0;
-    }
-}
+template <typename T>
+SizeType serializeSizeOf(const T& p)  noexcept;
+template <typename T>
+SizeType serialize(char* startp, const T& p) noexcept;
+template <typename T>
+T deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr);
 
-inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, RequestMoreBytesCallback requestMoreBytes)
-{
-    if(byteCountInRangeOf(*startp, *lastp) < neededBytes)
-    {
-        if(requestMoreBytes != nullptr)
-        {
-            requestMoreBytes(startp, lastp, neededBytes);
-            if(byteCountInRangeOf(*startp, *lastp) >= neededBytes)
-            {
-                return; //serializable
-            }
-        }
-        throw std::runtime_error("Not enough bytes for deserilization");
-    }
-    else
-    {
-        //serializable
-    }
-}
 
 namespace internal
 {
+
+inline SizeType byteCountInRangeOf(const char* const first, const char* const last);
+inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, RequestMoreBytesCallback requestMoreBytes);
 
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
 inline SizeType jsonSerializeSizeOf(const JsonType &value) noexcept;
@@ -98,6 +65,9 @@ struct ContainerReserver<Container, nstl::to_void<decltype (std::declval<Contain
 };
 
 }
+
+using namespace nstl;
+
 
 /**
  * Basic utility for serialization framework, that provide 3 main functionalities:
@@ -180,7 +150,7 @@ struct SerializationTrait
         mc_enable_if_is_number_or_enum_(NumberOrEnum)
             inline static NumberOrEnum deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
         {
-            makeSureDeserializable(startp, lastp, sizeof(NumberOrEnum), requestMoreBytes);
+            internal::makeSureDeserializable(startp, lastp, sizeof(NumberOrEnum), requestMoreBytes);
             auto value = *(reinterpret_cast<const pure_type_t<NumberOrEnum>*>(*startp));
             *startp += serializeSizeOf(value);
             return value;
@@ -223,7 +193,7 @@ struct SerializationTrait
             mc_must_default_constructible(PointerType)
             using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
 
-            makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
+            internal::makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
             bool isNotNull = static_cast<bool>(**startp);
             *startp += 1;
             NormalTypeOfPointerType* value = nullptr;
@@ -411,7 +381,7 @@ struct SerializationTrait<std::basic_string<CharT, Trait, Allocator>, void>
         ValueType value;
         auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
         if (size > 0) {
-            makeSureDeserializable(startp, lastp, size, requestMoreBytes);
+            internal::makeSureDeserializable(startp, lastp, size, requestMoreBytes);
             value.resize(size/sizeof(CharT));
             memcpy(reinterpret_cast<char*>(&value[0]), *startp, size);
             *startp += size;
@@ -449,8 +419,57 @@ struct SerializationTrait<StringDerived,
     }
 };
 
+
+template <typename T>
+SizeType serializeSizeOf(const T& v)  noexcept
+{
+    return SerializationTrait<T>::serializeSizeOf(v);
+}
+template <typename T>
+SizeType serialize(char* startp, const T& v) noexcept
+{
+    return SerializationTrait<T>::serialize(startp, v);
+}
+template <typename T>
+T deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes)
+{
+    return SerializationTrait<T>::deserialize(startp, lastp, requestMoreBytes);
+}
+
+
 namespace internal
 {
+inline SizeType byteCountInRangeOf(const char* const first, const char* const last)
+{
+    if ((first && last) && (last >= first))
+    {
+        return static_cast<SizeType>(last - first + 1) * sizeof(char);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, RequestMoreBytesCallback requestMoreBytes)
+{
+    if(byteCountInRangeOf(*startp, *lastp) < neededBytes)
+    {
+        if(requestMoreBytes != nullptr)
+        {
+            requestMoreBytes(startp, lastp, neededBytes);
+            if(byteCountInRangeOf(*startp, *lastp) >= neededBytes)
+            {
+                return; //serializable
+            }
+        }
+        throw std::runtime_error("Not enough bytes for deserilization");
+    }
+    else
+    {
+        //serializable
+    }
+}
 
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool>>
 inline SizeType jsonSerializeSizeOf(const JsonType &value) noexcept
