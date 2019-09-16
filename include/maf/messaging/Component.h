@@ -13,6 +13,7 @@ namespace messaging {
 
 class Component;
 using ComponentRef = std::weak_ptr<Component>;
+using ComponentPtr = std::shared_ptr<Component>;
 using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
 enum class LaunchMode

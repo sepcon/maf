@@ -6,7 +6,9 @@
 #include "ClientInterface.h"
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
+#include <maf/utils/cppextension/SyncObject.h>
 #include <maf/utils/debugging/Debug.h>
+#include <set>
 
 
 namespace maf {
