@@ -41,8 +41,6 @@ SOURCES += \
     src/maf/messaging/Component.cpp \
     src/maf/messaging/MessageBase.cpp \
     src/maf/messaging/Timer.cpp \
-    src/maf/logging/ConsoleLogger.cpp \
-    src/maf/logging/LoggingComponent.cpp \
     src/maf/messaging/client-server/CSMessage.cpp \
     src/maf/messaging/client-server/ClientBase.cpp \
     src/maf/messaging/client-server/IAMessageRouter.cpp \
@@ -50,6 +48,7 @@ SOURCES += \
     src/maf/messaging/client-server/ServerBase.cpp \
     src/maf/messaging/client-server/ServiceProxyBase.cpp \
     src/maf/messaging/client-server/ServiceStubBase.cpp \
+    src/maf/messaging/client-server/ServiceStubBaseImpl.cpp \
     src/maf/messaging/client-server/Address.cpp \
     src/maf/messaging/client-server/ipc/BytesCommunicator.cpp \
     src/maf/messaging/client-server/ipc/IPCClientBase.cpp \
@@ -73,21 +72,19 @@ SOURCES += \
 HEADERS += \
     include/maf/messaging/BasicMessages.h \
     include/maf/messaging/Component.h \
+    include/maf/messaging/ExtensibleComponent.h \
     include/maf/messaging/LocalIPCServer.h \
     include/maf/messaging/MessageBase.h \
     include/maf/messaging/MessageQueue.h \
     include/maf/messaging/MsgDefHelper.mc.h \
     include/maf/messaging/Timer.h \
-    include/maf/logging/ConsoleLogger.h \
-    include/maf/logging/LoggerBase.h \
-    include/maf/logging/LoggerInterface.h \
-    include/maf/logging/LoggingComponent.h \
     include/maf/messaging/Communicator.h \
     include/maf/messaging/client-server/ClientBase.h \
     include/maf/messaging/client-server/IAMessageRouter.h \
     include/maf/messaging/client-server/IAServiceProxy.h \
     include/maf/messaging/client-server/IAServiceStub.h \
     include/maf/messaging/client-server/QueueingServiceProxy.h \
+    include/maf/messaging/client-server/QueueingServiceProxy.impl.h \
     include/maf/messaging/client-server/QueueingServiceStub.h \
     include/maf/messaging/client-server/SCQServiceProxy.h \
     include/maf/messaging/client-server/SSQServiceStub.h \
@@ -130,6 +127,7 @@ HEADERS += \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCReceiverImpl.h \
     include/maf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCSenderImpl.h \
     include/maf/threading/IThreadPool.h \
+    include/maf/threading/ThreadPoolImplBase.h \
     include/maf/threading/Queue.h \
     include/maf/threading/Runnable.h \
     include/maf/threading/Signal.h \
@@ -139,15 +137,10 @@ HEADERS += \
     include/maf/threading/ThreadSafeQueue.h \
     include/maf/threading/TimerManager.h \
     include/maf/threading/Waiter.h \
-    include/maf/threading/internal/DynamicCountThreadPool.h \
-    include/maf/threading/internal/PriorityThreadPool.h \
-    include/maf/threading/internal/StableThreadPool.h \
-    include/maf/threading/internal/ThreadPoolImplBase.h \
-    include/maf/threading/internal/TimerManagerImpl.h \
     include/maf/utils/TimeMeasurement.h \
     include/maf/utils/cppextension/Loop.mc.h \
+    include/maf/utils/cppextension/Maf.mc.h \
     include/maf/utils/cppextension/SyncObject.h \
-    include/maf/utils/cppextension/maf.mc.h \
     include/maf/utils/debugging/Debug.h \
     include/maf/utils/IDManager.h \
     include/maf/patterns/Patterns.h \
@@ -169,11 +162,16 @@ HEADERS += \
     include/maf/messaging/client-server/ipc/MessageValidator.h \
     include/maf/messaging/client-server/ipc/internal/LocalIPCReceiver.h \
     include/maf/messaging/client-server/ipc/internal/LocalIPCSender.h \
-    include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeReceiverBase.h \
-    include/maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h \
-    include/maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h \
     include/maf/utils/serialization/Tplkdef.mc.h \
-    include/maf/utils/serialization/TupleLikeObject.mc.h
+    include/maf/utils/serialization/TupleLikeObject.mc.h \
+    src/maf/messaging/client-server/ServiceStubBaseImpl.h \
+    src/maf/threading/threadpool/DynamicCountThreadPool.h \
+    src/maf/threading/threadpool/PriorityThreadPool.h \
+    src/maf/threading/threadpool/StableThreadPool.h \
+    src/maf/threading/threadpool/TimerManagerImpl.h \
+    src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiverBase.h \
+    src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.h \
+    src/maf/messaging/client-server/ipc/platforms/windows/PipeShared.h
 
 DISTFILES +=
 

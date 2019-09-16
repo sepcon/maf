@@ -1,15 +1,23 @@
 #ifndef IPCMESSAGE_H
 #define IPCMESSAGE_H
 
-#include "maf/utils/serialization/ByteArray.h"
-#include "maf/utils/serialization/SerializableInterface.h"
-#include "maf/utils/debugging/Debug.h"
-#include "maf/messaging/client-server/CSMessage.h"
+#include <maf/utils/serialization/ByteArray.h>
+#include <maf/utils/serialization/SerializableInterface.h>
+#include <maf/utils/debugging/Debug.h>
+#include <maf/messaging/client-server/CSMessage.h>
 #include <functional>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+
+class IPCMessage : public CSMessage
+{
+public:
+    using CSMessage::CSMessage;
+    srz::ByteArray toBytes();
+    bool fromBytes(const std::shared_ptr<srz::ByteArray>& bytes) noexcept;
+};
 
 using PayloadType = srz::ByteArray;
 class SerializableMessageContentBase : public CSMessageContentBase, public srz::SerializableInterface
@@ -28,13 +36,7 @@ protected:
     PayloadType _payload;
 };
 
-class IPCMessage : public CSMessage
-{
-public:
-    using CSMessage::CSMessage;
-    srz::ByteArray toBytes();
-    bool fromBytes(const std::shared_ptr<srz::ByteArray>& bytes) noexcept;
-};
+
 
 
 }

@@ -1,7 +1,7 @@
 #ifndef PRIORITYTHREADPOOL_H
 #define PRIORITYTHREADPOOL_H
 
-#include "maf/threading/IThreadPool.h"
+#include <maf/threading/IThreadPool.h>
 
 namespace maf {
 namespace threading {

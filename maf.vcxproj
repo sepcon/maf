@@ -138,8 +138,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\maf\logging\ConsoleLogger.cpp" />
-    <ClCompile Include="src\maf\logging\LoggingComponent.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\Address.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\ClientBase.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\CSMessage.cpp" />
@@ -156,7 +154,9 @@
     <ClCompile Include="src\maf\messaging\client-server\ServerBase.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\ServiceProxyBase.cpp" />
     <ClCompile Include="src\maf\messaging\client-server\ServiceStubBase.cpp" />
+    <ClCompile Include="src\maf\messaging\client-server\ServiceStubBaseImpl.cpp" />
     <ClCompile Include="src\maf\messaging\Component.cpp" />
+    <ClCompile Include="src\maf\messaging\MessageBase.cpp" />
     <ClCompile Include="src\maf\messaging\Timer.cpp" />
     <ClCompile Include="src\maf\threading\Thread.cpp" />
     <ClCompile Include="src\maf\threading\threadpool\DynamicCountThreadPool.cpp" />
@@ -171,14 +171,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\maf\logging\ConsoleLogger.h" />
-    <ClInclude Include="include\maf\logging\LoggerBase.h" />
-    <ClInclude Include="include\maf\logging\LoggerInterface.h" />
-    <ClInclude Include="include\maf\logging\LoggingComponent.h" />
     <ClInclude Include="include\maf\messaging\BasicMessages.h" />
     <ClInclude Include="include\maf\messaging\client-server\Address.h" />
     <ClInclude Include="include\maf\messaging\client-server\ClientBase.h" />
     <ClInclude Include="include\maf\messaging\client-server\ClientInterface.h" />
-    <ClInclude Include="include\maf\messaging\client-server\ClientServerContract.h" />
     <ClInclude Include="include\maf\messaging\client-server\Connection.h" />
     <ClInclude Include="include\maf\messaging\client-server\CSContractBegin.mc.h" />
     <ClInclude Include="include\maf\messaging\client-server\CSContractDefines.mc.h" />
@@ -194,7 +190,6 @@
     <ClInclude Include="include\maf\messaging\client-server\IAServiceStub.h" />
     <ClInclude Include="include\maf\messaging\client-server\internal\CSShared.h" />
     <ClInclude Include="include\maf\messaging\client-server\ipc\BytesCommunicator.h" />
-    <ClInclude Include="include\maf\messaging\client-server\ipc\ClientServerContractMacros.h" />
     <ClInclude Include="include\maf\messaging\client-server\ipc\internal\LocalIPCReceiver.h" />
     <ClInclude Include="include\maf\messaging\client-server\ipc\internal\LocalIPCSender.h" />
     <ClInclude Include="include\maf\messaging\client-server\ipc\internal\platforms\linux\LocalIPCSender.h" />
@@ -233,7 +228,6 @@
     <ClInclude Include="include\maf\messaging\client-server\ServiceStubHandlerInterface.h" />
     <ClInclude Include="include\maf\messaging\client-server\ServiceStubInterface.h" />
     <ClInclude Include="include\maf\messaging\client-server\SSQServiceStub.h" />
-    <ClInclude Include="include\maf\messaging\Communicator.h" />
     <ClInclude Include="include\maf\messaging\Component.h" />
     <ClInclude Include="include\maf\messaging\IPCServer.h" />
     <ClInclude Include="include\maf\messaging\MessageBase.h" />
@@ -271,6 +265,7 @@
     <ClInclude Include="include\maf\utils\serialization\SerializationTrait.h" />
     <ClInclude Include="include\maf\utils\serialization\Serializer.h" />
     <ClInclude Include="include\maf\utils\TimeMeasurement.h" />
+    <ClInclude Include="src\maf\messaging\client-server\ServiceStubBaseImpl.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

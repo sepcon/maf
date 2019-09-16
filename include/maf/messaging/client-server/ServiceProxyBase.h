@@ -63,7 +63,7 @@ protected:
     void clearAllAsyncRequests();
     void clearAllRegisterEntries();
     bool sendMessageToServer(const CSMessagePtr& outgoingMsg);
-    std::shared_ptr<std::future<CSMessagePtr >> storeSyncRegEntry(const CSMessagePtr& outgoingMsg, RegID &regID);
+    std::future<CSMessagePtr> storeSyncRegEntry(const CSMessagePtr& outgoingMsg, RegID &regID);
     std::shared_ptr<std::promise<CSMessagePtr >> pickOutSyncRegEntry(const RegID &regID);
 
     RegID storeAndSendRequestToServer

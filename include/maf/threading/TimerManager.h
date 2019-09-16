@@ -1,5 +1,5 @@
 #pragma once
-#include "maf/utils/IDManager.h"
+#include <maf/utils/IDManager.h>
 #include <functional>
 
 namespace maf {
@@ -16,9 +16,9 @@ public:
     JobID start(Duration milliseconds, TimeOutCallback callback, bool cyclic = false);
     void restart(JobID jid);
     void stop(JobID jid);
+	void stop();
     bool isRunning(JobID jid);
     void setCyclic(JobID jid, bool cyclic = true);
-
     static bool isValid(JobID jid);
     static JobID invalidJobID() { return util::IDManager::INVALID_ID; }
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MessageBase.h"
-#include "maf/threading/Queue.h"
+#include <maf/threading/Queue.h>
 
 namespace maf {
 namespace messaging {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "maf/messaging/client-server/ipc/IPCSender.h"
+#include <maf/messaging/client-server/ipc/IPCSender.h>
 
 
 namespace maf {

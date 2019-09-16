@@ -1,4 +1,4 @@
-#include "maf/messaging/client-server/CSMessage.h"
+#include <maf/messaging/client-server/CSMessage.h>
 
 namespace maf {
 namespace messaging {

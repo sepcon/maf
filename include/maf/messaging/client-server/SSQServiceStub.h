@@ -2,7 +2,7 @@
 
 #include "QueueingServiceStub.h"
 #include <maf/patterns/Patterns.h>
-#include <maf/utils/cppextension/maf.mc.h>
+#include <maf/utils/cppextension/Maf.mc.h>
 
 namespace maf {
 namespace messaging {

@@ -1,8 +1,8 @@
 #ifndef STABLETHREADPOOL_H
 #define STABLETHREADPOOL_H
 
-#include "maf/threading/IThreadPool.h"
-#include "maf/threading/Queue.h"
+#include <maf/threading/IThreadPool.h>
+#include <maf/threading/Queue.h>
 
 namespace maf {
 namespace threading {

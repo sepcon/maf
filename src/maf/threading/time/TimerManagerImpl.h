@@ -1,7 +1,7 @@
 #pragma once
 
-#include "maf/threading/TimerManager.h"
-#include "maf/utils/cppextension/SyncObject.h"
+#include <maf/threading/TimerManager.h>
+#include <maf/utils/cppextension/SyncObject.h>
 #include <chrono>
 #include <set>
 #include <vector>
@@ -29,7 +29,7 @@ struct TimerManagerImpl
     void stop(JobID jid);
     bool isRunning(JobID jid);
     void setCyclic(JobID jid, bool cyclic);
-    void shutdown();
+    void stop();
 
 private:
     using JobDescRef = std::shared_ptr<JobDesc>;

@@ -1,4 +1,4 @@
-#include <maf/messaging/Component.h>
+#include <maf/messaging/ExtensibleComponent.h>
 #include <maf/messaging/client-server/ipc/LocalIPCClient.h>
 #include <maf/messaging/Timer.h>
 #include <maf/utils/TimeMeasurement.h>
@@ -10,22 +10,21 @@ using namespace maf::messaging::ipc;
 using namespace maf::messaging;
 using namespace maf::srz;
 using namespace maf;
- 
 
-class ClientCompTest
+
+class ClientCompTest : public ExtensibleComponent
 {
 	using IPCProxyPtr = std::shared_ptr<LocalIPCServiceProxy>;
 public:
-	ClientCompTest(bool detached = false):
-		_comp(detached)
+	ClientCompTest(ServiceID sid) : _sid(sid)
 	{
 	}
 
-	void start(ServiceID serviceID)
+	void onEntry() override
 	{
-		_comp.onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
-			if (msg->newStatus == Availability::Available)
-			{
+		_proxy = LocalIPCServiceProxy::createProxy(_sid);
+		onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
+			if (msg->newStatus == Availability::Available) {
 				mafMsg("Client component recevies status update of service: " << msg->serviceID);
 				static bool statusReg = true;
 				//if (statusReg)
@@ -41,9 +40,9 @@ public:
 				//else
 				{
 					mafMsg("Send request to server");
-					auto regid = _proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg){
+					auto regid = _proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg) {
 						static int totalResponse = 0;
-						mafMsg("Received update for request of weather status result " << msg->props().get_sStatus() << " - " << ++totalResponse);
+						mafMsg("Received update for request of weather status result " << msg->props().sStatus() << " - " << ++totalResponse);
 						mafMsg(msg->props().dump());
 						});
 					_timer.start(500, [this, regid] {
@@ -59,15 +58,13 @@ public:
 			{
 				mafMsg("Service is off for sometime, please wait for him to be available again!");
 			}
-			});
-		_comp.start([this, serviceID] {
-			_proxy = LocalIPCServiceProxy::createProxy(serviceID);
-			});
+			}
+		);
 	}
 private:
+	ServiceID _sid;
 	Timer _timer;
 	IPCProxyPtr _proxy;
-	messaging::Component _comp;
 };
 
 int main()
@@ -79,7 +76,7 @@ int main()
 	mafMsg("Client is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
 	LocalIPCClient::instance().init(addr, 500);
-	ClientCompTest cl;
-	cl.start(SID_WeatherService);
+	ClientCompTest cl(SID_WeatherService);
+	cl.run(LaunchMode::AttachToCurrentThread);
 	mafMsg("Client shutdown!");
 }

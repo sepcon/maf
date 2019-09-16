@@ -1,4 +1,4 @@
-#include "maf/messaging/client-server/ipc/IPCReceiver.h"
+#include <maf/messaging/client-server/ipc/IPCReceiver.h>
 
 
 namespace maf {

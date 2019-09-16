@@ -1,10 +1,10 @@
 #pragma once
 
-#include "maf/messaging/client-server/ServiceStubBase.h"
-#include "maf/messaging/Component.h"
-#include "maf/messaging/BasicMessages.h"
-#include "maf/threading/Queue.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/messaging/client-server/ServiceStubBase.h>
+#include <maf/messaging/client-server/RequestKeeper.h>
+#include <maf/messaging/Component.h>
+#include <maf/messaging/BasicMessages.h>
+#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace messaging {
@@ -80,16 +80,16 @@ QueueingServiceStub<MessageTrait>::QueueingServiceStub(ServiceID sid, ServerInte
                       this   // this is the message observer of itself
                       )
 {
-    _compref = Component::getComponentRef();
+    _compref = Component::getActiveWeakPtr();
 }
 
 template<class MessageTrait>
 void QueueingServiceStub<MessageTrait>::onClientRequest(const std::shared_ptr<RequestKeeperBase> &requestKeeper)
 {
-    auto lock(_compref->pa_lock());
-    if(_compref->get())
+    auto comp = _compref.lock();
+    if(comp)
     {
-        _compref->get()->postMessage<MyRequestMessage>(std::static_pointer_cast<MyRequestKeeper>(requestKeeper) );
+        comp->template postMessage<MyRequestMessage>(std::static_pointer_cast<MyRequestKeeper>(requestKeeper) );
     }
     else
     {
@@ -100,10 +100,10 @@ void QueueingServiceStub<MessageTrait>::onClientRequest(const std::shared_ptr<Re
 template<class MessageTrait>
 void QueueingServiceStub<MessageTrait>::onClientAbortRequest(RequestKeeperBase::AbortCallback callback)
 {
-    auto lock(_compref->pa_lock());
-    if(_compref->get())
+    auto comp = _compref.lock();
+    if(comp)
     {
-        _compref->get()->postMessage<CallbackExcMsg>(std::move(callback));
+        comp->template postMessage<CallbackExcMsg>(std::move(callback));
     }
     else
     {
@@ -115,7 +115,6 @@ template<class MessageTrait>
 void QueueingServiceStub<MessageTrait>::onComponentUnavailable()
 {
     mafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
-    _server->unregisterServiceProvider(this->serviceID());
 }
 
 }

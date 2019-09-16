@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IPCServerBase.h"
-#include "maf/patterns/Patterns.h"
+#include <maf/patterns/Patterns.h>
 #include "IPCMessageTrait.h"
 
 namespace maf {

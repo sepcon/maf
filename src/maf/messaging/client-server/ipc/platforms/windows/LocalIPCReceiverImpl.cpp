@@ -1,7 +1,7 @@
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/LocalIPCReceiverImpl.h"
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h"
-#include "maf/messaging/client-server/Connection.h"
-#include "maf/utils/debugging/Debug.h"
+#include "LocalIPCReceiverImpl.h"
+#include "PipeShared.h"
+#include <maf/messaging/client-server/Connection.h>
+#include <maf/utils/debugging/Debug.h>
 #include <Windows.h>
 #include <stdio.h>
 #include <strsafe.h>

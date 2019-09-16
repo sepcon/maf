@@ -1,6 +1,6 @@
 #pragma once
 
-#include "maf/messaging/client-server/ClientBase.h"
+#include <maf/messaging/client-server/ClientBase.h>
 #include "BytesCommunicator.h"
 #include "IPCTypes.h"
 #include <thread>

@@ -48,7 +48,7 @@ public: \
     mc_for_each_with_index( mc_declare_get_set_funcs_with_index, __VA_ARGS__) \
     msvc_expand_va_args( define_dump_function(__VA_ARGS__) ) \
     msvc_expand_va_args( define_load_from_json_functions(__VA_ARGS__) ) \
-    data_type& get_tuple() { return _data; } \
+    data_type& tuple() { return _data; } \
     const data_type& tuple () const { return _data; } \
 private: \
     static constexpr size_t __propertiesCount = std::tuple_size_v<data_type>; \
@@ -111,8 +111,8 @@ private: \
 #else
 #define mc_define_dump_helper_func
 #   define define_dump_function(...) \
-        void dump(int /*level*/, std::string& /*strOut*/) const { } \
-        std::string dump(int /*level*/ = 0) const { return ""; }
+        void dump(int /*level*/, std::string& strOut) const { strOut = "Object Dump is not supported"; } \
+        std::string dump(int /*level*/ = 0) const { return "Object Dump is not supported"; }
 #endif
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------

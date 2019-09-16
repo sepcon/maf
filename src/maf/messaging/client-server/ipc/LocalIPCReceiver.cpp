@@ -1,4 +1,4 @@
-#include "maf/messaging/client-server/ipc/internal/LocalIPCReceiver.h"
+#include "platforms/LocalIPCReceiver.h"
 
 #if defined(_WIN32) || defined(_WIN64)
     #include "./platforms/windows/LocalIPCReceiverImpl.cpp"

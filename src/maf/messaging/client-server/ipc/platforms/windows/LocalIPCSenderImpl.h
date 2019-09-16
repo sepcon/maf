@@ -1,6 +1,6 @@
 #pragma once
 
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/NamedPipeSenderBase.h"
+#include "NamedPipeSenderBase.h"
 
 namespace maf {
 namespace messaging {

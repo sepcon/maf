@@ -1,6 +1,6 @@
 #pragma once
 
-#include "maf/messaging/client-server/CSTypes.h"
+#include <maf/messaging/client-server/CSTypes.h>
 #include "ipc/IPCMessageTrait.h"
 
 #define result_object_s(OperationName) result_object_s_(OperationName)

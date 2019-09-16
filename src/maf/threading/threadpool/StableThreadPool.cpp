@@ -1,8 +1,8 @@
 #include <thread>
 #include <vector>
-#include "maf/threading/Queue.h"
-#include "maf/threading/internal/StableThreadPool.h"
-#include "maf/threading/internal/ThreadPoolImplBase.h"
+#include <maf/threading/Queue.h>
+#include <maf/threading/ThreadPoolImplBase.h>
+#include "StableThreadPool.h"
 
 namespace maf {
 namespace threading {

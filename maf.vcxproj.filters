@@ -15,12 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\maf\logging\ConsoleLogger.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\maf\logging\LoggingComponent.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\maf\messaging\client-server\ipc\BytesCommunicator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -105,18 +99,15 @@
     <ClCompile Include="src\maf\utils\IDManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\maf\messaging\MessageBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\maf\messaging\client-server\ServiceStubBaseImpl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\maf\logging\ConsoleLogger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\logging\LoggerBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\logging\LoggerInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\logging\LoggingComponent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\client-server\internal\CSShared.h">
@@ -147,9 +138,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\client-server\ipc\BytesCommunicator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\messaging\client-server\ipc\ClientServerContractMacros.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\client-server\ipc\IPCClientBase.h">
@@ -198,9 +186,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\client-server\ClientInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\messaging\client-server\ClientServerContract.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\client-server\Connection.h">
@@ -294,9 +279,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\BasicMessages.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\maf\messaging\Communicator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\messaging\Component.h">
@@ -408,6 +390,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\maf\utils\TimeMeasurement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\maf\messaging\client-server\ServiceStubBaseImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

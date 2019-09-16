@@ -1,5 +1,5 @@
-#include "maf/messaging/client-server/ipc/IPCMessage.h"
-#include "maf/utils/serialization/Serializer.h"
+#include <maf/messaging/client-server/ipc/IPCMessage.h>
+#include <maf/utils/serialization/Serializer.h>
 #include <maf/utils/debugging/Debug.h>
 
 

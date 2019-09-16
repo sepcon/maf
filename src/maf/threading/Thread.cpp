@@ -1,5 +1,5 @@
-#include "maf/threading/Thread.h"
-#include "maf/utils/debugging/Debug.h"
+#include <maf/threading/Thread.h>
+#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace threading {

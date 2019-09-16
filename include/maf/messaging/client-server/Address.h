@@ -1,7 +1,8 @@
 #pragma once
 
-#include "maf/utils/serialization/Serializer.h"
-#include "maf/utils/serialization/TupleLikeObject.mc.h"
+#define MAF_ENABLE_DUMP
+#include <maf/utils/serialization/Serializer.h>
+#include <maf/utils/serialization/TupleLikeObject.mc.h>
 
 namespace maf {
 namespace messaging {

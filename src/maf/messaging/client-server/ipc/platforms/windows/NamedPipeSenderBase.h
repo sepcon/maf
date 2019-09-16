@@ -1,10 +1,10 @@
 #pragma once
 
-#include "maf/messaging/client-server/ipc/internal/platforms/windows/PipeShared.h"
-#include "maf/messaging/client-server/ipc/IPCSender.h"
-#include "maf/messaging/client-server/Address.h"
-#include "maf/utils/serialization/ByteArray.h"
-#include "maf/utils/debugging/Debug.h"
+#include "PipeShared.h"
+#include <maf/messaging/client-server/ipc/IPCSender.h>
+#include <maf/messaging/client-server/Address.h>
+#include <maf/utils/serialization/ByteArray.h>
+#include <maf/utils/debugging/Debug.h>
 #include <windows.h>
 
 namespace maf {
