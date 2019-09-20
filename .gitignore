@@ -2,4 +2,5 @@
 build-*-Debug
 build-*-Release
 bin
+build
 .vs
