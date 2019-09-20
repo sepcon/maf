@@ -7,7 +7,7 @@
 namespace maf {
 namespace messaging {
 
-mc_sbClass(Address)
+mc_tpl_class(Address)
     public:
         using Port = int32_t;
         using Name = std::string;
@@ -15,13 +15,13 @@ mc_sbClass(Address)
         static const Name INVALID_NAME;
         static const Address INVALID_ADDRESS;
         bool valid() const { return (port() != INVALID_PORT) || (name() != INVALID_NAME);}
-    mc_sbProperties
+    mc_tpl_properties
         (
             (Name, name, INVALID_NAME),
             (Port, port, INVALID_PORT)
         )
 
-mc_sbClass_end(Address)
+mc_tpl_class_end(Address)
 
 
 }// messaging

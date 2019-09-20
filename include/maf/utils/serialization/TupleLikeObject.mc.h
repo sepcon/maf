@@ -8,14 +8,14 @@
  * @brief Use below MACROS to define a serializable object like this:
  *
  * mcsb_class(TheObject)
- *     mc_sbProperties
+ *     mc_tpl_properties
  *     (
  *          (std::string, Name),
  *          (int, Type),
  *          (std::string, Action),
  *          (Type, Name) //( <Type, Name> must be enclosed by parentheses)
  *     )
- * mc_sbClass_end(TheObject)
+ * mc_tpl_class_end(TheObject)
  *
  * After that, you can use it for serialization like this:
  *
@@ -41,13 +41,13 @@
  * */
 
 
-#define mc_sbClass(ClassName) mc_tuple_like_object_(ClassName)
+#define mc_tpl_class(ClassName) mc_tuple_like_object_(ClassName)
 
-#define mc_sbClass_end(ClassName) mc_tuple_like_object_end_(ClassName)
+#define mc_tpl_class_end(ClassName) mc_tuple_like_object_end_(ClassName)
 
-#define mc_sbClass_hasbase(ClassName, BaseClassName) mc_tuple_like_object_has_base_(ClassName, BaseClassName)
+#define mc_tpl_class_hasbase(ClassName, BaseClassName) mc_tuple_like_object_has_base_(ClassName, BaseClassName)
 
-#define mc_sbClass_hasbase_end(ClassName) mc_tuple_like_object_has_base_end_(ClassName)
+#define mc_tpl_class_hasbase_end(ClassName) mc_tuple_like_object_has_base_end_(ClassName)
 
-#define mc_sbProperties(...) mc_properties_map_(__VA_ARGS__)
+#define mc_tpl_properties(...) mc_properties_map_(__VA_ARGS__)
 

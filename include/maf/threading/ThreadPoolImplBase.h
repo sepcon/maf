@@ -3,7 +3,6 @@
 
 #include <maf/threading/IThreadPool.h>
 #include <maf/threading/ThreadJoiner.h>
-#include <maf/threading/Runnable.h>
 #include <maf/utils/debugging/Debug.h>
 #include <thread>
 #include <vector>
@@ -60,7 +59,7 @@ public:
 
     void run(Task task)
     {
-        _taskQueue.push(task);
+        _taskQueue.push(std::move(task));
     }
 
     unsigned int maxThreadCount() const
@@ -130,9 +129,9 @@ private:
     void addToRunningTasks(Task task)
     {
         std::lock_guard<std::mutex> lock(_runningTaskMutex);
-        _runningTasks.push_back(task);
+        _runningTasks.push_back(std::move(task));
     }
-    void removeFromRunningTasks(Task task)
+    void removeFromRunningTasks(const Task& task)
     {
         std::lock_guard<std::mutex> lock(_runningTaskMutex);
         for(auto iTask = _runningTasks.begin(); iTask != _runningTasks.end(); ++iTask)
