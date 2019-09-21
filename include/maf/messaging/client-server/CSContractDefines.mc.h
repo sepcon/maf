@@ -40,11 +40,11 @@ public: \
 
 #define properties(...) \
 private: \
-    mc_sbClass(Properties) \
-    mc_sbProperties(__VA_ARGS__)
+    mc_tpl_class(Properties) \
+    mc_tpl_properties(__VA_ARGS__)
 
 #define client_server_contract_object_e(OperationName, Type) \
-mc_sbClass_end(Properties) \
+mc_tpl_class_end(Properties) \
 private: \
     Properties _myProperties; \
     template <typename... Args> \
