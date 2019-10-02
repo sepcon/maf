@@ -26,10 +26,6 @@ public:
                 std::runtime_error("Stub of service ID " + std::to_string(sid) + "has already taken care by another component!");
             }
         }
-        else
-        {
-            throw std::runtime_error("Stub of service ID " + std::to_string(sid) + " has already been taken care by another component!");
-        }
         return std::static_pointer_cast<SSQServiceStub>(serviceProvider);
     }
 private:

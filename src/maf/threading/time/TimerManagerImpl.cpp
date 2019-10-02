@@ -39,41 +39,86 @@ public:
     }
 };
 
+
 struct JobDesc
 {
-    JobDesc(TimerManagerImpl::JobID id_, TimerManagerImpl::Duration duration_, TimerManagerImpl::TimeOutCallback callback_, bool isCyclic_ = false)
-        : id(id_), startTime(system_clock::now()), duration(duration_), callback(callback_), isCyclic(isCyclic_)
-    {}
-    TimerManagerImpl::Duration remainTime()
+#define mc_thread_locks(d) auto lock = _d.a_lock()
+    using JobID = TimerManagerImpl::JobID;
+    using Duration = TimerManagerImpl::Duration;
+    using TimeOutCallback = TimerManagerImpl::TimeOutCallback;
+
+    JobDesc(JobID id_, Duration duration_, TimeOutCallback callback_, bool isCyclic_ = false)
     {
-        return duration - elapseTime();
+        _d.reset(D{id_, duration_, std::move(callback_), isCyclic_});
     }
-    TimerManagerImpl::Duration elapseTime()
+    Duration remainTime()
     {
-        return duration_cast<milliseconds>(system_clock::now()- startTime).count();
+        mc_thread_locks(_d);
+        return _d->duration - elapseTime();
     }
+
     void reset()
     {
-        startTime = system_clock::now();
+        mc_thread_locks(_d);
+        _d->startTime = system_clock::now();
     }
     bool expired()
     {
-        return elapseTime() >= duration;
+        mc_thread_locks(_d);
+        return elapseTime() >= _d->duration;
     }
     void invalidate()
     {
-        callback = nullptr;
+        mc_thread_locks(_d);
+        _d->callback = nullptr;
     }
     bool valid() const
     {
-        return bool(callback);
+        mc_thread_locks(_d);
+        return bool(_d->callback);
     }
+    Duration duration() const
+    {
+        mc_thread_locks(_d);
+        return _d->duration;
+    }
+    JobID id() const
+    {
+        return _d->id;
+    }
+    bool isCyclic() const
+    {
+        mc_thread_locks(_d);
+        return _d->isCyclic;
+    }
+    void setCyclic(bool value)
+    {
+        mc_thread_locks(_d);
+        _d->isCyclic = value;
+    }
+    TimeOutCallback callback()
+    {
+        mc_thread_locks(_d);
+        return _d->callback;
+    }
+private:
+    Duration elapseTime()
+    {
+        return duration_cast<milliseconds>(system_clock::now()- _d->startTime).count();
+    }
+    struct D
+    {
+        D() = default;
+        D(JobID id_, Duration duration_, TimeOutCallback callback_, bool isCyclic_ = false)
+            : id(id_), startTime(system_clock::now()), duration(duration_), callback(callback_), isCyclic(isCyclic_){}
+        JobID id;
+        system_clock::time_point startTime;
+        Duration duration;
+        TimeOutCallback callback;
+        bool isCyclic;
+    };
 
-    TimerManagerImpl::JobID id;
-    system_clock::time_point startTime;
-    TimerManagerImpl::Duration duration;
-    TimerManagerImpl::TimeOutCallback callback;
-    bool isCyclic;
+    nstl::SyncObject<D> _d;
 };
 
 struct JobComp
@@ -124,33 +169,39 @@ bool TimerManagerImpl::start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCa
 
 void TimerManagerImpl::restart(TimerManagerImpl::JobID jid)
 {
-    std::unique_lock<JobsContainer> jobslock(_runningJobs);
-    auto itJob = findJob__(_runningJobs, jid);
-    if(itJob != _runningJobs->end())
-    {
-        LOG("Timer " << jid << " is restarted with duration = " << (*itJob)->duration);
+	if (!test(_shutdowned))
+	{
+		std::unique_lock<JobsContainer> jobslock(_runningJobs);
+		auto itJob = findJob__(_runningJobs, jid);
+		if (itJob != _runningJobs->end())
+		{
+			LOG("Timer " << jid << " is restarted with duration = " << (*itJob)->duration());
 
-        (*itJob)->reset();
-        jobslock.unlock();
-        _condvar.notify_one();
-    }
+			(*itJob)->reset();
+			jobslock.unlock();
+			_condvar.notify_one();
+		}
+	}
 }
 
 void TimerManagerImpl::stop(TimerManagerImpl::JobID jid)
 {
-    if(removeAndInvalidateJob(_pendingJobs, jid))
-    {
-        LOG("Job " << jid << " is canceled");
-    }
-    else if(removeAndInvalidateJob(_runningJobs, jid))
-    {
-        LOG("Job " << jid << " is canceled");
-        _condvar.notify_one();
-    }
-    else
-    {
-        LOG("Job " << jid << " does not exist or is already canceled");
-    }
+	if (!test(_shutdowned))
+	{
+		if (removeAndInvalidateJob(_pendingJobs, jid))
+		{
+			LOG("Job " << jid << " is canceled");
+		}
+		else if (removeAndInvalidateJob(_runningJobs, jid))
+		{
+			LOG("Job " << jid << " is canceled");
+			_condvar.notify_one();
+		}
+		else
+		{
+			LOG("Job " << jid << " does not exist or is already canceled");
+		}
+	}
 }
 
 bool TimerManagerImpl::isRunning(TimerManagerImpl::JobID jid)
@@ -159,10 +210,10 @@ bool TimerManagerImpl::isRunning(TimerManagerImpl::JobID jid)
     if(!test(_shutdowned))
     {
         auto jobFoundOn = [&jid](const JobsContainer& jobs) -> bool {
-            auto lock(jobs.pa_lock());
+            auto lock = jobs.a_lock();
             for(auto& job : *jobs)
             {
-                if(job->id == jid)
+                if(job->id() == jid)
                 {
                     return true;
                 }
@@ -178,20 +229,23 @@ bool TimerManagerImpl::isRunning(TimerManagerImpl::JobID jid)
 
 void TimerManagerImpl::setCyclic(TimerManagerImpl::JobID jid, bool cyclic)
 {
-    auto setCyclic = [](JobsContainer& jobs, JobID jid, bool value) -> bool{
-        auto lock(jobs.pa_lock());
-        auto itJob = findJob__(jobs, jid);
-        if(itJob != jobs->end())
-        {
-            (*itJob)->isCyclic = value;
-        }
-        return itJob != jobs->end();
-    };
+	if (!test(_shutdowned))
+	{
+		auto setCyclic = [](JobsContainer& jobs, JobID jid, bool value) -> bool {
+			auto lock = jobs.a_lock();
+			auto itJob = findJob__(jobs, jid);
+			if (itJob != jobs->end())
+			{
+				(*itJob)->setCyclic(value);
+			}
+			return itJob != jobs->end();
+		};
 
-    if(!setCyclic(_pendingJobs, jid, cyclic))
-    {
-        setCyclic(_runningJobs, jid, cyclic);
-    }
+		if (!setCyclic(_pendingJobs, jid, cyclic))
+		{
+			setCyclic(_runningJobs, jid, cyclic);
+		}
+	}
 }
 
 void TimerManagerImpl::stop()
@@ -241,11 +295,11 @@ void TimerManagerImpl::storePendingJob(TimerManagerImpl::JobDescRef job) noexcep
 
 TimerManagerImpl::JobDescRef TimerManagerImpl::removeAndInvalidateJob(TimerManagerImpl::JobsContainer& jobs, TimerManagerImpl::JobID jid)
 {
-    auto lock(jobs.pa_lock());
+    auto lock = jobs.a_lock();
     JobDescRef job;
     for(auto& j : *jobs)
     {
-        if(j->id == jid)
+        if(j->id() == jid)
         {
             job = std::move(j);
             job->invalidate();
@@ -263,7 +317,7 @@ TimerManagerImpl::JobsIterator TimerManagerImpl::findJob__(TimerManagerImpl::Job
 {
     for(auto itJob = jobs->begin(); itJob != jobs->end(); ++itJob)
     {
-        if((*itJob)->id == jid)
+        if((*itJob)->id() == jid)
         {
             return itJob;
         }
@@ -276,7 +330,7 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
     bool executed = false;
     if (job->expired())
     {
-        LOG("Timer " << job->id << " expired!");
+        LOG("Timer " << job->id() << " expired!");
         try
         {
             if(job->valid()) // for case of job has been stopped when waiting to be expired
@@ -374,7 +428,7 @@ TimerManagerImpl::JobDescRef TimerManagerImpl::getShorttestDurationJob__(const J
 
 void TimerManagerImpl::doJob__(TimerManagerImpl::JobDescRef job)
 {
-    job->callback(job->id, job->isCyclic);
+    job->callback()(job->id(), job->isCyclic());
 }
 
 TimerManagerImpl::JobDescRef TimerManagerImpl::scheduleShorttestJob__() noexcept
@@ -384,7 +438,7 @@ TimerManagerImpl::JobDescRef TimerManagerImpl::scheduleShorttestJob__() noexcept
     {
         std::pop_heap(_runningJobs->begin(), _runningJobs->end(), JobComp());
 
-        if(_runningJobs->back()->isCyclic)
+        if(_runningJobs->back()->isCyclic())
         {
             _runningJobs->back()->reset();
             job = _runningJobs->back();
@@ -425,7 +479,7 @@ void TimerManagerImpl::addOrReplace(
     if(newJob)
     {
         auto lock = autolock(jobs, sync);
-        auto itJob = findJob__(jobs, newJob->id);
+        auto itJob = findJob__(jobs, newJob->id());
         if(itJob != jobs->end())
         {
             *itJob = std::move(newJob);

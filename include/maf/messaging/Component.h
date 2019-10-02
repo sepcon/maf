@@ -56,12 +56,14 @@ public:
     ~Component();
 
 private:
+    static void setTLRef(ComponentRef ref);
     static TimerMgrPtr getTimerManager();
     std::string _name;
     ComponentImpl* _pImpl = nullptr;
 
     friend class Timer;
     friend struct ComponentImpl;
+    friend class CompThread;
 };
 
 
@@ -95,6 +97,42 @@ void Component::postMessage(Args&&... args)
     postMessage(createMessage<Msg>(std::forward<Args>(args)...));
 }
 
+#define mc_tlcomp_invoke(method, ...)          \
+if(auto comp = Component::getActiveSharedPtr())\
+{                                              \
+    comp->method(__VA_ARGS__);                 \
+    return true;                               \
+}                                              \
+else                                           \
+{                                              \
+    return false;                              \
+}
+
+template<class SignalMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SignalMsg>, bool> = true>
+bool tlcompOnSignal(SignalMsgHandlerFunc handler)
+{
+    mc_tlcomp_invoke(onSignal<SignalMsg>, std::move(handler))
+}
+
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool> = true>
+bool tlcompOnMessage(MessageHandlerFunc<SpecificMsg> f)
+{
+    mc_tlcomp_invoke(onMessage<SpecificMsg>, std::move(f))
+}
+
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool> = true>
+bool tlcompOnMessage(MessageHandler *handler)
+{
+    mc_tlcomp_invoke(onMessage<SpecificMsg>, handler)
+}
+
+template<class Msg, typename ...Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+bool tlcompPostMessage(Args&&... args)
+{
+    mc_tlcomp_invoke(postMessage<Msg>, std::forward<Args>(args)...)
+}
+
+#undef mc_tlcomp_invoke
 
 /// Helper function object for comparing weak_ptr of Component
 struct comprefless

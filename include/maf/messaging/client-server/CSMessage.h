@@ -82,7 +82,7 @@ std::shared_ptr<CSMessageDerived> createCSMessage (
     return std::make_shared<CSMessageDerived>(std::move(sID), std::move(opID), std::move(opCode), std::move(reqID), std::move(msgContent), std::move(sourceAddr));
 }
 
-#ifdef ENABLE_IPC_DEBUG
+#ifdef ENABLE_MAF_DEBUG_LOG
 template <class CSMsg, std::enable_if_t<std::is_base_of_v<CSMessage, CSMsg>, bool> = true>
 std::ostream& operator<<(std::ostream& os, const std::shared_ptr<CSMsg>& msg) {
     if(msg)

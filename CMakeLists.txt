@@ -5,10 +5,13 @@ project(maf LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
+
 add_library(maf
 
     # Source files
     src/maf/messaging/Component.cpp
+    src/maf/messaging/CompThread.cpp
     src/maf/messaging/MessageBase.cpp
     src/maf/messaging/Timer.cpp
     src/maf/messaging/client-server/Address.cpp
@@ -46,6 +49,7 @@ add_library(maf
     include/maf/messaging/BasicMessages.h
     include/maf/messaging/Component.h
     include/maf/messaging/ExtensibleComponent.h
+    include/maf/messaging/CompThread.h
     include/maf/messaging/MessageBase.h
     include/maf/messaging/MessageQueue.h
     include/maf/messaging/MsgDefHelper.mc.h
@@ -139,5 +143,8 @@ add_library(maf
     src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiverBase.h
     src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.h
     src/maf/messaging/client-server/ipc/platforms/windows/PipeShared.h)
+
+add_executable(maftest src/maf/main.cpp)
+target_link_libraries(maftest maf pthread)
 
 include_directories(include/)

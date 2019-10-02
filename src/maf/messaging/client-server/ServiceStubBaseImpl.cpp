@@ -1,5 +1,6 @@
-#include <maf/messaging/client-server/ServiceStubHandlerInterface.h>
 #include "ServiceStubBaseImpl.h"
+#include <maf/messaging/client-server/ServiceStubHandlerInterface.h>
+#include <vector>
 
 
 namespace maf {
