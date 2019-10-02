@@ -7,7 +7,7 @@
 /**
  * @brief Use below MACROS to define a serializable object like this:
  *
- * mcsb_class(TheObject)
+ * mc_tpl_class(TheObject)
  *     mc_tpl_properties
  *     (
  *          (std::string, Name),
@@ -35,7 +35,7 @@
  *  std::vector<std::string> vec;
  *  dsr >> object >> vec; //The order must be kept same as serialization
  *
- *  std::cout << object.getName() << object.getType() << object.getAction();
+ *  std::cout << object.name() << object.type() << object.action();
  *  printVector(vec) ...;
  *
  * */

@@ -18,7 +18,7 @@ QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
         auto insertResult = _listComponents->insert(compref);
         if(insertResult.second) // means that insertion took place
         {
-            if(_client->getServiceStatus(serviceID()) == Availability::Available)
+            if(getClient()->getServiceStatus(serviceID()) == Availability::Available)
             {
                 updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
             }
