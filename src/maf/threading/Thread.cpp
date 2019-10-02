@@ -1,12 +1,24 @@
 #include <maf/threading/Thread.h>
 #include <maf/utils/debugging/Debug.h>
+#include <signal.h>
+#include <cassert>
 
 namespace maf {
 namespace threading {
 
-thread_local Thread* Thread::_this = nullptr;
+thread_local Thread::OnSignalCallback Thread::_tlSigHandlerCallback = nullptr;
 
-Thread::Thread(Thread &&th) : _thread(std::move(th._thread)){}
+Thread::Thread(Thread &&th)
+{
+    assert(!th.joinable() && "Not allow moving thread that already running!");
+    takeFrom(std::move(th));
+}
+
+Thread &Thread::operator=(Thread &&th)
+{
+    takeFrom(std::move(th));
+    return *this;
+}
 
 Thread& Thread::start()
 {
@@ -51,17 +63,21 @@ void Thread::regSignals()
 
 void Thread::onSystemSignal(int sig)
 {
-    if(_this)
+    if(_tlSigHandlerCallback)
     {
-        if(_this->_sigHandlerCallback)
-        {
-            _this->_sigHandlerCallback(sig);
-        }
-        else
-        {
-            mafErr("There's no signal handler for thread " << std::this_thread::get_id() << " when signal " << sig << " comes");
-        }
+        _tlSigHandlerCallback(sig);
     }
+    else
+    {
+        mafErr("There's no signal handler for thread " << std::this_thread::get_id() << " when signal " << sig << " comes");
+    }
+}
+
+void Thread::takeFrom(Thread &&th)
+{
+    _thread = std::move(th._thread);
+    _callable = std::move(th._callable);
+    _sigHandlerCallback = std::move(th._sigHandlerCallback);
 }
 
 }

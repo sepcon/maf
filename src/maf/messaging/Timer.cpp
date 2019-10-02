@@ -11,7 +11,7 @@ using threading::TimerManager;
 namespace messaging {
 
 
-Timer::Timer() : _id(TimerManager::invalidJobID()), _cyclic(false)
+Timer::Timer(bool cyclic) : _id(TimerManager::invalidJobID()), _cyclic(cyclic)
 {
 }
 

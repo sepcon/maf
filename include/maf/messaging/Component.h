@@ -56,12 +56,14 @@ public:
     ~Component();
 
 private:
+    static void setTLRef(ComponentRef ref);
     static TimerMgrPtr getTimerManager();
     std::string _name;
     ComponentImpl* _pImpl = nullptr;
 
     friend class Timer;
     friend struct ComponentImpl;
+    friend class CompThread;
 };
 
 

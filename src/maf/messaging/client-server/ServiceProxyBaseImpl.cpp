@@ -215,7 +215,7 @@ void ServiceProxyBaseImpl::sendStatusChangeUnregister(RegID regID)
 
 void ServiceProxyBaseImpl::sendStatusChangeUnregisterAll(OpID propertyID)
 {
-    auto lock(_registerEntriesMap.pa_lock());
+    auto lock = _registerEntriesMap.a_lock();
     _registerEntriesMap->erase(propertyID);
 }
 
@@ -320,13 +320,13 @@ void ServiceProxyBaseImpl::abortAllSyncRequest()
 ///
 void ServiceProxyBaseImpl::clearAllAsyncRequests()
 {
-    auto lock(_requestEntriesMap.pa_lock());
+    auto lock = _requestEntriesMap.a_lock();
     _requestEntriesMap->clear();
 }
 
 void ServiceProxyBaseImpl::clearAllRegisterEntries()
 {
-    auto lock(_registerEntriesMap.pa_lock());
+    auto lock = _registerEntriesMap.a_lock();
     _registerEntriesMap->clear();
 }
 

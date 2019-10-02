@@ -15,7 +15,7 @@ class Timer : public pattern::Unasignable
 public:
     typedef std::function<void()> TimeOutCallback;
     typedef long long Duration;
-    Timer();
+    Timer(bool cyclic = false);
     ~Timer();
     void start(Duration milliseconds, TimeOutCallback callback);
     void restart();

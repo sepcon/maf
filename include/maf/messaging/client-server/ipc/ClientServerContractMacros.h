@@ -1,8 +1,8 @@
 #ifndef HEADERS_FRAMEWORK_MESSAGING_IPC_INTERFACES_CLIENTSERVERCONTRACTMACROS_H
 #define HEADERS_FRAMEWORK_MESSAGING_IPC_INTERFACES_CLIENTSERVERCONTRACTMACROS_H
 
-#   include "maf/utils/serialization/SerializableObject.h"
-#   include "maf/messaging/ipc/ClientServerContractMacros.h"
+#   include <maf/utils/serialization/TupleLikeObject.mc.h>
+#   include <maf/messaging/client-server/ipc/ClientServerContractMacros.h>
 
 #endif
 

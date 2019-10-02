@@ -1,11 +1,8 @@
 #ifndef HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 #define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 
-#undef ENABLE_IPC_DEBUG
-#define ENABLE_IPC_DEBUG 1
 
-
-#ifdef ENABLE_IPC_DEBUG
+#ifdef ENABLE_MAF_DEBUG_LOG
 #    if defined(__clang__) || defined (__GNUC__)
 #        define maf_FUNC __FUNCTION__
 #    elif defined(_MSC_VER)
@@ -14,7 +11,7 @@
 #        define maf_FUNC ""
 #    endif
 
-#    if ENABLE_IPC_DEBUG == 2
+#    if ENABLE_MAF_DEBUG_LOG == 2
 #        define maf_CODE_INFO() "\t\t: " << __FILE__ << ":" << __LINE__ << ":("<< maf_FUNC << ")" << ":"
 #    else
 #        define maf_CODE_INFO() ""

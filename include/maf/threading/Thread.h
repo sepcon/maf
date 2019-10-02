@@ -1,26 +1,55 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include <maf/patterns/Patterns.h>
 #include <thread>
-#include <signal.h>
 #include <functional>
 
 namespace maf {
 namespace threading {
 
-class Thread final
+class Thread : public pattern::UnCopyable
 {
+protected:
+    template<class Tuple>
+    struct Invoker
+    {
+        Tuple _callableAndParams;
+        template<class... Args>
+        Invoker(Args&&... args) : _callableAndParams {std::forward<Args>(args)...}
+        {
+        }
+        template<class Tuple, size_t... index>
+        void invoke_(Tuple& t, std::index_sequence<index...>)
+        {
+            std::invoke(std::move(std::get<index>(t))...);
+        }
+
+        void invoke()
+        {
+            invoke_(_callableAndParams, std::make_index_sequence<std::tuple_size_v<Tuple>>());
+        }
+    };
+
+    template<typename Callable, typename... Args>
+    static Invoker<std::tuple<std::decay_t<Callable>, std::decay_t<Args>...>> makeInvoker(Callable&& f, Args&&... args)
+    {
+        return Invoker<std::tuple<std::decay_t<Callable>, std::decay_t<Args>...>> {std::forward<Callable>(f), std::forward<Args>(args)...};
+    }
+
 public:
     using OnSignalCallback = std::function<void(int)>;
     Thread() = default;
     Thread(Thread&& th);
+    Thread& operator=(Thread&& th);
     template<typename Callable, typename... Args>
     Thread(Callable&& f, Args&&... args)
     {
-        _callable = [&f, &args..., this]{
-            Thread::_this = this;
+        auto invoker = makeInvoker(std::forward<Callable>(f), std::forward<Args>(args)...);
+        _callable = [invoker = std::move(invoker), sigHandler = std::move(_sigHandlerCallback)] () mutable {
+            _tlSigHandlerCallback = std::move(sigHandler);
             regSignals();
-            f(std::forward<Args>(args)...);
+            invoker.invoke();
         };
     }
 
@@ -29,18 +58,16 @@ public:
     void detach();
     bool joinable();
     void setSignalHandler(OnSignalCallback sigHandlerCallback);
-private:
-    Thread(const Thread&) = delete;
-    Thread& operator=(const Thread&) = delete;
-    Thread& operator=(Thread&& th) = delete;
+protected:
     static void regSignals();
     static void onSystemSignal(int sig);
+    void takeFrom(Thread&& th);
 
-    static thread_local Thread* _this;
+    static thread_local OnSignalCallback _tlSigHandlerCallback;
     std::thread _thread;
-	std::function<void()> _callable;
-    std::function<void(int)> _sigHandlerCallback;
+    std::function<void()> _callable;
+    OnSignalCallback _sigHandlerCallback;
 };
-};
+}
 }
 #endif // THREAD_H

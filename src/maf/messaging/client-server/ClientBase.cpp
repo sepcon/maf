@@ -22,13 +22,13 @@ bool ClientBase::unregisterServiceRequester(ServiceID sid)
 
 void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
-    auto lockSSMap(_serviceStatusMap.pa_lock());
+    auto lockSSMap = _serviceStatusMap.a_lock();
     for(auto& service : *_serviceStatusMap)
     {
         service.second = Availability::Unavailable;
     }
 
-    auto lockRequesters(_requesters.pa_lock());
+    auto lockRequesters = _requesters.a_lock();
     for(auto& requester : *_requesters)
     {
         requester->onServerStatusChanged(oldStatus, newStatus);
@@ -84,7 +84,7 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 
 void ClientBase::storeServiceStatus(ServiceID sid, Availability status)
 {
-    auto lock(_serviceStatusMap.pa_lock());
+    auto lock = _serviceStatusMap.a_lock();
     (*_serviceStatusMap)[sid] = status;
 }
 
@@ -95,7 +95,7 @@ IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
 
 Availability ClientBase::getServiceStatus(ServiceID sid)
 {
-    auto lock(_serviceStatusMap.pa_lock());
+    auto lock = _serviceStatusMap.a_lock();
     auto itStatus = _serviceStatusMap->find(sid);
     if(itStatus != _serviceStatusMap->end())
     {

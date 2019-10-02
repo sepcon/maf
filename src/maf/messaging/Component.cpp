@@ -187,7 +187,6 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
 
 Component::Component() : _pImpl{ new ComponentImpl } {}
 Component::~Component() { if(_pImpl) delete _pImpl; }
-
 std::shared_ptr<Component> Component::create() { return std::shared_ptr<Component>{ new Component};}
 const std::string &Component::name() const { return _name; }
 void Component::setName(std::string name) { _name = std::move(name); }
@@ -198,7 +197,7 @@ void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler
 void Component::registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _pImpl->registerMessageHandler(msgType, std::move(onMessageFunc)); }
 ComponentRef Component::getActiveWeakPtr() { return _tlwpInstance; }
 std::shared_ptr<Component> Component::getActiveSharedPtr(){ return _tlwpInstance.lock(); }
-
+void Component::setTLRef(ComponentRef ref) { if(!getActiveSharedPtr()) _tlwpInstance = std::move(ref);}
 TimerMgrPtr Component::getTimerManager()
 {
     auto spInstance = _tlwpInstance.lock();
