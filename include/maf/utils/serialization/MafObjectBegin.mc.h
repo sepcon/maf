@@ -1,21 +1,15 @@
-#pragma once
-
-#include "Serializer.h"
-#include "DumpHelper.h"
-#include "Tplkdef.mc.h"
-
 /**
  * @brief Use below MACROS to define a serializable object like this:
  *
- * mc_tpl_class(TheObject)
- *     mc_tpl_properties
+ * OBJECT(TheObject) // or OBJECT(TheObject, BaseObject)
+ *     PROPERTIES
  *     (
  *          (std::string, Name),
  *          (int, Type),
  *          (std::string, Action),
  *          (Type, Name) //( <Type, Name> must be enclosed by parentheses)
  *     )
- * mc_tpl_class_end(TheObject)
+ * ENDOBJECT(TheObject)
  *
  * After that, you can use it for serialization like this:
  *
@@ -40,14 +34,33 @@
  *
  * */
 
+#ifndef MAFOBJECTBEGIN_MC_H
+#   define MAFOBJECTBEGIN_MC_H
+#   include "Serializer.h"
+#   include "DumpHelper.h"
+#endif // MAFOBJECTBEGIN_MC_H
 
-#define mc_tpl_class(ClassName) mc_tuple_like_object_(ClassName)
+// The rest of this file must be putted outside include guard
+// Make it to be use with multiple files
 
-#define mc_tpl_class_end(ClassName) mc_tuple_like_object_end_(ClassName)
+#include "Internal/TplkdefBegin.mc.h"
 
-#define mc_tpl_class_hasbase(ClassName, BaseClassName) mc_tuple_like_object_has_base_(ClassName, BaseClassName)
+#	ifdef OBJECT
+#		pragma push_macro("OBJECT")
+#		define maf_restore_macro_OBJECT
+#	endif
+#	ifdef PROPERTIES
+#		pragma push_macro("PROPERTIES")
+#		define maf_restore_macro_PROPERTIES
+#	endif
+#	ifdef ENDOBJECT
+#		pragma push_macro("ENDOBJECT")
+#		define maf_restore_macro_END_OBJECT
+#	endif
 
-#define mc_tpl_class_hasbase_end(ClassName) mc_tuple_like_object_has_base_end_(ClassName)
+#define OBJECT mc_maf_tuple_like_object
 
-#define mc_tpl_properties(...) mc_properties_map_(__VA_ARGS__)
+#define ENDOBJECT mc_maf_tuple_like_object_end
+
+#define PROPERTIES mc_maf_properties_map
 

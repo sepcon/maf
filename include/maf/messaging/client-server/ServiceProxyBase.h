@@ -43,6 +43,15 @@ public:
     void sendAbortSyncRequest(const RegID& regID) override;
 
 protected:
+    RegID sendRequest(OpID operationID,
+                      const CSMsgContentPtr& msgContent = {},
+                      CSMessageHandlerCallback callback = {});
+    CSMessagePtr sendRequestSync
+        (
+            OpID operationID,
+            const CSMsgContentPtr& msgContent = {},
+            unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
+            );
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;

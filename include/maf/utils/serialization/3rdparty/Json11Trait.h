@@ -13,7 +13,6 @@
  *  #include "Json11Trait.h"
  */
 
-#ifdef MAF_USING_JSON11
 #define MAF_ENABLE_JSON
 
 #include <maf/utils/serialization/BasicTypes.h>
@@ -66,7 +65,7 @@ struct J11TraitImpl
         }
 
         template<typename T, std::enable_if_t<is_tuple_like_v<T>, bool> = true>
-        static T exist(const Json& j)
+        static bool exist(const Json& j)
         {
             return j.is_object();
         }
@@ -211,4 +210,3 @@ struct JsonTrait<json11::Json> : public JsonTraitBase<json11::Json>
 
 }
 }
-#endif

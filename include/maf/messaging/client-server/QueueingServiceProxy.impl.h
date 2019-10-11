@@ -193,11 +193,11 @@ QueueingServiceProxy<MessageTrait>::sendRequestSync(const CSMsgContentPtr &outgo
     }
 }
 
+
 template<class MessageTrait> template<class IncomingMsgContent>
-RegID
-QueueingServiceProxy<MessageTrait>::sendStatusChangeRegister(OpID propertyID, PayloadProcessCallback<IncomingMsgContent> callback)
+RegID QueueingServiceProxy<MessageTrait>::sendStatusChangeRegister(PayloadProcessCallback<IncomingMsgContent> callback)
 {
-    return ServiceProxyBase::sendStatusChangeRegister(propertyID, createMsgHandlerAsyncCallback(std::move(callback)));
+    return ServiceProxyBase::sendStatusChangeRegister(MessageTrait::template getOperationID<IncomingMsgContent>(), createMsgHandlerAsyncCallback(std::move(callback)));
 }
 
 template<class MessageTrait> template<class IncomingMsgContent>

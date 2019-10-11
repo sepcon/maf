@@ -11,7 +11,7 @@ namespace messaging {
 
 
 template<class MessageTrait>
-struct ClientRequestMessage : public ExternalMessage
+struct ClientRequestMessage : public MessageBase
 {
     using MyRequestKeeper = RequestKeeper<MessageTrait>;
     using MyRequestKeeperPtr = std::shared_ptr<MyRequestKeeper>;

@@ -101,10 +101,7 @@ void CSMessage::take(CSMessage &&other)
     }
 }
 
-CSMessageContentBase::~CSMessageContentBase()
-{
-
-}
+CSMessageContentBase::~CSMessageContentBase() = default;
 
 void CSMessageContentBase::makesureTransferable()
 {

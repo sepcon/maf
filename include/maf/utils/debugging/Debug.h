@@ -1,7 +1,7 @@
 #ifndef HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 #define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 
-#define ENABLE_MAF_DEBUG_LOG 1
+//#define ENABLE_MAF_DEBUG_LOG 1
 #ifdef ENABLE_MAF_DEBUG_LOG
 #    if defined(__clang__) || defined (__GNUC__)
 #        define maf_FUNC __FUNCTION__
