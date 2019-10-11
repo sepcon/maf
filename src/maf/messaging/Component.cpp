@@ -30,7 +30,6 @@ public:
     TimerMgrPtr getTimerManager();
     void startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit);
 private:
-    ComponentRef _compref;
     std::thread _workerThread;
     MessageQueue _msgQueue;
     MsgHandlerMap _msgHandlers;
@@ -131,10 +130,10 @@ TimerMgrPtr Component::ComponentImpl::getTimerManager()
 
 void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit)
 {
-    _compref = _tlwpInstance = compref;
+    _tlwpInstance = std::move(compref);
     if(onEntry)
     {
-        if(auto component = _compref.lock()) onEntry();
+        if(auto component = _tlwpInstance.lock(); component) onEntry();
     }
 
     MessageBasePtr msg;
@@ -181,13 +180,12 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
 
     if(onExit)
     {
-        if(auto component = _compref.lock()) onExit();
+        if(auto component = _tlwpInstance.lock()) onExit();
     }
 }
 
 Component::Component() : _pImpl{ new ComponentImpl } {}
 Component::~Component() { if(_pImpl) delete _pImpl; }
-
 std::shared_ptr<Component> Component::create() { return std::shared_ptr<Component>{ new Component};}
 const std::string &Component::name() const { return _name; }
 void Component::setName(std::string name) { _name = std::move(name); }
@@ -198,7 +196,7 @@ void Component::registerMessageHandler(MessageBase::Type msgType, MessageHandler
 void Component::registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _pImpl->registerMessageHandler(msgType, std::move(onMessageFunc)); }
 ComponentRef Component::getActiveWeakPtr() { return _tlwpInstance; }
 std::shared_ptr<Component> Component::getActiveSharedPtr(){ return _tlwpInstance.lock(); }
-
+void Component::setTLRef(ComponentRef ref) { if(!getActiveSharedPtr()) _tlwpInstance = std::move(ref);}
 TimerMgrPtr Component::getTimerManager()
 {
     auto spInstance = _tlwpInstance.lock();

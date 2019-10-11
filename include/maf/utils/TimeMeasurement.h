@@ -9,6 +9,7 @@ namespace util {
 class TimeMeasurement
 {
 public:
+	TimeMeasurement() = default;
     TimeMeasurement(std::function<void(long long)> onReportCallback) :
         _onReportCallback(std::move(onReportCallback))
     {

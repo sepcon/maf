@@ -14,11 +14,11 @@ QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
 {
     if(auto comp = compref.lock())
     {
-        auto lockListComps(_listComponents.pa_lock()); //Lock must be invoked here to protect both
+        auto lockListComps = _listComponents.a_lock(); //Lock must be invoked here to protect both
         auto insertResult = _listComponents->insert(compref);
         if(insertResult.second) // means that insertion took place
         {
-            if(_client->getServiceStatus(serviceID()) == Availability::Available)
+            if(getClient()->getServiceStatus(serviceID()) == Availability::Available)
             {
                 updateServiceStatusToComponent(compref, Availability::Unavailable, Availability::Available);
             }
@@ -68,7 +68,7 @@ QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availa
 {
     assert(sid == serviceID());
     mafInfo("Service id " << serviceID() << " has changed Status: " << static_cast<int>(oldStatus) << " - " << static_cast<int>(newStatus));
-    auto lock(_listComponents.pa_lock());
+    auto lock = _listComponents.a_lock();
     for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
     {
         if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))

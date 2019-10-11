@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ServiceRequesterInterface.h"
-#include "RegisterDataStructure.h"
+#include "RegID.h"
 
 namespace maf {
 namespace messaging {

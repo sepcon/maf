@@ -1,14 +1,16 @@
 #pragma once
 
-#include "Connection.h"
-#include "CSStatus.h"
-#include "ServiceProxyInterface.h"
-#include "CSDefines.h"
+#include <maf/messaging/client-server/Connection.h>
+#include <maf/messaging/client-server/CSStatus.h>
+#include <maf/messaging/client-server/ServiceProxyInterface.h>
+#include <maf/messaging/client-server/CSDefines.h>
 
 namespace maf {
 namespace messaging {
 
 class ClientInterface;
+class ServiceProxyBaseImpl;
+
 class ServiceProxyBase : public ServiceProxyInterface
 {
 public:
@@ -24,8 +26,6 @@ public:
             const CSMsgContentPtr& msgContent,
             CSMessageHandlerCallback callback
             ) override;
-    void sendAbortRequest(const RegID& regID) override;
-    void sendAbortSyncRequest(const RegID& regID) override;
     bool sendRequestSync
     (
             const CSMsgContentPtr& msgContent,
@@ -39,61 +39,16 @@ public:
             unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
             ) override;
 
-protected:
-    //Helper functions
-    RegID sendRequest(OpID operationID,
-                      const CSMsgContentPtr& msgContent = {},
-                      CSMessageHandlerCallback callback = {});
-    CSMessagePtr sendRequestSync
-    (
-            OpID operationID,
-            const CSMsgContentPtr& msgContent = {},
-            unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
-            );
+    void sendAbortRequest(const RegID& regID) override;
+    void sendAbortSyncRequest(const RegID& regID) override;
 
+protected:
+    bool onIncomingMessage(const CSMessagePtr& csMsg) override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
-    bool onIncomingMessage(const CSMessagePtr& csMsg) override;
+    ClientInterface* getClient();
 
-    CSMessagePtr createCSMessage(OpID opID, OpCode opCode, const CSMsgContentPtr& msgContent = nullptr);
-    void onPropChangeUpdate(const CSMessagePtr& msg);
-    void onRequestResult(const CSMessagePtr& msg, bool done = true);
-    void onRequestSyncResult(const CSMessagePtr& msg);
-    void abortAllSyncRequest();
-    void clearAllAsyncRequests();
-    void clearAllRegisterEntries();
-    bool sendMessageToServer(const CSMessagePtr& outgoingMsg);
-    std::future<CSMessagePtr> storeSyncRegEntry(const CSMessagePtr& outgoingMsg, RegID &regID);
-    std::shared_ptr<std::promise<CSMessagePtr >> pickOutSyncRegEntry(const RegID &regID);
-
-    RegID storeAndSendRequestToServer
-        (
-            RegEntriesMap& regEntriesMap,
-            const CSMessagePtr& outgoingMsg,
-            CSMessageHandlerCallback callback,
-            bool forceSend = true
-            );
-    size_t storeRegEntry
-        (
-            RegEntriesMap& regInfoEntries,
-            OpID propertyID,
-            CSMessageHandlerCallback callback,
-            RegID &regID
-            );
-    size_t removeRegEntry
-        (
-            RegEntriesMap& regInfoEntries,
-            RegID &regID
-            );
-
-protected:
-    ClientInterface* _client;
-    RegEntriesMap _registerEntriesMap;
-    RegEntriesMap _requestEntriesMap;
-    SyncRegEntriesMap _syncRequestEntriesMap;
-    util::IDManager _idMgr;
-    std::thread _serviceMonitoringThread;
-    std::atomic_bool _stopFlag;
+    ServiceProxyBaseImpl* _pi = nullptr;
 };
 
 }// messaging

@@ -21,7 +21,7 @@ template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageRece
 bool addIfNew(SMList<Interester>& interesters, SMElem<Interester> interester)
 {
     bool added = false;
-    auto lock(interesters.pa_lock());
+    auto lock = interesters.a_lock();
     auto it = std::find(interesters->begin(), interesters->end(), interester);
     if(it == interesters->end())
     {
@@ -40,7 +40,7 @@ bool remove(SMList<Interester>& interesters, SMElem<Interester> interester)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool removeByID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock(interesters.pa_lock());
+    auto lock = interesters.a_lock();
     for(auto it = interesters->begin(); it != interesters->end(); ++it)
     {
         if((*it)->serviceID() == sid)
@@ -55,7 +55,7 @@ bool removeByID(SMList<Interester>& interesters, ServiceID sid)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 SMElem<Interester> findByID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock(interesters.pa_lock());
+    auto lock = interesters.a_lock();
     auto it = std::find_if(
         interesters->begin(), interesters->end(),
         [&sid](const auto& interester) { return (interester->serviceID() == sid); }
@@ -73,7 +73,7 @@ SMElem<Interester> findByID(SMList<Interester>& interesters, ServiceID sid)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool hasItemWithID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock(interesters.pa_lock());
+    auto lock = interesters.a_lock();
     auto it = std::find_if(
         interesters->begin(), interesters->end(),
         [&sid](const auto& interester) { return (interester->serviceID() == sid); }

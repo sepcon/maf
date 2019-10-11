@@ -1,6 +1,6 @@
 #include "maf/utils/debugging/Debug.h"
 #include "maf/messaging/client-server/ipc/IPCMessageTrait.h"
-#include "maf/utils/serialization/SerializableObject.h"
+#include "maf/utils/serialization/TupleLikeObject.mc.h"
 #include "maf/messaging/client-server/ipc/LocalIPCClient.h"
 #include "maf/messaging/client-server/ipc/LocalIPCServer.h"
 #include "maf/messaging/client-server/ipc/LocalIPCServiceProxy.h"
@@ -26,7 +26,7 @@ result_object_e(WeatherStatus)
 request_object_s(WeatherStatus)
 properties
 (
-        (std::string, client_name, "This is client"),
+        (std::string, client_name, "This s client"),
         (uint32_t, command, 0)
         )
 request_object_e(WeatherStatus)
@@ -55,25 +55,26 @@ struct ClientComponent
 
     void startTest()
     {
-        _component = std::make_shared<Component>();
-//        _component->setName("ServiceClient");
+        _component = Component::create();
         _component->onMessage<ServiceStatusMsg>([this](const std::shared_ptr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available)
             {
                 auto request = std::make_shared<WeatherStatusRequest>();
                 _proxy->template sendStatusChangeRegister<WeatherStatusResult>(CSC_OpID_WeatherStatus, [](const std::shared_ptr<WeatherStatusResult>& result){
-                    mafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: " << (*result)->get_the_status());
+                    mafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: " << (*result)->the_status());
                 });
 
                 (*request)->set_command(1);
                 _proxy->template sendRequest<WeatherStatusResult>(request, [](const std::shared_ptr<WeatherStatusResult>& result) {
-                    auto size = result->props().get_shared_list_of_places() ? result->props().get_shared_list_of_places()->size() : 0;
-                    mafMsg("Received result from server with size of listPlaces ----> = " << size);
-                    mafMsg((*result)->get_the_status());
+                    static thread_local int updateCount = 0;
+                    auto size = result->props().shared_list_of_places() ? result->props().shared_list_of_places()->size() : 0;
+                    mafMsg("Received result [" << ++updateCount << "] from server with size of listPlaces ----> = " << size);
+                    mafMsg((*result)->the_status());
                 });
             }
         });
-        _component->start([this] {
+
+        _component->run(LaunchMode::Async, [this] {
             _proxy = Proxy::createProxy(ServiceID);
             mafMsg("proxy for service 1 ready ! Component  = " << _component->name());
         });
@@ -95,7 +96,8 @@ class ServerComponent
 public:
     void startTest(bool detached = true)
     {
-        _component = std::make_shared<Component>(detached);
+        _serverTimer.setCyclic(true);
+        _component = Component::create();
         _component->onMessage<RequestMessage>([this](const std::shared_ptr<RequestMessage>& msg) {
             auto requestKeeper = msg->getRequestKeeper();
             switch(requestKeeper->getOperationCode())
@@ -110,28 +112,41 @@ public:
                 break;
             case OpCode::Request:
             {
-                static thread_local int requestCount = 0;
-                ++requestCount;
-                _serverTimer.start(5, [this] {
-                    //				assert(requestCount == (NumberOfRequests + 1) * NClient);
-                    mafMsg("Component id: " << std::this_thread::get_id() << " Timer expired , total request: " << requestCount);
-                    _component->shutdown();
+                _serverTimer.start(5, [this, requestKeeper] {
+                    static thread_local int responseCount = 0;
+                    static thread_local long long totalupdateTime = 0;
+
+                    mafMsg("Component id: " << std::this_thread::get_id() << " Timer expired , total request: " << ++responseCount);
+                    auto res = std::make_shared<WeatherStatusResult>();
+                    res->props().set_shared_list_of_places(listOfPlaces);
+
+                    {
+                        maf::util::TimeMeasurement updateMeasure{
+                            [](long long elapsed) {
+                                totalupdateTime += elapsed;
+                            }
+                        };
+
+                        requestKeeper->update(res);
+                    }
+                    if(responseCount >= 100)
+                    {
+                        mafMsg("Send final update to client");
+                        mafMsg("Avarage time to send an update " << " = " << totalupdateTime / responseCount << "ms") ;
+                        requestKeeper->respond(res);
+                        _serverTimer.stop();
+                        _component->stop();
+                    }
                 });
                 auto req = msg->template getRequestContent<WeatherStatusRequest>();
                 if(req)
                 {
-                    mafMsg("Receiver request from client: " << (*req)->get_client_name());
+                    mafMsg("Receiver request from client: " << (*req)->client_name());
                 }
                 else
                 {
                     mafMsg("Get request with no content, operationID=  " << msg->getRequestKeeper()->getOperationID());
                 }
-
-                auto res = std::make_shared<WeatherStatusResult>();
-                res->props().set_shared_list_of_places(listOfPlaces);
-                for(int i = 0; i < 100; ++i)
-                {requestKeeper->update(res);}
-                requestKeeper->respond(res);
             }
                 break;
 
@@ -142,8 +157,9 @@ public:
 
         });
 
-        //std::shared_ptr<Stub> stub;
-        _component->start([this] {
+
+        _component->run(detached ? LaunchMode::Async : LaunchMode::AttachToCurrentThread, [this] {
+            mafMsg("Component is starting");
             _stub = Stub::createStub(ServiceID);
             mafMsg("Stub ready as well");
         });
@@ -156,68 +172,107 @@ public:
 };
 
 
-template<class Proxy, class Stub, class RequestMessage, int NumberOfRequests = 10, int NClient = 4>
+template<class Proxy, class Stub, class RequestMessage, int NClient = 4>
 void test()
 {
-    ClientComponent<Proxy, 0> clients[NClient];
-    for (auto i = 0; i < NClient / 4; ++i)
-    {
-        clients[i].startTest();
-    }
-    ClientComponent<Proxy, 1> clients1[NClient];
-    for (auto i = 0; i < NClient / 4; ++i)
-    {
-        clients1[i].startTest();
-    }
-
-    ClientComponent<Proxy, 2> clients2[NClient];
-    for (auto i = 0; i < NClient / 4; ++i)
-    {
-        clients2[i].startTest();
-    }
-
-    ClientComponent<Proxy, 3> clients3[NClient];
-    for (auto i = 0; i < NClient / 4; ++i)
-    {
-        clients3[i].startTest();
-    }
-
+    ClientComponent<Proxy, 0> clients;
+    clients.startTest();
     ServerComponent<Stub, RequestMessage, 0> server;
-    server.startTest();
+    server.startTest(false);
 
-    ServerComponent<Stub, RequestMessage, 1> server1;
-    server1.startTest();
-    
-    ServerComponent<Stub, RequestMessage, 2> server2;
-    server2.startTest();
-
-    ServerComponent<Stub, RequestMessage, 3> server3;
-    server3.startTest(false);
-
+    clients.stopTest();
     mafMsg("End test");
 }
 
 #include <fstream>
+#include <maf/messaging/ExtensibleComponent.h>
+#include <maf/messaging/CompThread.h>
+
+struct Runner
+{
+    void run()
+    {
+        using namespace std::chrono_literals;
+        _tm.reset(new maf::util::TimeMeasurement{ [](long long mls) { std::cout << "time for 10 expiration = " << mls << std::endl; } });
+        _timer.setCyclic(true);
+        _timer.start(100, [this] {
+            static thread_local int  i = 0;
+            i++;
+            mafMsg("Timer expiered " << i);
+            if(i == 10)
+            {
+                maf::messaging::tlcompPostMessage<ShutdownMessage>();
+				i = 0;
+                _tm.reset();
+            }
+        });
+        for(int i = 0; i < 10; ++i)
+        {
+            mafMsg("one more output " << i);
+            std::this_thread::sleep_for(1ms);
+        }
+    }
+    std::unique_ptr<maf::util::TimeMeasurement> _tm;
+    Timer _timer = true;
+};
+
+class MyComp : public ExtensibleComponent
+{
+public:
+    MyComp() = default;
+    ~MyComp() { }
+    void onEntry() override
+    {
+        onSignal<maf::messaging::ShutdownMessage>([this]{
+            stop();
+            if(_th.joinable())
+            {
+                _th.join();
+            }
+        });
+        _th = CompThread{ &Runner::run, &_myRunner};
+        _th.start();
+    }
+    void onExit() override
+    {
+        if(_th.joinable())
+        {
+            _th.join();
+        }
+        mafMsg("Component stops!");
+    }
+
+    CompThread _th;
+    Runner _myRunner;
+};
 
 int main()
 {
     maf::util::TimeMeasurement tm([](auto t){
         std::cout << "Total time is: " << t << std::endl;
     });
-    Address addr("com.opswat.client", 0);
-    LocalIPCClient::instance().init(addr, 10);
-    LocalIPCServer::instance().init(addr);
 
-    {
-        util::TimeMeasurement tm([](long long time) {
-            mafMsg("Total test time = " << time << "ms");
-        });
+//    for (int i = 0; i < 1; ++i)
+//    {
+//        MyComp comp;
+//        comp.run(LaunchMode::AttachToCurrentThread);
+//    }
 
-        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg>();
+//    Address addr("com.opswat.client", 0);
+//    static constexpr int SERVER_CHECKING_CYCLE_IN_MILLISECONDS = 10;
+//    LocalIPCClient::instance().init(addr, SERVER_CHECKING_CYCLE_IN_MILLISECONDS);
+//    LocalIPCServer::instance().init(addr);
+
+//    {
+//        util::TimeMeasurement tm([](long long time) {
+//            mafMsg("Total test time = " << time << "ms");
+//        });
+
+//        test<LocalIPCServiceProxy, LocalIPCServiceStub, IPCClientRequestMsg, 1>();
         test<IAServiceProxy, IAServiceStub, IARequestMesasge>();
 
-        mafMsg("Program ends!");
-    }
+//        mafMsg("Program ends!");
+//    }
 //    std::cin.get();
     return 0;
 }
