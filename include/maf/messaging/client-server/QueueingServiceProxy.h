@@ -27,7 +27,7 @@ public:
     using PayloadProcessCallback = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
 
     template<class IncomingMsgContent>
-    RegID sendStatusChangeRegister(OpID propertyID, PayloadProcessCallback<IncomingMsgContent> callback);
+    RegID sendStatusChangeRegister(PayloadProcessCallback<IncomingMsgContent> callback);
 
     template<class IncomingMsgContent>
     RegID sendRequest
@@ -71,7 +71,6 @@ protected:
 
     ListOfInterestedComponents _listComponents;
 };
-
 
 }
 }

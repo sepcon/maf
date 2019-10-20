@@ -87,9 +87,8 @@ add_library(maf
     include/maf/messaging/client-server/internal/CSShared.h
     include/maf/messaging/client-server/IAMessageTrait.h
     include/maf/messaging/client-server/Connection.h
-    include/maf/messaging/client-server/CSContractBegin.mc.h
-    include/maf/messaging/client-server/CSContractDefines.mc.h
-    include/maf/messaging/client-server/CSContractEnd.mc.h
+    include/maf/messaging/client-server/CSContractDefinesBegin.mc.h
+    include/maf/messaging/client-server/CSContractDefinesEnd.mc.h
     include/maf/messaging/client-server/ipc/BytesCommunicator.h
     include/maf/messaging/client-server/ipc/IPCClientBase.h
     include/maf/messaging/client-server/ipc/IPCServerBase.h
@@ -133,8 +132,10 @@ add_library(maf
     include/maf/utils/serialization/SerializableInterface.h
     include/maf/utils/serialization/SerializationTrait.h
     include/maf/utils/serialization/Serializer.h
-    include/maf/utils/serialization/Tplkdef.mc.h
-    include/maf/utils/serialization/TupleLikeObject.mc.h
+    include/maf/utils/serialization/Internal/TplkdefBegin.mc.h
+    include/maf/utils/serialization/Internal/TplkdefEnd.mc.h
+    include/maf/utils/serialization/MafObjectBegin.mc.h
+    include/maf/utils/serialization/MafObjectEnd.mc.h
     src/maf/messaging/client-server/ServiceStubBaseImpl.h
     src/maf/messaging/client-server/ServiceProxyBaseImpl.h
     src/maf/threading/threadpool/DynamicCountThreadPool.h
@@ -144,7 +145,15 @@ add_library(maf
     src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.h
     src/maf/messaging/client-server/ipc/platforms/windows/PipeShared.h)
 
-add_executable(maftest src/maf/main.cpp)
-target_link_libraries(maftest maf pthread)
+add_executable(maftest
+    src/maf/main.cpp
+    )
+
+
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_link_libraries(maftest pthread)
+endif()
+
+target_link_libraries(maftest maf)
 
 include_directories(include/)

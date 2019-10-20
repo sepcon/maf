@@ -77,10 +77,14 @@ struct DumpHelper
         mc_enable_if_is_ptr_(PointerType)
             inline static void dump(const PointerType& value, int indentLevel, std::string& strOut) noexcept
         {
+            using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
             if(value)
             {
-                using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
                 DumpHelper<NormalTypeOfPointerType>::dump(*value, indentLevel, strOut);
+            }
+            else
+            {
+                DumpHelper<NormalTypeOfPointerType>::dump(NormalTypeOfPointerType{}, indentLevel, strOut);
             }
         }
 

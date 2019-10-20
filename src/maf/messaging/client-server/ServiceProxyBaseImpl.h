@@ -18,6 +18,7 @@ namespace messaging {
 class ClientInterface;
 class ServiceProxyBaseImpl
 {
+    friend class ServiceProxyBase;
 public:
     ServiceProxyBaseImpl(ServiceID sid, ClientInterface* client);
     ~ServiceProxyBaseImpl();

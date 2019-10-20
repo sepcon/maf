@@ -28,6 +28,12 @@ void ServiceProxyBase::sendAbortRequest(const RegID &regID)
 void ServiceProxyBase::sendAbortSyncRequest(const RegID &regID)
 { _pi->sendAbortSyncRequest(regID); }
 
+RegID ServiceProxyBase::sendRequest(OpID operationID, const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback)
+{ return _pi->sendRequest(operationID, msgContent, std::move(callback)); }
+
+CSMessagePtr ServiceProxyBase::sendRequestSync(OpID operationID, const CSMsgContentPtr &msgContent, unsigned long maxWaitTimeMs)
+{ return _pi->sendRequestSync(operationID, msgContent, maxWaitTimeMs); }
+
 bool ServiceProxyBase::sendRequestSync(const CSMsgContentPtr &msgContent, CSMessageHandlerCallback callback, unsigned long maxWaitTimeMs)
 { return _pi->sendRequestSync(msgContent, std::move(callback), maxWaitTimeMs); }
 
