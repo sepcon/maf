@@ -27,8 +27,8 @@ void IPCClientBase::deinit()
     {
         _serverMonitorThread.join();
     }
-    auto lock = _requesters.a_lock();
-    _requesters->clear();
+
+    _requesters.atomic()->clear();
 }
 
 IPCClientBase::~IPCClientBase()

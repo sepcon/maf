@@ -159,10 +159,10 @@ public:
 
                         requestKeeper->update(res);
                     }
-                    if(responseCount >= 1000)
+                    if(responseCount >= 100)
                     {
                         mafMsg("Send final update to client");
-                        mafMsg("Avarage time to send an update " << " = " << static_cast<double>(totalupdateTime) / static_cast<double>(responseCount) << "ms") ;
+                         mafMsg("Avarage time to send an update " << " = " << static_cast<double>(totalupdateTime) / static_cast<double>(responseCount) << "ms") ;
                         requestKeeper->respond(res);
                         _serverTimer.stop();
                         this->stop();
@@ -208,16 +208,24 @@ public:
 template<class MessageTrait, class Server, class Client, int NClient = 4>
 void test()
 {
-    ClientComponent<MessageTrait, Client, 0> clients;
-    clients.startTest();
+    using ClientComp = ClientComponent<MessageTrait, Client, 0>;
+    ClientComp cls[NClient];
+    for(auto& c : cls)
+    {
+        c.startTest();
+    }
+
     ServerComponent<MessageTrait, Server, 0> server;
     server.startTest(false);
 
-    clients.stopTest();
+    for(auto& c : cls)
+    {
+        c.stopTest();
+    }
     mafMsg("End test");
 }
 
-
+#include <maf/utils/cppextension/Lockable.h>
 int main()
 {
     maf::util::TimeMeasurement tm([](auto t){
@@ -230,7 +238,7 @@ int main()
     LocalIPCClient::instance().init(addr, SERVER_CHECKING_CYCLE_IN_MILLISECONDS);
     LocalIPCServer::instance().init(addr);
 
-    test<IPCMessageTrait, LocalIPCServer, LocalIPCClient, 1>();
+    test<IPCMessageTrait, LocalIPCServer, LocalIPCClient, 2>();
     test<IAMessageTrait, IAMessageRouter, IAMessageRouter, 1>();
 
     return 0;

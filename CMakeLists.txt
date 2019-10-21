@@ -118,7 +118,7 @@ add_library(maf
     include/maf/utils/TimeMeasurement.h
     include/maf/utils/cppextension/Loop.mc.h
     include/maf/utils/cppextension/Maf.mc.h
-    include/maf/utils/cppextension/SyncObject.h
+    include/maf/utils/cppextension/Lockable.h
     include/maf/utils/debugging/Debug.h
     include/maf/utils/IDManager.h
     include/maf/patterns/Patterns.h

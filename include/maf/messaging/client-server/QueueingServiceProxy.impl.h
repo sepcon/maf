@@ -14,8 +14,8 @@ QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
 {
     if(auto comp = compref.lock())
     {
-        auto lockListComps = _listComponents.a_lock(); //Lock must be invoked here to protect both
-        auto insertResult = _listComponents->insert(compref);
+        std::lock_guard lock(_components); //Lock must be invoked here to protect both
+        auto insertResult = _components->insert(compref);
         if(insertResult.second) // means that insertion took place
         {
             if(getClient()->getServiceStatus(serviceID()) == Availability::Available)
@@ -68,8 +68,8 @@ QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availa
 {
     assert(sid == serviceID());
     mafInfo("Service id " << serviceID() << " has changed Status: " << static_cast<int>(oldStatus) << " - " << static_cast<int>(newStatus));
-    auto lock = _listComponents.a_lock();
-    for(auto itCompref = _listComponents->begin(); itCompref != _listComponents->end(); )
+    std::lock_guard lock(_components);
+    for(auto itCompref = _components->begin(); itCompref != _components->end(); )
     {
         if(updateServiceStatusToComponent(*itCompref, oldStatus, newStatus))
         {
@@ -78,7 +78,7 @@ QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availa
         else
         {
             mafWarn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
-            itCompref = _listComponents->erase(itCompref);
+            itCompref = _components->erase(itCompref);
         }
     }
 }

@@ -6,7 +6,7 @@
 #include "ClientInterface.h"
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <maf/utils/debugging/Debug.h>
 #include <set>
 
@@ -19,7 +19,7 @@ template<class MessageTrait>
 class QueueingServiceProxy : public ServiceProxyBase
 {
     using _MyBase = ServiceProxyBase;
-    using ListOfInterestedComponents = nstl::SyncObject<std::set<ComponentRef, comprefless>>;
+    using ListOfInterestedComponents = nstl::Lockable<std::set<ComponentRef, comprefless>>;
 public:
     using ServiceProxyBase::ServiceProxyBase;
 
@@ -69,7 +69,7 @@ protected:
     template<class IncomingMsgContent>
     CSMessageHandlerCallback createMsgHandlerAsyncCallback(PayloadProcessCallback<IncomingMsgContent> callback);
 
-    ListOfInterestedComponents _listComponents;
+    ListOfInterestedComponents _components;
 };
 
 }

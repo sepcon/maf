@@ -22,7 +22,7 @@ public:
 
 	long long elapsedTime() const 
 	{
-		return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - _startTime).count();
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - _startTime).count();
 	}
 
     void stop()

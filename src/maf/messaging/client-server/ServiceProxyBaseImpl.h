@@ -6,7 +6,7 @@
 #include <maf/messaging/client-server/CSDefines.h>
 #include <maf/messaging/client-server/CSMessage.h>
 #include <maf/messaging/client-server/Address.h>
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <future>
 #include <map>
 #include <list>
@@ -72,9 +72,8 @@ protected:
         std::promise< std::shared_ptr<CSMessage> > _msgPromise;
     };
 
-    using RegEntriesMap = nstl::SyncObject<std::map<OpID, std::list<RegEntry> >>;
-    using SyncRegEntriesMap = nstl::SyncObject<std::map<OpID, std::list<SyncRegEntry>>>;
-    using RegisteredClientsMap = nstl::SyncObject<std::map<Address, std::set<OpID>>>;
+    using RegEntriesMap = nstl::Lockable<std::map<OpID, std::list<RegEntry> >>;
+    using SyncRegEntriesMap = nstl::Lockable<std::map<OpID, std::list<SyncRegEntry>>>;
 
     //Helper functions
     RegID sendRequest(OpID operationID,

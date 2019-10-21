@@ -20,13 +20,14 @@ enum class OpCode : unsigned char
     Request,                            // Send request to server (Doing actions/get properties' status...)
     RequestSync,                        // Send request to server and the requester will be blocked until receiving the result
     Abort,                              // Ask server to abort pending/ongoing request that has not been done yet
-    StatusUpdate,                       //
-    RequestResultUpdate,                //
-    RequestSyncResultUpdate,            //
-    RequestResultDone,                  // apply for server to complete a request MANY updates from server until the request is fully respond. the callers must
-    RequestSyncResultDone,              //
-    RequestError,                       //
-    SyncRequestError,                   //
+//  Server Response
+    StatusUpdate,                       // \__
+    RequestResultUpdate,                // \__
+    RequestSyncResultUpdate,            // \__
+    RequestResultDone,                  // \__ Apply for server to complete a request MANY updates from server until the request is fully respond. the callers must
+    RequestSyncResultDone,              // \__
+    RequestError,                       // \__
+    SyncRequestError,                   // \__
     RegisterServiceStatus,              // used by client to register for service status change event
     ServiceStatusUpdate,                // used by server to update service status to client
 //  Unhandle                            // might be use to update client that the action is not applicable
