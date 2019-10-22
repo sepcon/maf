@@ -5,11 +5,12 @@ project(maf LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(MAF_ROOT_DIR .)
+set(MAF_LIB_INCLUDE_PATH ${MAF_ROOT_DIR}/include)
 
+include_directories(${MAF_LIB_INCLUDE_PATH})
 
-add_library(maf
-
-    # Source files
+set(MAF_LIBRARY_SOURCES
     src/maf/messaging/Component.cpp
     src/maf/messaging/CompThread.cpp
     src/maf/messaging/MessageBase.cpp
@@ -42,17 +43,15 @@ add_library(maf
     src/maf/threading/time/Waiter.cpp
     src/maf/utils/IDManager.cpp
     src/maf/utils/serialization/Serializer.cpp
+    )
 
-
-    # Header files
-
+set(MAF_LIBRARY_HEADERS
     include/maf/messaging/BasicMessages.h
     include/maf/messaging/Component.h
     include/maf/messaging/ExtensibleComponent.h
     include/maf/messaging/CompThread.h
     include/maf/messaging/MessageBase.h
     include/maf/messaging/MessageQueue.h
-    include/maf/messaging/MsgDefHelper.mc.h
     include/maf/messaging/Timer.h
     include/maf/messaging/Communicator.h
     include/maf/messaging/client-server/ClientBase.h
@@ -118,7 +117,7 @@ add_library(maf
     include/maf/utils/TimeMeasurement.h
     include/maf/utils/cppextension/Loop.mc.h
     include/maf/utils/cppextension/Maf.mc.h
-    include/maf/utils/cppextension/SyncObject.h
+    include/maf/utils/cppextension/Lockable.h
     include/maf/utils/debugging/Debug.h
     include/maf/utils/IDManager.h
     include/maf/patterns/Patterns.h
@@ -136,6 +135,9 @@ add_library(maf
     include/maf/utils/serialization/Internal/TplkdefEnd.mc.h
     include/maf/utils/serialization/MafObjectBegin.mc.h
     include/maf/utils/serialization/MafObjectEnd.mc.h
+    )
+
+set(MAF_LIBRARY_PRIV_HEADERS
     src/maf/messaging/client-server/ServiceStubBaseImpl.h
     src/maf/messaging/client-server/ServiceProxyBaseImpl.h
     src/maf/threading/threadpool/DynamicCountThreadPool.h
@@ -143,17 +145,26 @@ add_library(maf
     src/maf/threading/threadpool/StableThreadPool.h
     src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeReceiverBase.h
     src/maf/messaging/client-server/ipc/platforms/windows/NamedPipeSenderBase.h
-    src/maf/messaging/client-server/ipc/platforms/windows/PipeShared.h)
+    src/maf/messaging/client-server/ipc/platforms/windows/PipeShared.h
+    )
 
-add_executable(maftest
-    src/maf/main.cpp
+add_library(maf
+    ${MAF_LIBRARY_SOURCES}
+    ${MAF_LIBRARY_HEADERS}
+    ${MAF_LIBRARY_PRIV_HEADERS}
     )
 
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    target_link_libraries(maftest pthread)
-endif()
+if(NOT DEFINED MAF_DISABLE_TEST)
+    add_subdirectory(test)
+endif(NOT DEFINED MAF_DISABLE_TEST)
 
-target_link_libraries(maftest maf)
+source_group(TREE ${PROJECT_SOURCE_DIR}/src/maf PREFIX "Sources" FILES ${MAF_LIBRARY_SOURCES} )
+source_group(TREE ${PROJECT_SOURCE_DIR}/include PREFIX "Headers"  FILES ${MAF_LIBRARY_HEADERS} )
+source_group(TREE ${PROJECT_SOURCE_DIR}/src/maf PREFIX "Headers"  FILES ${MAF_LIBRARY_PRIV_HEADERS} )
 
-include_directories(include/)
+
+
+
+
+

@@ -71,8 +71,7 @@ void ServerBase::init()
 
 void ServerBase::deinit()
 {
-    auto lock = _providers.a_lock();
-    _providers->clear();
+    _providers.atomic()->clear();
 }
 
 }

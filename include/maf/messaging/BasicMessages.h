@@ -19,7 +19,10 @@ struct CallbackExcMsg : public InternalMessage
 };
 struct TimeoutMessage : public CallbackExcMsg
 {
-    TimeoutMessage() { setPriority(1000); }
+    TimeoutMessage(unsigned int timerID_, std::function<void()> timeoutCallback): CallbackExcMsg(std::move(timeoutCallback)), timerID(timerID_)
+    {
+        setPriority(1000);
+    }
     unsigned int timerID;
 };
 }

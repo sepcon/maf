@@ -2,6 +2,7 @@
 
 #ifdef MAF_ENABLE_DUMP
 #   pragma push_macro("MAF_ENABLE_DUMP")
+#   define maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
 #endif
 
 #define MAF_ENABLE_DUMP
@@ -32,4 +33,8 @@ ENDOBJECT(Address)
 
 #include <maf/utils/serialization/MafObjectEnd.mc.h>
 #undef MAF_ENABLE_DUMP
-#pragma pop_macro("MAF_ENABLE_DUMP")
+
+#ifdef maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
+#   undef maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
+#   pragma pop_macro("MAF_ENABLE_DUMP")
+#endif

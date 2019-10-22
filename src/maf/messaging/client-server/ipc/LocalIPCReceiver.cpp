@@ -1,7 +1,9 @@
+#include <maf/utils/debugging/Debug.h>
 #include "platforms/LocalIPCReceiver.h"
 
 #if defined(_WIN32) || defined(_WIN64)
-    #include "./platforms/windows/LocalIPCReceiverImpl.cpp"
+#   define __PRETTY_FUNCTION__ __FUNCSIG__
+#   include "./platforms/windows/LocalIPCReceiverImpl.cpp"
 #elif defined(LINUX)
     #include "./platforms/linux/LocalIPCReceiverImpl.cpp"
 #else
@@ -9,14 +11,30 @@ namespace maf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCReceiverImpl : public LocalIPCReceiver
+class LocalIPCReceiverImpl : public IPCReceiver
 {
 public:
-    virtual bool initConnection(Address, bool = false)  { return false; }
-    virtual bool startListening()  { return false; }
-    virtual bool stopListening()  { return false; }
-    virtual bool listening() const  { return false; }
-    virtual const Address& address() const  { return Address::INVALID_ADDRESS; }
+    virtual bool initConnection(Address, bool = false)
+    {
+        mafMsg(__PRETTY_FUNCTION__ << " has not be implemented yet");
+        return false;
+    }
+    virtual bool startListening()  {
+        mafMsg(__PRETTY_FUNCTION__ << " has not be implemented yet");
+        return false;
+    }
+    virtual bool stopListening()  {
+        mafMsg(__func__ << " has not be implemented yet");
+        return false;
+    }
+    virtual bool listening() const  {
+        mafMsg(__PRETTY_FUNCTION__ << " has not be implemented yet");
+        return false;
+    }
+    virtual const Address& address() const  {
+        mafMsg(__PRETTY_FUNCTION__ << " has not be implemented yet");
+        return Address::INVALID_ADDRESS;
+    }
 };
 }
 }

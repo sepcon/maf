@@ -10,7 +10,7 @@ bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
     bool isNewRequester = true;
     if( (isNewRequester = addIfNew(_requesters, requester)) )
     {
-        auto lockSSMap = _serviceStatusMap.a_lock();
+        std::lock_guard lock(_serviceStatusMap);
         auto itServiceID = _serviceStatusMap->find(requester->serviceID());
         if(itServiceID != _serviceStatusMap->end())
         {
@@ -35,13 +35,14 @@ void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newS
 {
     if(newStatus != Availability::Available)
     {
-        auto lockSSMap = _serviceStatusMap.a_lock();
-        _serviceStatusMap->clear();
+        _serviceStatusMap.atomic()->clear();
     }
-    auto lockRequesters = _requesters.a_lock();
-    for(auto& requester : *_requesters)
     {
-        requester->onServerStatusChanged(oldStatus, newStatus);
+        std::lock_guard lock(_requesters);
+        for(auto& requester : *_requesters)
+        {
+            requester->onServerStatusChanged(oldStatus, newStatus);
+        }
     }
 }
 
@@ -49,8 +50,7 @@ void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, A
 {
     mafInfo("Client receives service status update from server: [" << sid << "-" << static_cast<int>(oldStatus) << "-" << static_cast<int>(newStatus));
     {
-        auto lockSSMap = _serviceStatusMap.a_lock();
-        (*_serviceStatusMap)[sid] = newStatus;
+        (*_serviceStatusMap.atomic())[sid] = newStatus;
     }
     auto requester = findByID(_requesters, sid);
     if(requester)
@@ -98,8 +98,7 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 
 void ClientBase::storeServiceStatus(ServiceID sid, Availability status)
 {
-    auto lock = _serviceStatusMap.a_lock();
-    (*_serviceStatusMap)[sid] = status;
+    (*_serviceStatusMap.atomic())[sid] = status;
 }
 
 IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
@@ -109,7 +108,7 @@ IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
 
 Availability ClientBase::getServiceStatus(ServiceID sid)
 {
-    auto lock = _serviceStatusMap.a_lock();
+    std::lock_guard lock(_serviceStatusMap);
     auto itStatus = _serviceStatusMap->find(sid);
     if(itStatus != _serviceStatusMap->end())
     {
@@ -128,14 +127,8 @@ void ClientBase::init()
 
 void ClientBase::deinit()
 {
-    {
-        auto lock = _requesters.a_lock();
-        _requesters->clear();
-    }
-    {
-        auto lock = _serviceStatusMap.a_lock();
-        _serviceStatusMap->clear();
-    }
+    _requesters.atomic()->clear();
+    _serviceStatusMap.atomic()->clear();
 }
 
 }

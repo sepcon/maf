@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <maf/messaging/client-server/CSStatus.h>
 #include <maf/messaging/client-server/CSMessage.h>
 #include <algorithm>
@@ -15,15 +15,14 @@ template<class Elem>
 using SMElem = std::shared_ptr<Elem>;
 
 template <class Elem>
-using SMList = nstl::SyncObject<std::vector<SMElem<Elem>>>;
+using SMList = nstl::Lockable<std::vector<SMElem<Elem>>>;
 
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool addIfNew(SMList<Interester>& interesters, SMElem<Interester> interester)
 {
     bool added = false;
-    auto lock = interesters.a_lock();
-    auto it = std::find(interesters->begin(), interesters->end(), interester);
-    if(it == interesters->end())
+    std::lock_guard lock(interesters);
+    if(std::find(interesters->begin(), interesters->end(), interester) == interesters->end())
     {
         interesters->emplace_back(interester);
         added = true;
@@ -40,7 +39,7 @@ bool remove(SMList<Interester>& interesters, SMElem<Interester> interester)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool removeByID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock = interesters.a_lock();
+    std::lock_guard lock(interesters);
     for(auto it = interesters->begin(); it != interesters->end(); ++it)
     {
         if((*it)->serviceID() == sid)
@@ -55,7 +54,7 @@ bool removeByID(SMList<Interester>& interesters, ServiceID sid)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 SMElem<Interester> findByID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock = interesters.a_lock();
+    std::lock_guard lock(interesters);
     auto it = std::find_if(
         interesters->begin(), interesters->end(),
         [&sid](const auto& interester) { return (interester->serviceID() == sid); }
@@ -73,7 +72,7 @@ SMElem<Interester> findByID(SMList<Interester>& interesters, ServiceID sid)
 template<class Interester, std::enable_if_t<std::is_base_of_v<ServiceMessageReceiver, Interester>, bool> = true>
 bool hasItemWithID(SMList<Interester>& interesters, ServiceID sid)
 {
-    auto lock = interesters.a_lock();
+    std::lock_guard lock(interesters);
     auto it = std::find_if(
         interesters->begin(), interesters->end(),
         [&sid](const auto& interester) { return (interester->serviceID() == sid); }

@@ -130,7 +130,7 @@ bool ServiceStubBaseImpl::sendStatusUpdate(const CSMessagePtr &msg)
     AddressList addresses;
 
     { // locking _regEntriesMap block
-        auto lock = _regEntriesMap.a_lock();
+        std::lock_guard lock(_regEntriesMap);
         for(auto& regEntry : *_regEntriesMap)
         {
             if(regEntry.second.find(msg->operationID()) != regEntry.second.end())
@@ -250,9 +250,8 @@ void ServiceStubBaseImpl::forwardToStubHandler(RequestKeeperBase::AbortCallback 
 ServiceStubBaseImpl::RequestKeeperPtr ServiceStubBaseImpl::saveRequestInfo(const CSMessagePtr &msg)
 {
     auto requestKeeper = RequestKeeperBase::create(msg, this);
-    auto lock = _requestKeepersMap.a_lock();
 
-    (*_requestKeepersMap)[msg->operationID()].push_back(requestKeeper);
+    (*_requestKeepersMap.atomic())[msg->operationID()].push_back(requestKeeper);
 
     return requestKeeper;
 }
@@ -264,7 +263,7 @@ ServiceStubBaseImpl::RequestKeeperPtr ServiceStubBaseImpl::pickOutRequestInfo(co
     // By that deadlock situation will not occurr
     if(!_stopped.load(std::memory_order_acquire))
     {
-        auto lock = _requestKeepersMap.a_lock();
+        std::lock_guard lock(_requestKeepersMap);
         auto itKeeperList = _requestKeepersMap->find(msg->operationID());
         if(itKeeperList != _requestKeepersMap->end())
         {
@@ -289,10 +288,9 @@ ServiceStubBaseImpl::RequestKeeperPtr ServiceStubBaseImpl::pickOutRequestInfo(co
 
 void ServiceStubBaseImpl::invalidateAndRemoveAllRequestKeepers()
 {
-    auto reqTrackerLock = _requestKeepersMap.a_lock();
-    for(auto& reqTrackersPair : *_requestKeepersMap)
+    std::lock_guard lock(_requestKeepersMap);
+    for(auto& [opID, requestKeepers] : *_requestKeepersMap)
     {
-        auto& requestKeepers = reqTrackersPair.second;
         for(auto& keeper : requestKeepers)
         {
             keeper->invalidateIfValid();
@@ -303,28 +301,22 @@ void ServiceStubBaseImpl::invalidateAndRemoveAllRequestKeepers()
 
 void ServiceStubBaseImpl::saveRegisterInfo(const CSMessagePtr &msg)
 {
-    auto lock = _regEntriesMap.a_lock();
-    auto& interestedPropsOfThisSender = (*_regEntriesMap)[msg->sourceAddress()];
-    interestedPropsOfThisSender.insert(msg->operationID());
+    (*_regEntriesMap.atomic())[msg->sourceAddress()].insert(msg->operationID());
 }
 
 void ServiceStubBaseImpl::removeRegisterInfo(const CSMessagePtr &msg)
 {
-    auto lock = _regEntriesMap.a_lock();
-    auto& interestedPropsOfThisSender = (*_regEntriesMap)[msg->sourceAddress()];
-    interestedPropsOfThisSender.erase(msg->operationID());
+    (*_regEntriesMap.atomic())[msg->sourceAddress()].erase(msg->operationID());
 }
 
 void ServiceStubBaseImpl::removeAllRegisterInfo()
 {
-    auto lock = _regEntriesMap.a_lock();
-    _regEntriesMap->clear();
+    _regEntriesMap.atomic()->clear();
 }
 
 void ServiceStubBaseImpl::removeRegistersOfAddress(const Address &addr)
 {
-    auto lock = _regEntriesMap.a_lock();
-    _regEntriesMap->erase(addr);
+    _regEntriesMap.atomic()->erase(addr);
 }
 
 void ServiceStubBaseImpl::onAbortActionRequest(const CSMessagePtr &msg)

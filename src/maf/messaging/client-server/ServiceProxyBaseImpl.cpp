@@ -60,7 +60,7 @@ void ServiceProxyBaseImpl::sendAbortRequest(const RegID &regID)
     {
         bool found = false;
         { // create {block} for releasing lock on _requestEntriesMap
-            auto lk = _requestEntriesMap.a_lock();
+            std::lock_guard lock(_requestEntriesMap);
             auto it = _requestEntriesMap->find(regID.opID);
             if(it != _requestEntriesMap->end())
             {
@@ -215,8 +215,7 @@ void ServiceProxyBaseImpl::sendStatusChangeUnregister(RegID regID)
 
 void ServiceProxyBaseImpl::sendStatusChangeUnregisterAll(OpID propertyID)
 {
-    auto lock = _registerEntriesMap.a_lock();
-    _registerEntriesMap->erase(propertyID);
+    _registerEntriesMap.atomic()->erase(propertyID);
 }
 
 void ServiceProxyBaseImpl::onPropChangeUpdate(const CSMessagePtr& msg)
@@ -224,7 +223,7 @@ void ServiceProxyBaseImpl::onPropChangeUpdate(const CSMessagePtr& msg)
     std::vector<decltype(RegEntry::callback)> callbacks;
 
     {
-        auto lk = _registerEntriesMap.a_lock();
+        std::lock_guard lock(_registerEntriesMap);
         auto it = _registerEntriesMap->find(msg->operationID());
         if(it != _registerEntriesMap->end())
         {
@@ -243,10 +242,9 @@ void ServiceProxyBaseImpl::onPropChangeUpdate(const CSMessagePtr& msg)
 
 void ServiceProxyBaseImpl::onRequestResult(const CSMessagePtr& msg, bool done)
 {
-    bool foundRequest = false;
     decltype (RegEntry::callback) callback;
     {
-        auto lk = _requestEntriesMap.a_lock();
+        std::lock_guard lock(_requestEntriesMap);
         auto it = _requestEntriesMap->find(msg->operationID());
         if(it != _requestEntriesMap->end())
         {
@@ -258,25 +256,21 @@ void ServiceProxyBaseImpl::onRequestResult(const CSMessagePtr& msg, bool done)
 					if (done)
 					{
 						callback = std::move(itRegEntry->callback);
-						regEntries.erase(itRegEntry);
+                        regEntries.erase(itRegEntry); // Be carefull if don't have break statement after this line
 					}
 					else
 					{
 						callback = itRegEntry->callback;
-					}
-                    foundRequest = true;
+                    }
                     break;
                 }
             }
         }
     }
 
-    if(foundRequest)
+    if(callback)
     {
-        if(callback)
-        {
-            callback(msg);
-        }
+        callback(msg);
     }
 	else
 	{
@@ -299,20 +293,21 @@ void ServiceProxyBaseImpl::onRequestSyncResult(const CSMessagePtr &msg)
 void ServiceProxyBaseImpl::abortAllSyncRequest()
 {
     int totalAborted = 0;
-    auto lock = _syncRequestEntriesMap.a_lock();
-    for(auto& opid2ListEntries : *_syncRequestEntriesMap)
+    std::lock_guard lock(_syncRequestEntriesMap);
+    for(auto& [opID, regEntries] : *_syncRequestEntriesMap)
     {
-        for(auto& regEntry : opid2ListEntries.second)
+        for(auto& entry : regEntries)
         {
             ++ totalAborted;
-            regEntry._msgPromise.set_value(nullptr);
+            entry._msgPromise.set_value(nullptr);
         }
     }
+    _syncRequestEntriesMap->clear();
+
     if(totalAborted > 0)
     {
         mafWarn("Aborting " << totalAborted << " Sync requests!");
     }
-    _syncRequestEntriesMap->clear();
 }
 
 ///
@@ -320,14 +315,12 @@ void ServiceProxyBaseImpl::abortAllSyncRequest()
 ///
 void ServiceProxyBaseImpl::clearAllAsyncRequests()
 {
-    auto lock = _requestEntriesMap.a_lock();
-    _requestEntriesMap->clear();
+    _requestEntriesMap.atomic()->clear();
 }
 
 void ServiceProxyBaseImpl::clearAllRegisterEntries()
 {
-    auto lock = _registerEntriesMap.a_lock();
-    _registerEntriesMap->clear();
+    _registerEntriesMap.atomic()->clear();
 }
 
 bool ServiceProxyBaseImpl::sendMessageToServer(const CSMessagePtr &outgoingMsg)
@@ -337,20 +330,15 @@ bool ServiceProxyBaseImpl::sendMessageToServer(const CSMessagePtr &outgoingMsg)
 
 std::future<CSMessagePtr > ServiceProxyBaseImpl::storeSyncRegEntry(const CSMessagePtr &outgoingMsg, RegID &regID)
 {
+    std::promise<CSMessagePtr> prm;
+    std::future<CSMessagePtr> resultFuture = prm.get_future();
     regID.requestID = _idMgr.allocateNewID();
     regID.opID = outgoingMsg->operationID();
-
-    std::future<CSMessagePtr > resultFuture;
-
-    { // using {block} to unlock the mutex of _syncRequestEntriesMap
-        auto lk = _syncRequestEntriesMap.a_lock();
-        auto& listOfRequests = (*_syncRequestEntriesMap)[outgoingMsg->operationID()];
-        std::promise<CSMessagePtr> prm;
-        resultFuture = prm.get_future();
-        SyncRegEntry regEntry = { regID.requestID, std::move(prm) };
-        listOfRequests.push_back(std::move(regEntry));
-    }
     outgoingMsg->setRequestID(regID.requestID);
+
+    (*_syncRequestEntriesMap.atomic())[outgoingMsg->operationID()].push_back(SyncRegEntry{regID.requestID, std::move(prm)});
+
+
     return resultFuture;
 }
 
@@ -358,7 +346,7 @@ std::shared_ptr<std::promise<CSMessagePtr >> ServiceProxyBaseImpl::pickOutSyncRe
 {
     std::shared_ptr<std::promise<CSMessagePtr >> resultPromise;
     { // using {block} to unlock the mutex of _syncRequestEntriesMap
-        auto lk = _syncRequestEntriesMap.a_lock();
+        std::lock_guard lock(_syncRequestEntriesMap);
         auto itPairID2ListOfRequests = _syncRequestEntriesMap->find(regID.opID);
         if(itPairID2ListOfRequests != _syncRequestEntriesMap->end())
         {
@@ -377,11 +365,12 @@ std::shared_ptr<std::promise<CSMessagePtr >> ServiceProxyBaseImpl::pickOutSyncRe
     return resultPromise;
 }
 
-RegID ServiceProxyBaseImpl::storeAndSendRequestToServer
-    (RegEntriesMap& regEntriesMap,
-        const CSMessagePtr& outgoingMsg,
-        CSMessageHandlerCallback callback
-        , bool forceSend)
+RegID ServiceProxyBaseImpl::storeAndSendRequestToServer(
+    RegEntriesMap& regEntriesMap,
+    const CSMessagePtr& outgoingMsg,
+    CSMessageHandlerCallback callback,
+    bool forceSend
+    )
 {
     RegID regID;
     auto totalSameRequests = storeRegEntry(regEntriesMap, outgoingMsg->operationID(), callback, regID);
@@ -399,17 +388,17 @@ RegID ServiceProxyBaseImpl::storeAndSendRequestToServer
     return regID;
 }
 
-size_t ServiceProxyBaseImpl::storeRegEntry
-    (RegEntriesMap& regInfoEntries,
-     OpID propertyID,
-     CSMessageHandlerCallback callback,
-     RegID &regID
-     )
+size_t ServiceProxyBaseImpl::storeRegEntry(
+    RegEntriesMap& regInfoEntries,
+    OpID propertyID,
+    CSMessageHandlerCallback callback,
+    RegID &regID
+    )
 {
     regID.requestID = _idMgr.allocateNewID();
     regID.opID = propertyID;
 
-    auto lk = regInfoEntries.a_lock();
+    std::lock_guard lock(regInfoEntries);
     auto& regEntries = (*regInfoEntries)[propertyID];
     regEntries.emplace_back( regID.requestID, std::move(callback) );
     return regEntries.size(); //means that already sent register for this propertyID to service
@@ -417,7 +406,7 @@ size_t ServiceProxyBaseImpl::storeRegEntry
 
 size_t ServiceProxyBaseImpl::removeRegEntry(RegEntriesMap &regInfoEntries, RegID &regID)
 {
-    auto lk = regInfoEntries.a_lock();
+    std::lock_guard lock(regInfoEntries);
     auto it = regInfoEntries->find(regID.opID);
     if(it != regInfoEntries->end())
     {

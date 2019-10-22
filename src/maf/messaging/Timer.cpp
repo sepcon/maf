@@ -34,16 +34,12 @@ void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
             stop();
         }
         auto componentRef = Component::getActiveWeakPtr();
-        auto onTimeout = [componentRef, callback, this]()
+        auto onTimeout = [componentRef, callback = std::move(callback), this]()
         {
-            auto msg = std::make_shared<TimeoutMessage>();
-            msg->timerID = _id;
-            msg->callback = callback;
-
             auto component = componentRef.lock();
             if(component)
             {
-                component->postMessage(msg);
+                component->postMessage<TimeoutMessage>(_id, std::move(callback));
             }
             else
             {

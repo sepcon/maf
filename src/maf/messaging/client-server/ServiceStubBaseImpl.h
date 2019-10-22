@@ -2,7 +2,7 @@
 #include <maf/messaging/client-server/CSStatus.h>
 #include <maf/messaging/client-server/ServerInterface.h>
 #include <maf/messaging/client-server/RequestKeeper.h>
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <maf/utils/debugging/Debug.h>
 #include <map>
 #include <set>
@@ -15,8 +15,8 @@ class ServiceStubHandlerInterface;
 class ServiceStubBaseImpl
 {
     using RequestKeeperPtr = std::shared_ptr<RequestKeeperBase>;
-    using OpID2RequestKeeperMap = nstl::SyncObject<std::map<OpID, std::list<RequestKeeperPtr>>>;
-    using Address2OpIDsMap = nstl::SyncObject<std::map<Address, std::set<OpID>>>;
+    using RequestKeeperMap = nstl::Lockable<std::map<OpID, std::list<RequestKeeperPtr>>>;
+    using Address2OpIDsMap = nstl::Lockable<std::map<Address, std::set<OpID>>>;
     friend class RequestKeeperBase;
 public:
     ServiceStubBaseImpl(ServerInterface* server, ServiceStubHandlerInterface* stubHandler = nullptr);
@@ -48,7 +48,7 @@ public:
 
     ServiceStubHandlerInterface* _stubHandler;
     Address2OpIDsMap _regEntriesMap;
-    OpID2RequestKeeperMap _requestKeepersMap;
+    RequestKeeperMap _requestKeepersMap;
     ServerInterface* _server;
     std::atomic_bool _stopped;
 };

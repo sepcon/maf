@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/threading/TimerManager.h>
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <chrono>
 #include <set>
 #include <vector>
@@ -24,7 +24,7 @@ struct TimerManagerImpl
 
     TimerManagerImpl() : _shutdowned(true), _workerThreadIsRunning(false) {}
     ~TimerManagerImpl();
-    bool start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
+    bool start(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic);
     void restart(JobID jid);
     void stop(JobID jid);
     bool isRunning(JobID jid);
@@ -33,7 +33,7 @@ struct TimerManagerImpl
 
 private:
     using JobDescRef = std::shared_ptr<JobDesc>;
-    using JobsContainer = nstl::SyncObject<std::vector<JobDescRef>>;
+    using JobsContainer = nstl::Lockable<std::vector<JobDescRef>>;
     using JobsIterator = JobsContainer::DataType::iterator;
     using JobsCIterator = JobsContainer::DataType::const_iterator;
     friend struct JobComp;
@@ -52,7 +52,7 @@ private:
     bool runJobIfExpired__(JobDescRef job);
     void cleanup();
 
-    static std::unique_ptr<std::lock_guard<std::mutex> > autolock(TimerManagerImpl::JobsContainer& jobs, bool sync = true);
+    static std::lock_guard<JobsContainer> autolock(JobsContainer& jobs, bool sync = true);
     static void addOrReplace(JobsContainer& jobs, JobDescRef newJob, bool sync = true);
     static JobDescRef removeAndInvalidateJob(JobsContainer &jobs, JobID jid);
     static JobsIterator findJob__(JobsContainer &jobs, JobID jid);

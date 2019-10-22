@@ -1,6 +1,6 @@
 #include <maf/messaging/MessageQueue.h>
 #include <maf/messaging/Component.h>
-#include <maf/utils/cppextension/SyncObject.h>
+#include <maf/utils/cppextension/Lockable.h>
 #include <maf/threading/TimerManager.h>
 #include <maf/messaging/BasicMessages.h>
 #include <maf/utils/debugging/Debug.h>
@@ -12,7 +12,7 @@
 namespace maf {
 namespace messaging {
 
-using MsgHandlerMap = nstl::SyncObject<std::map<MessageBase::Type, MessageHandlerFunc<MessageBase>>>;
+using MsgHandlerMap = nstl::Lockable<std::map<MessageBase::Type, MessageHandlerFunc<MessageBase>>>;
 using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
 
 static thread_local ComponentRef _tlwpInstance;
@@ -114,8 +114,7 @@ void Component::ComponentImpl::registerMessageHandler(MessageBase::Type msgType,
 {
     if(onMessageFunc)
     {
-        auto lock = _msgHandlers.a_lock();
-        _msgHandlers->insert(std::make_pair(msgType, onMessageFunc));
+        _msgHandlers.atomic()->insert(std::make_pair(msgType, onMessageFunc));
     }
 }
 
@@ -148,7 +147,7 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
         {
             BaseMessageHandlerFunc handlerFunc;
             {
-                auto lock = _msgHandlers.a_lock();
+                std::lock_guard lock(_msgHandlers);
                 auto itHandler = _msgHandlers->find(MessageBase::idof(*msg));
                 if(itHandler != _msgHandlers->end())
                 {

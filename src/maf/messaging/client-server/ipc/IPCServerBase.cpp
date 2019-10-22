@@ -37,7 +37,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
     if(oldStatus != newStatus)
     {
         auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
-        auto lock = _registedClAddrs.a_lock();
+        std::lock_guard lock(_registedClAddrs);
         for (auto itAddr = _registedClAddrs->begin(); itAddr != _registedClAddrs->end(); /*intenedTobeEmpy*/) {
             auto ec = sendMessageToClient(serviceStatusMsg, *itAddr);
             if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))
@@ -58,12 +58,9 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     mafInfo(csMsg);
     if(csMsg->operationCode() == OpCode::RegisterServiceStatus)
     {
-        { //intension for release the lock of _registedClAddrs
-            auto lock = _registedClAddrs.a_lock();
-            _registedClAddrs->insert(csMsg->sourceAddress());
-        }
+        _registedClAddrs.atomic()->insert(csMsg->sourceAddress());
         {
-            auto lock = _providers.a_lock();
+            std::lock_guard lock(_providers);
             for(auto& provider : *_providers)
             {
                 notifyServiceStatusToClient(csMsg->sourceAddress(), provider->serviceID(), Availability::Unavailable, Availability::Available);

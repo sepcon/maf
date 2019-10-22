@@ -21,7 +21,7 @@ public:
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 protected:
     void notifyServiceStatusToClient(const Address& clAddr, ServiceID sid, Availability oldStatus, Availability newStatus);
-    using RegistedClientAddresses = nstl::SyncObject<std::set<Address>>;
+    using RegistedClientAddresses = nstl::Lockable<std::set<Address>>;
     class BytesCommunicator* _communicator;
     RegistedClientAddresses _registedClAddrs;
 };

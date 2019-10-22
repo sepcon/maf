@@ -31,7 +31,7 @@ protected:
     bool onIncomingMessage(const CSMessagePtr& msg) override;
     void storeServiceStatus(ServiceID sid, Availability status);
     using Requesters = SMList<ServiceRequesterInterface>;
-    using ServiceStatusMap = nstl::SyncObject<std::map<ServiceID, Availability>>;
+    using ServiceStatusMap = nstl::Lockable<std::map<ServiceID, Availability>>;
     Requesters _requesters;
     ServiceStatusMap _serviceStatusMap;
 };
