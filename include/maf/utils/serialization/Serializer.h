@@ -44,7 +44,7 @@ class BASerializer : public Serializer
 public:
     char* getNextWriteArea(SizeType length) override;
     const ByteArray& bytes() const { return _ba; }
-    ByteArray& mutableBytes() { return _ba; }
+    ByteArray&& mutableBytes() { return std::move(_ba); }
     operator ByteArray() { return _ba; }
 private:
     ByteArray _ba;

@@ -9,30 +9,33 @@ namespace pattern {
 
 class UnMovable
 {
-protected:
+public:
     UnMovable(){}
     ~UnMovable(){}
-private:
-    UnMovable(UnMovable&&);
-    UnMovable& operator=(UnMovable&);
+    UnMovable(UnMovable&&) = delete;
+    UnMovable& operator=(UnMovable&&) = delete;
 };
 
 class UnCopyable
 {
-protected:
+public:
     UnCopyable(){}
     ~UnCopyable(){}
-private:
-    UnCopyable(const UnCopyable&);
-    UnCopyable& operator=(const UnCopyable&);
+
+    UnCopyable(const UnCopyable&) = delete;
+    UnCopyable& operator=(const UnCopyable&) = delete;
 };
 
 
-class Unasignable : public UnMovable, public UnCopyable
+class Unasignable
 {
 public:
 	Unasignable() {}
 	~Unasignable() {}
+    Unasignable(Unasignable&&) = delete;
+    Unasignable& operator=(Unasignable&&) = delete;
+    Unasignable(const Unasignable&) = delete;
+    Unasignable& operator=(const Unasignable&) = delete;
 };
 
 template <class ToBeSingleton>

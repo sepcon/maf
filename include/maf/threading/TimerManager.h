@@ -1,11 +1,12 @@
 #pragma once
 #include <maf/utils/IDManager.h>
+#include <maf/patterns/Patterns.h>
 #include <functional>
 
 namespace maf {
 namespace threading {
 
-class TimerManager
+class TimerManager : public pattern::Unasignable
 {
 public:
     using JobID = util::IDManager::IDType;
@@ -25,10 +26,6 @@ public:
 private:
     struct TimerManagerImpl* _pImpl;
     util::IDManager _idManager;
-    TimerManager(const TimerManager&) = delete;
-    TimerManager(TimerManager&&) = delete;
-    TimerManager& operator=(const TimerManager&) = delete ;
-    TimerManager& operator=(TimerManager&&) = delete ;
 };
 
 }

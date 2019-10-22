@@ -1,4 +1,9 @@
 #pragma once
+/**
+ * SSQServiceStub = Singleton Server Queueing ServiceStub
+ * A Stub must be bound with a single server that satisfies requirement of being subclass of pattern::SingletonObject<SingletonServer>
+ * Create stub can be call on different threads to get the existing instance of stub corresponding to given service ID
+*/
 
 #include "QueueingServiceStub.h"
 #include <maf/patterns/Patterns.h>
