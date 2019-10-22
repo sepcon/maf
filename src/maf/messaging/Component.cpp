@@ -30,7 +30,7 @@ public:
     TimerMgrPtr getTimerManager();
     void startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit);
 private:
-    std::thread _workerThread;
+    std::unique_ptr<std::thread> _workerThread;
     MessageQueue _msgQueue;
     MsgHandlerMap _msgHandlers;
     TimerMgrPtr _timerMgr;
@@ -58,10 +58,10 @@ void Component::ComponentImpl::run(ComponentRef compref, LaunchMode LaunchMode, 
 {
     if(LaunchMode == LaunchMode::Async)
     {
-        _workerThread = std::thread {
+        _workerThread = std::make_unique<std::thread>(
             [this, compref, onEntry, onExit] {
             this->startMessageLoop(compref, onEntry, onExit);
-        }};
+        });
     }
     else
     {
@@ -73,13 +73,13 @@ void Component::ComponentImpl::stop()
 {
     _msgQueue.close();
 	if (_timerMgr) { _timerMgr->stop(); _timerMgr.reset(); }
-    if(std::this_thread::get_id() != _workerThread.get_id())
-    {
-        if(_workerThread.joinable())
-        {
-            _workerThread.join();
-        }
-    }
+	if (_workerThread && (std::this_thread::get_id() != _workerThread->get_id()))
+	{
+		if (_workerThread->joinable())
+		{
+			_workerThread->join();
+		}
+	}
 }
 
 void Component::ComponentImpl::postMessage(MessageBasePtr msg)

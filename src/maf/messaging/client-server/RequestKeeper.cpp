@@ -75,7 +75,7 @@ CSMsgContentPtr RequestKeeperBase::getRequestContent()
     return _csMsg->content();
 }
 
-void RequestKeeperBase::abortedBy(AbortCallback abortCallback)
+void RequestKeeperBase::onAbortRequest(AbortCallback abortCallback)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     if(!_valid)

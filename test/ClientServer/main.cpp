@@ -44,7 +44,7 @@ int main()
     LocalIPCServer::instance().init(addr);
 
 
-    test<IPCMessageTrait, LocalIPCServer, LocalIPCClient, 2>();
+//    test<IPCMessageTrait, LocalIPCServer, LocalIPCClient, 2>();
     test<IAMessageTrait, IAMessageRouter, IAMessageRouter, 1>();
 
     return 0;

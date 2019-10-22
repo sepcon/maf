@@ -4,7 +4,7 @@
 #include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/Address.h>
 
-//#define MAF_ENABLE_DUMP
+#define MAF_ENABLE_DUMP
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 
 constexpr maf::messaging::Address::Port REQUESTS_PER_CLIENT = 100;
@@ -13,7 +13,7 @@ constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;
 constexpr const char* const SERVER_ADDRESS = "nocpes.github.com";
 constexpr const maf::messaging::ServiceID SID_WeatherService = 0;
 
-FUNCTION(WeatherStatusF)
+FUNCTION(WeatherStatus)
     enum StatusType{
         Rainy,
         Suny,

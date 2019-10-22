@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(maf-test  LANGUAGES CXX)
+set(MAF_TEST_PJNAME maf-test)
+set(MAF_TEST_ROOT_DIR .)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(${MAF_TEST_PJNAME})
 
 add_subdirectory(ClientServer)
 add_subdirectory(Serialization)
+
+source_group(TREE ${PROJECT_SOURCE_DIR}/test PREFIX "Tests")

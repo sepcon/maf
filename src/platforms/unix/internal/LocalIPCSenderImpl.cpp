@@ -1,3 +1,46 @@
+#include <maf/utils/debugging/Debug.h>
+#include "LocalIPCSenderImpl.h"
+
+namespace maf {
+namespace messaging {
+namespace ipc {
+
+#define NOT_IMPLEMENTED_WARN(/*returned_value*/...)     mafMsg(__PRETTY_FUNCTION__ << " has not implemented yet!"); return __VA_ARGS__
+
+LocalIPCSenderImpl::LocalIPCSenderImpl()
+{
+    NOT_IMPLEMENTED_WARN();
+}
+
+LocalIPCSenderImpl::~LocalIPCSenderImpl()
+{
+    NOT_IMPLEMENTED_WARN();
+}
+
+DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &/*ba*/, const Address &/*destination*/)
+{
+    NOT_IMPLEMENTED_WARN(DataTransmissionErrorCode::FailedUnknown);
+}
+
+void LocalIPCSenderImpl::initConnection(const Address &)
+{
+    NOT_IMPLEMENTED_WARN();
+}
+
+Availability LocalIPCSenderImpl::checkReceiverStatus() const
+{
+    NOT_IMPLEMENTED_WARN(Availability::Unknown);
+}
+
+const Address &LocalIPCSenderImpl::receiverAddress() const
+{
+    NOT_IMPLEMENTED_WARN(Address::INVALID_ADDRESS);
+}
+
+}
+}
+}
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -44,7 +87,7 @@ void * cientThread(void *arg)
     close(clientSocket);
     pthread_exit(NULL);
 }
-int main(){
+int dummy(){
   int i = 0;
   pthread_t tid[51];
   while(i< 50)

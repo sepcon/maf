@@ -1,12 +1,49 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<sys/socket.h>
-#include<netinet/in.h>
-#include<string.h>
+#include <maf/utils/debugging/Debug.h>
+#include "LocalIPCReceiverImpl.h"
+
+namespace maf {
+namespace messaging {
+namespace ipc {
+
+bool LocalIPCReceiverImpl::initConnection(Address, bool isClientMode)
+{
+    return false;
+}
+
+bool LocalIPCReceiverImpl::startListening()
+{
+    return false;
+}
+
+bool LocalIPCReceiverImpl::stopListening()
+{
+    return false;
+}
+
+bool LocalIPCReceiverImpl::listening() const
+{
+    return false;
+}
+
+const Address &LocalIPCReceiverImpl::address() const
+{
+    return Address::INVALID_ADDRESS;
+}
+
+}
+}
+}
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <fcntl.h> // for open
 #include <unistd.h> // for close
-#include<pthread.h>
+#include <pthread.h>
+
 
 char client_message[2000];
 char buffer[1024];
@@ -31,7 +68,7 @@ void * socketThread(void *arg)
     close(newSocket);
     pthread_exit(NULL);
 }
-int main(){
+int dump(){
     int serverSocket, newSocket;
     struct sockaddr_in serverAddr;
     struct sockaddr_storage serverStorage;

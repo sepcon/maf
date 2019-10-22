@@ -102,7 +102,7 @@ public: \
     }
 
 #define mc_maf_csc_function_params_empty(Type) \
-    struct Type { \
+    struct Type : public maf::messaging::ipc::SerializableMessageContentBase { \
         static constexpr maf::messaging::OpID sOperationID() { \
             return ID(); \
         } \

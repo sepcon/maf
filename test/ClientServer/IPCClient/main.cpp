@@ -4,7 +4,7 @@
 #include <maf/utils/TimeMeasurement.h>
 #include <maf/messaging/client-server/ipc/LocalIPCClient.h>
 #include <maf/messaging/client-server/ipc/LocalIPCServiceProxy.h>
-#include "../../IPCServer/src/WeatherContract.h"
+#include "../WeatherContract.h"
 
 using namespace maf::messaging::ipc;
 using namespace maf::messaging;
@@ -39,16 +39,16 @@ public:
 				//}
 				//else
 				{
-					mafMsg("Send request to server");
-					auto regid = _proxy->sendRequest<WeatherStatusResult>([](const std::shared_ptr<WeatherStatusResult>& msg) {
+                    mafMsg("Send request to server");
+                    auto regid = _proxy->sendRequest<WeatherStatus::Result>([](const std::shared_ptr<WeatherStatus::Result>& msg) {
 						static int totalResponse = 0;
-						mafMsg("Received update for request of weather status result " << msg->props().sStatus() << " - " << ++totalResponse);
-						mafMsg(msg->props().dump());
+                        mafMsg("Received update for request of weather status result " << msg->sStatus() << " - " << ++totalResponse);
+                        mafMsg(msg->dump());
 						});
-					_timer.start(500, [this, regid] {
+					_timer.start(5000, [this, regid] {
 						mafMsg("send abort the request immediately");
-						//_proxy->sendAbortRequest(regid);
-						_proxy->sendRequest<ShutDownServerRequestResult>();
+                        _proxy->sendAbortRequest(regid);
+                        _proxy->sendRequest<ShutDownServerRequest::Event>();
 						});
 				}
 
@@ -72,7 +72,7 @@ int main()
 	auto proxy = LocalIPCServiceProxy::createProxy(1);
 	maf::util::TimeMeasurement tmeasure([](auto time) {
 		mafMsg("Total execution time = " << time);
-		});
+        });
 	mafMsg("Client is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
 	LocalIPCClient::instance().init(addr, 500);
