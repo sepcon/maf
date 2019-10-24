@@ -1,10 +1,8 @@
+#include <maf/utils/debugging/Debug.h>
 #include "LocalIPCReceiverImpl.h"
 #include "PipeShared.h"
 #include <maf/messaging/client-server/Connection.h>
-#include <maf/utils/debugging/Debug.h>
-#include <Windows.h>
-#include <stdio.h>
-#include <strsafe.h>
+//#include <strsafe.h>
 
 #define CONNECTING_STATE 0
 #define READING_STATE 1

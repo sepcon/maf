@@ -13,9 +13,9 @@ namespace messaging {
 
 OBJECT(Address)
     public:
-        using Port = int32_t;
+        using Port = uint16_t;
         using Name = std::string;
-        static constexpr Port INVALID_PORT = -1;
+        static constexpr Port INVALID_PORT = static_cast<Port>(-1);
         static const Name INVALID_NAME;
         static const Address INVALID_ADDRESS;
         bool valid() const { return (port() != INVALID_PORT) || (name() != INVALID_NAME);}

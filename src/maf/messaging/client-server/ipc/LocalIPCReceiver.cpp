@@ -16,7 +16,7 @@ LocalIPCReceiver::~LocalIPCReceiver()
 {
 }
 
-bool LocalIPCReceiver::initConnection(Address address, bool isClientMode)
+bool LocalIPCReceiver::initConnection(const Address& address, bool isClientMode)
 {
     return _impl->initConnection(address, isClientMode);
 }

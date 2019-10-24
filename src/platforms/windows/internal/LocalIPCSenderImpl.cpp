@@ -9,7 +9,11 @@ namespace messaging {
 namespace ipc {
 
 static constexpr int MAX_ATEMPTS = 10;
-static HANDLE openPipe(const std::string& pipeName);
+namespace
+{
+	static HANDLE openPipe(const std::string& pipeName);
+}
+
 static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const char* buffer, size_t buffSize)
 {
     bool success = false;
@@ -142,19 +146,21 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
     return errCode;
 }
 
-HANDLE openPipe(const std::string &pipeName)
+namespace
 {
-    return CreateFileA(
-                pipeName.c_str(),                                                                   // pipe name
-                GENERIC_WRITE |                                                                     // write only
-                FILE_FLAG_OVERLAPPED,
-                0,                                                                                  // no sharing
-                nullptr,                                                                            // default security attributes
-                OPEN_EXISTING,                                                                      // opens existing pipe
-                0,                                                                                  // write overlapped
-                nullptr);                                                                           // no template file
+	HANDLE openPipe(const std::string &pipeName)
+	{
+		return CreateFileA(
+			pipeName.c_str(),                                                                   // pipe name
+			GENERIC_WRITE |                                                                     // write only
+			FILE_FLAG_OVERLAPPED,
+			0,                                                                                  // no sharing
+			nullptr,                                                                            // default security attributes
+			OPEN_EXISTING,                                                                      // opens existing pipe
+			0,                                                                                  // write overlapped
+			nullptr);                                                                           // no template file
+	}
 }
-
 
 } // ipc
 } // messaging

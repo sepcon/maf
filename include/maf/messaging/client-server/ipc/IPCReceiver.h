@@ -25,7 +25,7 @@ class IPCReceiver
 {
 public:
     virtual ~IPCReceiver() = default;
-    virtual bool initConnection(Address address, bool isClientMode = false) = 0;
+    virtual bool initConnection(const Address& address, bool isClientMode = false) = 0;
     virtual bool startListening() = 0;
     virtual bool stopListening() = 0;
     virtual bool listening() const = 0;

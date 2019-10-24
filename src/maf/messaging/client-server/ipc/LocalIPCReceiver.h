@@ -11,7 +11,7 @@ class LocalIPCReceiver : public IPCReceiver, BytesComeObserver
 public:
     LocalIPCReceiver();
     ~LocalIPCReceiver() override;
-    bool initConnection(Address address, bool isClientMode = false) override;
+    bool initConnection(const Address &address, bool isClientMode = false) override;
     bool startListening() override;
     bool stopListening() override;
     bool listening() const override;

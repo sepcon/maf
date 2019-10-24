@@ -41,7 +41,7 @@ public:
                     static thread_local int responseCount = 0;
                     static thread_local long long totalupdateTime = 0;
 
-                    mafMsg("Component id: " << std::this_thread::get_id() << " Timer expired , total request: " << ++responseCount);
+                    mafMsg("Component " << name() << " Timer expired , total request: " << ++responseCount);
                     auto res = std::make_shared<WeatherStatus::Result>();
                     res->set_shared_list_of_places({"hello", "world"});
 

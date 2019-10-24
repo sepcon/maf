@@ -26,8 +26,8 @@ struct ClientComponent : public ExtensibleComponent
             {
                 auto request = WeatherStatus::makeRequest();
                 _proxy->template sendStatusChangeRegister<WeatherStatus::Result>
-                    ([](const std::shared_ptr<WeatherStatus::Result>& result){
-                        mafMsg("thread " << std::this_thread::get_id() << " Got Status update from server: \n" << result->dump());
+                    ([this](const std::shared_ptr<WeatherStatus::Result>& result){
+                        mafMsg("Component " << name() << " Got Status update from server: \n" << result->dump());
                     });
 
                 request->set_command(1);

@@ -1,107 +1,148 @@
-#include <maf/utils/debugging/Debug.h>
 #include "LocalIPCSenderImpl.h"
+#include "SocketShared.h"
+#include <maf/utils/debugging/Debug.h>
+
+#define ns_global
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-#define NOT_IMPLEMENTED_WARN(/*returned_value*/...)     mafMsg(__PRETTY_FUNCTION__ << " has not implemented yet!"); return __VA_ARGS__
+namespace
+{
+    AutoCloseFD<SockFD> connectToSocket(const std::string& sockpath)
+    {
+        AutoCloseFD<SockFD> fd;
+        if(isValidSocketPath(sockpath))
+        {
+            if( fd = socket(AF_UNIX, SOCK_STREAM, 0); fd == INVALID_FD)
+            {
+                mafUssErr("Cannot create socket on sockpath " << sockpath);
+            }
+            else
+            {
+                auto addr = createUnixAbstractSocketAddr(sockpath);
+                if (connect(fd, _2sockAddr(&addr), sizeof(addr)) == INVALID_FD)
+                {
+                    mafUssErr("Can't connect to address " << sockpath);
+                    fd.reset();
+                }
+            }
+        }
+        else
+        {
+            mafErr("Length of address exeeds the limitation of unix domain socket path");
+        }
+
+        return fd;
+    }
+}
 
 LocalIPCSenderImpl::LocalIPCSenderImpl()
 {
-    NOT_IMPLEMENTED_WARN();
 }
 
 LocalIPCSenderImpl::~LocalIPCSenderImpl()
 {
-    NOT_IMPLEMENTED_WARN();
 }
 
-DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &/*ba*/, const Address &/*destination*/)
+DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &payload, const Address &destination)
 {
-    NOT_IMPLEMENTED_WARN(DataTransmissionErrorCode::FailedUnknown);
+    DataTransmissionErrorCode ec = DataTransmissionErrorCode::FailedUnknown;
+    SocketPath sockpath;
+
+    if(destination.valid())
+    {
+        sockpath = constructSocketPath(destination);
+    }
+    else if(_myReceiverAddr && _myReceiverAddr->valid())
+    {
+        sockpath = *_myReceiverSocketPath;
+    }
+
+
+    if(auto fd = connectToSocket(sockpath); fd != INVALID_FD)
+    {
+        SizeType totalWritten = 0;
+        SizeType payloadSize = static_cast<SizeType>(payload.length());
+
+        // First write is to send payload size to receiver to reserve a buffer
+        if(auto written = ns_global::write(fd, reinterpret_cast<char*>(&payloadSize), sizeof (SizeType));
+                written == sizeof(SizeType))
+        {
+            // Second write is to send payload content
+            do
+            {
+                if(written = ns_global::write(fd, payload.data() + totalWritten, payloadSize - totalWritten); written != -1)
+                {
+                    totalWritten += written;
+                }
+                else
+                {
+                    mafUssErr("Failed to send bytes to receiver, total written = " << totalWritten);
+                    ec = DataTransmissionErrorCode::FailedUnknown;
+                    break;
+                }
+            }
+            while(totalWritten < payloadSize);
+
+            ec = DataTransmissionErrorCode::Success;
+        }
+        else
+        {
+            mafUssErr("Failed to send payload size[" << payloadSize << "] to receiver");
+        }
+
+        if(ec != DataTransmissionErrorCode::Success)
+        {
+            if(totalWritten == 0)
+            {
+
+            }
+            else
+            {
+                //ec = FailedUnknown, must provide more info for debugging purpose
+                mafErr("Failed to send payload to receiver, expected is " << sizeof(SizeType) << ", sent was " << totalWritten);
+            }
+        }
+    }
+    else
+    {
+        ec = DataTransmissionErrorCode::ReceiverUnavailable;
+    }
+
+    return ec;
 }
 
-void LocalIPCSenderImpl::initConnection(const Address &)
+bool LocalIPCSenderImpl::initConnection(const Address & receiverAddr)
 {
-    NOT_IMPLEMENTED_WARN();
+    _myReceiverAddr = std::make_unique<Address>(receiverAddr);
+    _myReceiverSocketPath = std::make_unique<SocketPath>(constructSocketPath(receiverAddr));
+    return isValidSocketPath(*_myReceiverSocketPath);
 }
 
 Availability LocalIPCSenderImpl::checkReceiverStatus() const
 {
-    NOT_IMPLEMENTED_WARN(Availability::Unknown);
+    auto status = Availability::Unknown;
+    if(_myReceiverSocketPath)
+    {
+        status = connectToSocket(*_myReceiverSocketPath) != INVALID_FD ? Availability::Available : Availability::Unavailable;
+    }
+    return status;
 }
 
 const Address &LocalIPCSenderImpl::receiverAddress() const
 {
-    NOT_IMPLEMENTED_WARN(Address::INVALID_ADDRESS);
-}
-
-}
-}
-}
-
-#include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <stdlib.h>
-#include <fcntl.h> // for open
-#include <unistd.h> // for close
-#include<pthread.h>
-
-void * cientThread(void *arg)
-{
-  printf("In thread\n");
-  char message[1000];
-  char buffer[1024];
-  int clientSocket;
-  struct sockaddr_in serverAddr;
-  socklen_t addr_size;
-  // Create the socket.
-  clientSocket = socket(PF_INET, SOCK_STREAM, 0);
-  //Configure settings of the server address
- // Address family is Internet
-  serverAddr.sin_family = AF_INET;
-  //Set port number, using htons function
-  serverAddr.sin_port = htons(7799);
- //Set IP address to localhost
-  serverAddr.sin_addr.s_addr = inet_addr("localhost");
-  memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
-    //Connect the socket to the server using the address
-    addr_size = sizeof serverAddr;
-    connect(clientSocket, (struct sockaddr *) &serverAddr, addr_size);
-    strcpy(message,"Hello");
-   if( send(clientSocket , message , strlen(message) , 0) < 0)
+    if(_myReceiverAddr)
     {
-            printf("Send failed\n");
+        return *_myReceiverAddr;
     }
-    //Read the message from the server into the buffer
-    if(recv(clientSocket, buffer, 1024, 0) < 0)
+    else
     {
-       printf("Receive failed\n");
+        return Address::INVALID_ADDRESS;
     }
-    //Print the received message
-    printf("Data received: %s\n",buffer);
-    close(clientSocket);
-    pthread_exit(NULL);
 }
-int dummy(){
-  int i = 0;
-  pthread_t tid[51];
-  while(i< 50)
-  {
-    if( pthread_create(&tid[i], NULL, cientThread, NULL) != 0 )
-           printf("Failed to create thread\n");
-    i++;
-  }
-  sleep(20);
-  i = 0;
-  while(i< 50)
-  {
-     pthread_join(tid[i++],NULL);
-     printf("%d:\n",i);
-  }
-  return 0;
+
+}
+}
 }

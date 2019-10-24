@@ -20,15 +20,13 @@ void IPCClientBase::init(IPCType type, const Address &serverAddress, long long s
 
 void IPCClientBase::deinit()
 {
+    _stop.store(true, std::memory_order_release);
     ClientBase::deinit();
     BytesCommunicator::deinit();
-    _stop.store(true, std::memory_order_release);
     if(_serverMonitorThread.joinable())
     {
         _serverMonitorThread.join();
     }
-
-    _requesters.atomic()->clear();
 }
 
 IPCClientBase::~IPCClientBase()

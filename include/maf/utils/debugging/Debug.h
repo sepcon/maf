@@ -1,56 +1,56 @@
 #ifndef HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 #define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 
-//#define ENABLE_MAF_DEBUG_LOG 1
-#ifdef ENABLE_MAF_DEBUG_LOG
-#    if defined(__clang__) || defined (__GNUC__)
-#        define maf_FUNC __FUNCTION__
-#    elif defined(_MSC_VER)
-#        define maf_FUNC __FUNCTION__
-#    else
-#        define maf_FUNC ""
-#    endif
+#include <sstream>
+#include <functional>
 
-#    if ENABLE_MAF_DEBUG_LOG == 2
-#        define maf_CODE_INFO() "\t\t: " << __FILE__ << ":" << __LINE__ << ":("<< maf_FUNC << ")" << ":"
-#    else
-#        define maf_CODE_INFO() ""
-#    endif
-
-#    define mafInfo(messageChain)  sendToMyLoggingDevice("INFO: " << messageChain, std::cout, maf_CODE_INFO())
-#    define mafWarn(messageChain)  sendToMyLoggingDevice("WARN: " << messageChain, std::cerr, maf_CODE_INFO())
-#    define mafErr(messageChain)   sendToMyLoggingDevice("ERROR: " << messageChain, std::cerr, maf_CODE_INFO())
-#    define mafFatal(messageChain) sendToMyLoggingDevice("FATAL: " << messageChain, std::cerr, maf_CODE_INFO())
-
-#else
-#    define mafInfo(messageChain) sendToMyLoggingDevice(messageChain, maf::debugging::DumpMan(), "")
-#    define mafWarn(messageChain) sendToMyLoggingDevice(messageChain, maf::debugging::DumpMan(), "")
-#    define mafErr(messageChain)  sendToMyLoggingDevice(messageChain, maf::debugging::DumpMan(), "")
-#endif
-
-#    include <iostream>
-#    include <sstream>
 namespace maf {
 namespace debugging {
 
-class DumpMan
+enum class LogLevel : char
 {
-public:
-    template<typename T>
-    DumpMan& operator<<(const T& /*anything*/) { return *this; }
-	void flush() {}
+    LEVEL_INFO,
+    LEVEL_WARN,
+    LEVEL_ERROR,
+    LEVEL_FATAL,
+    INDISCARDABLE
 };
+using LoggingFunctionType = std::function<void(const std::string& msg)>;
+
+void initLogging(LogLevel filteredLevel = LogLevel::INDISCARDABLE,
+                 LoggingFunctionType outLogFunc = {},
+                 LoggingFunctionType errLogFunc = {});
+void log(const std::string& msg, LogLevel filteredLevel);
 
 }
 }
 
 
-#    define mafMsg(messageChain)   sendToMyLoggingDevice(messageChain, std::cout, "")
-#    define sendToMyLoggingDevice(messageChain, loggingDevice, debugInfo)  { \
-                std::ostringstream oss; \
-                oss << messageChain << debugInfo << "\n"; \
-                loggingDevice << oss.str(); \
-                loggingDevice.flush(); \
-            } void(0)
+#if defined(__clang__) || defined (__GNUC__)
+#    define maf_FUNC __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#    define maf_FUNC __FUNCSIG__
+#else
+#    define maf_FUNC ""
+#endif
+
+#ifdef ENABLE_MAF_DEBUG_LOG_VERBOSE
+#    define maf_CODE_INFO() "\t\t: " << __FILE__ << ":" << __LINE__ << ":("<< maf_FUNC << ")" << ":"
+#else
+#    define maf_CODE_INFO() ""
+#endif
+
+#define mafInfo(messageChain)  sendToMyLoggingDevice("INFO :    " << messageChain, maf::debugging::LogLevel::LEVEL_INFO, maf_CODE_INFO())
+#define mafWarn(messageChain)  sendToMyLoggingDevice("WARN :    " << messageChain, maf::debugging::LogLevel::LEVEL_WARN, maf_CODE_INFO())
+#define mafErr(messageChain)   sendToMyLoggingDevice("ERROR:    " << messageChain, maf::debugging::LogLevel::LEVEL_ERROR, maf_CODE_INFO())
+#define mafFatal(messageChain) sendToMyLoggingDevice("FATAL:    " << messageChain, maf::debugging::LogLevel::LEVEL_FATAL, maf_CODE_INFO())
+#define mafMsg(messageChain)   sendToMyLoggingDevice("MSG  :    " << messageChain, maf::debugging::LogLevel::INDISCARDABLE, "")
+
+#define sendToMyLoggingDevice(messageChain, loglevel, debugInfo)  \
+{ \
+    std::ostringstream oss; \
+    oss << messageChain << debugInfo; \
+    maf::debugging::log(oss.str(), loglevel); \
+} void(0)
 
 #endif // HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H

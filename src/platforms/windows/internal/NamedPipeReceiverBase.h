@@ -29,7 +29,7 @@ public:
             _workerThread.join();
         }
     }
-    bool initConnection(Address address, bool isClientMode = false) override
+    bool initConnection(const Address& address, bool isClientMode = false) override
     {
         _isClient = isClientMode;
         if(isClientMode)
