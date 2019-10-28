@@ -1,27 +1,6 @@
-#include "platforms/LocalIPCReceiver.h"
-
-#if defined(_WIN32) || defined(_WIN64)
-    #include "./platforms/windows/LocalIPCReceiverImpl.cpp"
-#elif defined(LINUX)
-    #include "./platforms/linux/LocalIPCReceiverImpl.cpp"
-#else
-namespace maf {
-namespace messaging {
-namespace ipc {
-
-class LocalIPCReceiverImpl : public LocalIPCReceiver
-{
-public:
-    virtual bool initConnection(Address, bool = false)  { return false; }
-    virtual bool startListening()  { return false; }
-    virtual bool stopListening()  { return false; }
-    virtual bool listening() const  { return false; }
-    virtual const Address& address() const  { return Address::INVALID_ADDRESS; }
-};
-}
-}
-}
-#endif
+#include <maf/utils/debugging/Debug.h>
+#include <internal/LocalIPCReceiverImpl.h>
+#include "LocalIPCReceiver.h"
 
 namespace maf {
 namespace messaging {
@@ -37,7 +16,7 @@ LocalIPCReceiver::~LocalIPCReceiver()
 {
 }
 
-bool LocalIPCReceiver::initConnection(Address address, bool isClientMode)
+bool LocalIPCReceiver::initConnection(const Address& address, bool isClientMode)
 {
     return _impl->initConnection(address, isClientMode);
 }

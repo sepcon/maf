@@ -22,8 +22,6 @@ public:
     BytesCommunicator(CSMessageReceiver* receiver);
     void init(IPCType type, const Address& serverAddress, bool isClient);
     void deinit();
-    void startWaitingMessages();
-    void stopWaitingMessages();
     bool isWaiting() const;
     DataTransmissionErrorCode send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
     ~BytesCommunicator() override; //Not allow to make instance of this class

@@ -21,7 +21,7 @@ public:
     bool respond(const CSMsgContentPtr& answer);
     bool update(const CSMsgContentPtr& answer);
     CSMsgContentPtr getRequestContent();
-    void abortedBy(AbortCallback abortCallback);
+    void onAbortRequest(AbortCallback abortCallback);
 
 protected:
     friend class ServiceStubBaseImpl;

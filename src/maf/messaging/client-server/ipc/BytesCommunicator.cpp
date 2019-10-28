@@ -30,31 +30,12 @@ void BytesCommunicator::init(IPCType type, const Address &serverAddress, bool is
     _pSender->initConnection(serverAddress);
     _pReceiver->initConnection(serverAddress, isClient);
     _pReceiver->registerObserver(this);
-    startWaitingMessages();
+    _pReceiver->startListening();
 }
 
 void BytesCommunicator::deinit()
 {
-    if(_pReceiver && _pReceiver->listening())
-    {
-        _pReceiver->stopListening();
-    }
-}
-
-void BytesCommunicator::startWaitingMessages()
-{
-    if(_pReceiver && !_pReceiver->listening())
-    {
-        _pReceiver->startListening();
-    }
-}
-
-void BytesCommunicator::stopWaitingMessages()
-{
-    if(_pReceiver && _pReceiver->listening())
-    {
-        _pReceiver->stopListening();
-    }
+    _pReceiver->stopListening();
 }
 
 bool BytesCommunicator::isWaiting() const

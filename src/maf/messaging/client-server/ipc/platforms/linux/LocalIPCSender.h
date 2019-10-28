@@ -1,5 +1,0 @@
-#ifndef LOCALIPCSENDER_H
-#define LOCALIPCSENDER_H
-
-
-#endif // LOCALIPCSENDER_H

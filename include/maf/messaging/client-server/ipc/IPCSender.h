@@ -12,7 +12,7 @@ class IPCSender
 {
 public:
     virtual ~IPCSender() = default;
-    virtual void initConnection(const Address&) = 0;
+    virtual bool initConnection(const Address&) = 0;
     virtual DataTransmissionErrorCode send(const srz::ByteArray& ba, const Address& destination = Address::INVALID_ADDRESS) = 0;
     virtual Availability checkReceiverStatus() const = 0;
     virtual const Address& receiverAddress() const = 0;

@@ -16,7 +16,6 @@ enum class DataTransmissionErrorCode : char
     Success,
     ReceiverBusy,
     ReceiverUnavailable,
-    CantConnectToReceiver,
     FailedUnknown
 };
 

@@ -1,26 +1,6 @@
+#include <internal/LocalIPCSenderImpl.h>
+#include "LocalIPCSender.h"
 
-#include "platforms/LocalIPCSender.h"
-#if defined(_WIN32) || defined(_WIN64)
-#   include "./platforms/windows/LocalIPCSenderImpl.cpp"
-#elif defined(LINUX)
-#   include "./platforms/linux/LocalIPCSenderImpl.cpp"
-#else
-namespace maf {
-namespace messaging {
-namespace ipc {
-
-class LocalIPCSenderImpl : public IPCSender
-{
-public:
-    virtual void initConnection(const Address&) {}
-    virtual DataTransmissionErrorCode send(const srz::ByteArray&, const Address& = Address::INVALID_ADDRESS)
-    { return {}; }
-    virtual Availability checkReceiverStatus() const { return {}; }
-    virtual const Address& receiverAddress() const { return Address::INVALID_ADDRESS; }
-};
-
-}}}
-#endif
 
 namespace maf {
 namespace messaging {
@@ -36,9 +16,9 @@ LocalIPCSender::~LocalIPCSender()
 {
 }
 
-void LocalIPCSender::initConnection(const Address& addr)
+bool LocalIPCSender::initConnection(const Address& addr)
 {
-    _pImpl->initConnection(addr);
+    return _pImpl->initConnection(addr);
 }
 
 DataTransmissionErrorCode LocalIPCSender::send(const maf::srz::ByteArray& ba, const Address &destination)
