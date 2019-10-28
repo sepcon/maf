@@ -40,22 +40,22 @@ int main()
     SecurityScanRequestMsg s;
     s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
     s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["hello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+//    s.special_map()["kello"]["dello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
 
     std::cout << "s before cleared is: " << std::endl;
     std::cout << (s.dump()) << std::endl;
@@ -73,5 +73,24 @@ int main()
 
     std::cout << "After deserialization: " << std::endl;
     std::cout << s.dump() << std::endl;
+    std::cout << s.dump(-1) << std::endl;
+
+    std::map<std::string, std::vector<int>> mv = {
+        {"1", {1, 2, 3}},
+        {"2", {3, 2, 3}}
+    };
+    {
+        std::string dumped;
+        maf::srz::DumpHelper<decltype (mv)>::dump(mv, -1, dumped);
+        std::cout << dumped << std::endl;
+
+    }
+    {
+        std::string dumped;
+        maf::srz::DumpHelper<decltype (mv)>::dump(mv, 0, dumped);
+        std::cout << dumped << std::endl;
+
+    }
+
     return 0;
 }
