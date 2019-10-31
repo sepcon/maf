@@ -188,13 +188,13 @@ private: \
     static void dump(const char* valName, const T& val, int level, std::string& strOut) { \
         strOut += maf::srz::getIndent(level, true); \
         maf::srz::dump(valName, level, strOut); \
-        strOut += " : "; \
+        strOut += maf::srz::keyValueSeparator(level); \
         maf::srz::dump(val, level, strOut); \
         strOut += ","; \
     }
 
 #   define mc_maf_dump_each_property_(Type, Name, index) \
-        dump(#Name, Name(), level + 1, strOut);
+        dump(#Name, Name(), maf::srz::nextLevel(level), strOut);
 
 #   define mc_maf_dump_each_property(...) mc_maf_msvc_expand_va_args( mc_maf_dump_each_property_(__VA_ARGS__) )
 
@@ -203,7 +203,7 @@ private: \
 
 #   define mc_maf_define_dump_function(...) \
        void dump(int level, std::string& strOut) const { \
-           strOut += "{"; \
+           strOut += maf::srz::getIndent(level) + "{"; \
            mc_maf_for_each_idx( mc_maf_dump_each_property_with_index, __VA_ARGS__) \
            if(strOut.back() == ',') { \
                strOut.resize(strOut.size() - 1); \

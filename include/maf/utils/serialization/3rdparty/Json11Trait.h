@@ -101,7 +101,7 @@ struct J11TraitImpl<std::vector<T>>
 
     static ReturnType get(const Json& j)
     {
-        auto array = j.array_items();
+        auto& array = j.array_items();
         ReturnType ret;
         for(auto& item : array)
         {
@@ -134,9 +134,9 @@ struct J11TraitImpl<std::map<Key, Value>>
 
     static ReturnType get(const Json& j)
     {
-        auto array = j.object_items();
+        auto& items = j.object_items();
         ReturnType ret;
-        for(auto& item : array)
+        for(auto& item : items)
         {
             ret.insert(std::make_pair(item.first, J11TraitImpl<Value>::get(item.second)));
         }

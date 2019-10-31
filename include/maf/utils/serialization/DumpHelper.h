@@ -5,9 +5,6 @@
 #include "BasicTypes.h"
 #include "JsonTrait.h"
 #include <string>
-#include <cstring>
-#include <cassert>
-#include <locale>
 
 #define mc_enable_if_is_tuplelike_(TypeName) template<typename TypeName, std::enable_if_t<is_tuple_like_v<TypeName>, bool> = true>
 #define mc_enable_if_is_number_(NumberType) template<typename NumberType, std::enable_if_t<nstl::is_number_type_v<NumberType> , bool> = true>
@@ -22,8 +19,20 @@ namespace srz {
 
 using namespace nstl;
 
+inline int nextLevel(int currentLevel)
+{
+    if(currentLevel < 0)
+    {
+        return currentLevel;
+    }
+    else
+    {
+        return currentLevel + 1;
+    }
+}
 inline std::string getIndent(int indentLevel, bool newLine = false)
 {
+    if(indentLevel < 0) { return ""; }
     if(newLine)
     {
         auto str = std::string(static_cast<size_t>(indentLevel * 4) + 1, ' ');
@@ -36,15 +45,16 @@ inline std::string getIndent(int indentLevel, bool newLine = false)
     }
 }
 
+inline std::string keyValueSeparator(int indentLevel)
+{
+    return indentLevel < 0 ? ":" : ": ";
+}
 struct hlp
 {
     template<typename T, std::enable_if_t<nstl::is_number_type_v<T>, bool> = true>
     inline static std::string quote(T value) { return quote(std::to_string(value)); }
     inline static std::string quote(const std::string& str) { return '"' + str + '"'; }
 };
-
-template <class JsonClass>
-struct JsonTrait;
 
 template<typename NonDeterminedType, typename = void>
 struct DumpHelper
@@ -129,7 +139,7 @@ struct DumpHelper<std::pair<T1, T2>, void>
     inline static void dump(const DType& p, int indentLevel, std::string& strOut) noexcept
     {
         DumpHelper<pure_type_t<decltype(p.first)>>::dump(p.first, indentLevel, strOut);
-        strOut += " : ";
+        strOut += keyValueSeparator(indentLevel);
         DumpHelper<pure_type_t<decltype(p.second)>>::dump(p.second , indentLevel, strOut);
     }
 };
@@ -141,8 +151,8 @@ struct DumpHelper<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>>
         constexpr bool newLine = true;
         strOut += "[";
         nstl::tuple_for_each(tp, [indentLevel, &strOut, &newLine](const auto& elem) {
-            strOut += getIndent(indentLevel + 1, newLine);
-            DumpHelper<pure_type_t<decltype(elem)>>::dump(elem, indentLevel + 1, strOut);
+            strOut += getIndent(nextLevel(indentLevel), newLine);
+            DumpHelper<pure_type_t<decltype(elem)>>::dump(elem, nextLevel(indentLevel), strOut);
             strOut += ",";
         });
 
@@ -194,7 +204,7 @@ struct Packager
 {
     inline static void openBox(int /*indentLevel*/, std::string& strOut)
     {
-        strOut += " [";
+        strOut += "[";
     }
     inline static void closeBox(int indentLevel, std::string& strOut)
     {
@@ -223,11 +233,11 @@ struct DumpHelper<Container, std::enable_if_t<nstl::is_iterable_v<Container>, vo
     inline static void dump(const Container& seq, int indentLevel, std::string& strOut) noexcept
     {
         constexpr bool NEWLINE = true;
-        auto elemPreSeparator = getIndent(indentLevel + 1, NEWLINE);
+        auto elemPreSeparator = getIndent(nextLevel(indentLevel), NEWLINE);
         Packager<Container>::openBox(indentLevel, strOut);
         for (const auto& elem : seq) {
             strOut += elemPreSeparator;
-            DumpHelper<typename Container::value_type>::dump(elem, indentLevel + 1, strOut);
+            DumpHelper<typename Container::value_type>::dump(elem, nextLevel(indentLevel), strOut);
             strOut += ",";
         }
         if(!seq.empty())
