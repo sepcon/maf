@@ -1,9 +1,9 @@
 #include <maf/threading/Thread.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <signal.h>
 #include <cassert>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace threading {
 
 thread_local Thread::OnSignalCallback Thread::_tlSigHandlerCallback = nullptr;
@@ -28,7 +28,7 @@ Thread& Thread::start()
     }
     else
     {
-        mafErr("Please specify the callback first!");
+        Logger::error("Please specify the callback first!");
     }
     return *this;
 }
@@ -69,7 +69,7 @@ void Thread::onSystemSignal(int sig)
     }
     else
     {
-        mafErr("There's no signal handler for thread " << std::this_thread::get_id() << " when signal " << sig << " comes");
+        Logger::error("There's no signal handler for thread " ,  std::this_thread::get_id() ,  " when signal " ,  sig ,  " comes");
     }
 }
 

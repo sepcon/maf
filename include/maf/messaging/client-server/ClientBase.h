@@ -4,7 +4,6 @@
 #include "ServiceStatusObserverInterface.h"
 #include "ServiceRequesterInterface.h"
 #include "internal/CSShared.h"
-#include <maf/utils/debugging/Debug.h>
 #include <map>
 
 namespace maf {
@@ -24,8 +23,8 @@ public:
     IServiceRequesterPtr getServiceRequester(ServiceID sid) override;
     Availability getServiceStatus(ServiceID sid) override;
 
-    void init();
-    void deinit();
+    bool init(const Address& serverAddress, long long sersverMonitoringCycleMS) override;
+    bool deinit() override;
 
 protected:
     bool onIncomingMessage(const CSMessagePtr& msg) override;

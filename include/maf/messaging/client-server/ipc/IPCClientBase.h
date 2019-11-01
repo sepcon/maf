@@ -12,15 +12,16 @@ namespace ipc {
 class IPCClientBase : public ClientBase, public BytesCommunicator
 {
 public:
-    IPCClientBase();
+    IPCClientBase(IPCType type);
     ~IPCClientBase() override;
 
-    void init(IPCType type, const Address& serverAddress, long long serverStatusCheckPeriodMS = 1000);
-    void deinit();
+    bool init(const Address& serverAddress, long long sersverMonitoringCycleMS = 1000) override;
+    bool deinit() override;
     DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg)  override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
+
 protected:
-    void monitorServerStatus(long long serverStatusCheckPeriodMS);
+    void monitorServerStatus(long long sersverMonitoringCycleMS);
     std::thread _serverMonitorThread;
     std::atomic_bool _stop;
 };

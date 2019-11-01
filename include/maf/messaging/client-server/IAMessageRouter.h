@@ -15,8 +15,8 @@ class IAMessageRouter : public ClientBase, public ServerBase, public pattern::Si
 {
 public:
     IAMessageRouter(Invisible){}
-    void init();
-    void deinit();
+    bool init(const Address &, long long) override;
+    bool deinit() override;
     bool registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface>& requester)  override;
     DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
     DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg) override;

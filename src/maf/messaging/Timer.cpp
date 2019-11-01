@@ -1,13 +1,11 @@
 #include <maf/messaging/Timer.h>
-#include <maf/threading/TimerManager.h>
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
+#include "TimerManager.h"
 #include <cassert>
 
-namespace maf {
-using util::IDManager;
-using threading::TimerManager;
+namespace maf { using util::IDManager; using logging::Logger;
 namespace messaging {
 
 
@@ -24,13 +22,13 @@ void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
 {
     if(!callback)
     {
-        mafErr("[Timer]: Please specify not null callback");
+        Logger::error("[Timer]: Please specify not null callback");
     }
     else if((_myMgr = Component::getTimerManager()))
     {
         if(running())
         {
-            mafInfo("Timer is still running, then stop!");
+            Logger::info("Timer is still running, then stop!");
             stop();
         }
         auto componentRef = Component::getActiveWeakPtr();
@@ -56,7 +54,7 @@ void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
         };
 
         _id = _myMgr->start(milliseconds, onTimeout, _cyclic);
-        mafInfo("Start new timer with id = " << _id);
+        Logger::info("Start new timer with id = " ,  _id);
     }
 }
 

@@ -20,6 +20,8 @@ public:
     virtual bool unregisterServiceProvider(ServiceID sid) = 0;
     virtual bool hasServiceProvider(ServiceID sid) = 0;
     virtual IServiceProviderPtr getServiceProvider(ServiceID sid) = 0;
+    virtual bool init(const Address& serverAddr) = 0;
+    virtual bool deinit() = 0;
 };
 
 }

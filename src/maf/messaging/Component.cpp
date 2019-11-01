@@ -1,19 +1,19 @@
 #include <maf/messaging/MessageQueue.h>
 #include <maf/messaging/Component.h>
 #include <maf/utils/cppextension/Lockable.h>
-#include <maf/threading/TimerManager.h>
 #include <maf/messaging/BasicMessages.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
+#include "TimerManager.h"
 #include <thread>
 #include <memory>
 #include <map>
 
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 using MsgHandlerMap = nstl::Lockable<std::map<MessageBase::Type, MessageHandlerFunc<MessageBase>>>;
-using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
+using TimerMgrPtr = std::shared_ptr<TimerManager>;
 
 static thread_local ComponentRef _tlwpInstance;
 
@@ -39,11 +39,11 @@ private:
 
 Component::ComponentImpl::ComponentImpl()
 {
-    registerMessageHandler(MessageBase::idof<TimeoutMessage>(), [](const auto& msg) {
+    registerMessageHandler(msgID<TimeoutMessage>(), [](const auto& msg) {
         auto timeoutMsg = std::static_pointer_cast<TimeoutMessage>(msg);
         timeoutMsg->execute();
     });
-    registerMessageHandler(MessageBase::idof<CallbackExcMsg>(), [](const auto& msg) {
+    registerMessageHandler(msgID<CallbackExcMsg>(), [](const auto& msg) {
         auto cbExcMsg = std::static_pointer_cast<CallbackExcMsg>(msg);
         cbExcMsg->execute();
     });
@@ -90,15 +90,15 @@ void Component::ComponentImpl::postMessage(MessageBasePtr msg)
     }
     catch(const std::bad_alloc& ba)
     {
-        mafErr("Queue overflow: " << ba.what());
+        Logger::error("Queue overflow: " ,  ba.what());
     }
     catch(const std::exception& e)
     {
-        mafErr("Exception occurred when pushing data to queue: " << e.what());
+        Logger::error("Exception occurred when pushing data to queue: " ,  e.what());
     }
     catch(...)
     {
-        mafErr("Unkown exception occurred when pushing data to queue!");
+        Logger::error("Unkown exception occurred when pushing data to queue!");
     }
 }
 
@@ -122,7 +122,7 @@ TimerMgrPtr Component::ComponentImpl::getTimerManager()
 {
     if(!_timerMgr)
     {
-        _timerMgr = std::make_shared<threading::TimerManager>();
+        _timerMgr = std::make_shared<TimerManager>();
     }
     return _timerMgr; // at this point, the timer object will never be destroyed if still have someone holding its reference(shared_ptr)
 }
@@ -140,7 +140,7 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
     {
         if(!msg)
         {
-            mafErr("Got nullptr message");
+            Logger::error("Got nullptr message");
             continue;
         }
         else
@@ -148,7 +148,7 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
             BaseMessageHandlerFunc handlerFunc;
             {
                 std::lock_guard lock(_msgHandlers);
-                auto itHandler = _msgHandlers->find(MessageBase::idof(*msg));
+                auto itHandler = _msgHandlers->find(msgID(*msg));
                 if(itHandler != _msgHandlers->end())
                 {
                     handlerFunc = itHandler->second;
@@ -163,16 +163,16 @@ void Component::ComponentImpl::startMessageLoop(ComponentRef compref, std::funct
                 }
                 catch(const std::exception& e)
                 {
-                    mafErr("Exception occurred while executing messageHandler function: " << e.what());
+                    Logger::error("Exception occurred while executing messageHandler function: " ,  e.what());
                 }
                 catch(...)
                 {
-                    mafErr("Unknown exception occurred while executing messageHandler function: ");
+                    Logger::error("Unknown exception occurred while executing messageHandler function: ");
                 }
             }
             else
             {
-                mafWarn("There's no handler for message " << MessageBase::idof(*msg).name());
+                Logger::warn("There's no handler for message " ,  msgID(*msg).name());
             }
         }
     }

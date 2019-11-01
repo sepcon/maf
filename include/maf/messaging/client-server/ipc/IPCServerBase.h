@@ -12,10 +12,10 @@ namespace ipc {
 class IPCServerBase : public ServerBase
 {
 public:
-    IPCServerBase();
+    IPCServerBase(IPCType ipctype);
     ~IPCServerBase() override;
-    void init(IPCType type, const Address& serverAddress);
-    void deinit();
+    bool init(const Address& serverAddress) override;
+    bool deinit() override  ;
     DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override;
     void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;

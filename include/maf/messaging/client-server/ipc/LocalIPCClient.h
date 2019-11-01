@@ -12,8 +12,7 @@ namespace ipc {
 class LocalIPCClient : public IPCClientBase, public pattern::SingletonObject<LocalIPCClient>
 {
 public:
-    LocalIPCClient(Invisible){}
-    void init(const Address& addr, long long serverStatusCheckPeriodMS = 1000) {IPCClientBase::init(IPCType::Local, addr, serverStatusCheckPeriodMS); }
+    LocalIPCClient(Invisible) : IPCClientBase{ IPCType::Local }{}
 };
 
 } // ipc

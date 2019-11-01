@@ -21,9 +21,8 @@ public:
     bool hasServiceProvider(ServiceID sid) override;
     IServiceProviderPtr getServiceProvider(ServiceID sid) override;
 
-    void init();
-    void deinit();
-
+    virtual bool init(const Address& serverAddr) override;
+    bool deinit() override;
 protected:
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 

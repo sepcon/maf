@@ -1,9 +1,9 @@
 #include <maf/messaging/client-server/ipc/IPCMessage.h>
 #include <maf/utils/serialization/Serializer.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
 
-namespace maf { using namespace srz;
+namespace maf { using namespace srz; using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -35,7 +35,7 @@ bool IPCMessage::fromBytes(const std::shared_ptr<srz::ByteArray> &bytes) noexcep
     }
     catch (const std::exception& e)
     {
-        mafErr("Error occurred when trying to decode IPCMessage from bytes: " << e.what());
+        Logger::error("Error occurred when trying to decode IPCMessage from bytes: " ,  e.what());
     }
 
     return false;

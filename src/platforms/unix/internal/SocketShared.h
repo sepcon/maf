@@ -18,7 +18,7 @@ using SockFD = FD;
 static constexpr size_t MAXCLIENTS = 30;
 static constexpr SockFD INVALID_FD = -1;
 
-#define mafUssErr(messageChain) mafErr(messageChain << " with error <<" << errno << ">>")
+#define mafUssErr(messageChain) Logger::error(messageChain ,  " with error , " ,  errno ,  ">>")
 
 inline bool isValidSocketPath(const SocketPath& path)
 {

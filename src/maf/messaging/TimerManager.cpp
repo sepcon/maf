@@ -1,9 +1,9 @@
-#include <maf/threading/TimerManager.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
+#include "TimerManager.h"
 #include "TimerManagerImpl.h"
 
-namespace maf {
-namespace threading {
+namespace maf { using logging::Logger;
+namespace messaging {
 
 TimerManager::TimerManager()
 {
@@ -21,11 +21,11 @@ TimerManager::~TimerManager()
         }
         catch (const std::exception& e)
         {
-            mafWarn( "Caught exception: " << e.what() );
+            Logger::warn( "Caught exception: " ,  e.what() );
         }
         catch (...)
         {
-            mafWarn( "Uncaught exception!" );
+            Logger::warn( "Uncaught exception!" );
         }
     }
 }

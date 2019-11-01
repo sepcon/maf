@@ -3,7 +3,6 @@
 
 #include <maf/utils/serialization/ByteArray.h>
 #include <maf/utils/serialization/SerializableInterface.h>
-#include <maf/utils/debugging/Debug.h>
 #include <maf/messaging/client-server/CSMessage.h>
 #include <functional>
 

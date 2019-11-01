@@ -1,12 +1,12 @@
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include "TimerManagerImpl.h"
 #include <algorithm>
 
 using namespace std::chrono;
 
 
-namespace maf {
-namespace threading {
+namespace maf { using logging::Logger;
+namespace messaging {
 
 static bool test(const std::atomic_bool& flag)
 {
@@ -145,7 +145,7 @@ bool TimerManagerImpl::start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCa
         }
         else
         {
-            mafWarn("Cannot start timer for job " << jid << " Due to number of jobs exceeds the permited amount(" << MAX_JOBS_COUNT << "), please try with other BusyTimer");
+            Logger::warn("Cannot start timer for job " ,  jid ,  " Due to number of jobs exceeds the permited amount(" ,  MAX_JOBS_COUNT ,  "), please try with other BusyTimer");
             success = false;
         }
     }
@@ -166,7 +166,7 @@ void TimerManagerImpl::restart(TimerManagerImpl::JobID jid)
 		auto itJob = findJob__(_runningJobs, jid);
 		if (itJob != _runningJobs->end())
 		{
-            mafInfo("Timer " << jid << " is restarted with duration = " << (*itJob)->duration());
+            Logger::info("Timer " ,  jid ,  " is restarted with duration = " ,  (*itJob)->duration());
 
 			(*itJob)->reset();
 			jobslock.unlock();
@@ -181,16 +181,16 @@ void TimerManagerImpl::stop(TimerManagerImpl::JobID jid)
 	{
 		if (removeAndInvalidateJob(_pendingJobs, jid))
 		{
-            mafInfo("Job " << jid << " is canceled");
+            Logger::info("Job " ,  jid ,  " is canceled");
 		}
 		else if (removeAndInvalidateJob(_runningJobs, jid))
 		{
-            mafInfo("Job " << jid << " is canceled");
+            Logger::info("Job " ,  jid ,  " is canceled");
 			_condvar.notify_one();
 		}
 		else
 		{
-            mafWarn("Job " << jid << " does not exist or is already canceled");
+            Logger::warn("Job " ,  jid ,  " does not exist or is already canceled");
 		}
 	}
 }
@@ -321,7 +321,7 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
     bool executed = false;
     if (job->expired())
     {
-        mafInfo("Timer " << job->id() << " expired!");
+        Logger::info("Timer " ,  job->id() ,  " expired!");
         try
         {
             if(job->valid()) // for case of job has been stopped when waiting to be expired
@@ -331,11 +331,11 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
         }
         catch(const std::exception& e)
         {
-            mafInfo("Catch exception when executing job's callback: " << e.what());
+            Logger::info("Catch exception when executing job's callback: " ,  e.what());
         }
         catch(...)
         {
-            mafInfo("Uncaught exception occurred when executing job's callback");
+            Logger::info("Uncaught exception occurred when executing job's callback");
         }
         executed = true;
     }
@@ -349,7 +349,7 @@ void TimerManagerImpl::run() noexcept
     _future = std::async(std::launch::async, [this] {
 
         set(_workerThreadIsRunning, true);
-        mafInfo("TimerManager thread is running!");
+        Logger::info("TimerManager thread is running!");
         do
         {
             ConcurrentMutex<JobsContainer> ccMutex(_pendingJobs, _runningJobs);

@@ -4,7 +4,7 @@
 #include <functional>
 
 namespace maf {
-namespace threading {
+namespace messaging {
 
 class TimerManager : public pattern::Unasignable
 {

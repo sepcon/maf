@@ -29,7 +29,7 @@ public:
             {
             case OpCode::Register:
             {
-                mafMsg("Client registered to status " << msg->getRequestKeeper()->getOperationID());
+                maf::Logger::debug("Client registered to status " ,  msg->getRequestKeeper()->getOperationID());
                 auto msg = WeatherStatus::makeResult();
                 msg->set_the_status("Response to register");
                 requestKeeper->respond(msg);
@@ -41,23 +41,21 @@ public:
                     static thread_local int responseCount = 0;
                     static thread_local long long totalupdateTime = 0;
 
-                    mafMsg("Component " << name() << " Timer expired , total request: " << ++responseCount);
+                    maf::Logger::debug("Component " ,  name() ,  " Timer expired , total request: " ,  ++responseCount);
                     auto res = std::make_shared<WeatherStatus::Result>();
                     res->set_shared_list_of_places({"hello", "world"});
 
                     {
-                        maf::util::TimeMeasurement updateMeasure{
-                            [](long long elapsed) {
-                                totalupdateTime += elapsed;
-                            }
-                        };
+                        maf::TimeMeasurement updateMeasure = [](long long elapsed) {
+                                totalupdateTime += elapsed; };
+                        updateMeasure.stop();
 
                         requestKeeper->update(res);
                     }
-                    if(responseCount >= 100)
+                    if(responseCount >= 10000000)
                     {
-                        mafMsg("Send final update to client");
-                        mafMsg("Avarage time to send an update " << " = " << static_cast<double>(totalupdateTime) / static_cast<double>(responseCount) << "ms") ;
+                        maf::Logger::debug("Send final update to client");
+                        maf::Logger::debug("Avarage time to send an update " ,  " = " ,  static_cast<double>(totalupdateTime) / static_cast<double>(responseCount) ,  "ms") ;
                         requestKeeper->respond(res);
                         _serverTimer.stop();
                         this->stop();
@@ -66,11 +64,11 @@ public:
                 auto req = msg->template getRequestContent<WeatherStatus::Request>();
                 if(req)
                 {
-                    mafMsg("Receiver request from client: " << req->client_name());
+                    maf::Logger::debug("Receiver request from client: " ,  req->client_name());
                 }
                 else
                 {
-                    mafMsg("Get request with no content, operationID=  " << msg->getRequestKeeper()->getOperationID());
+                    maf::Logger::debug("Get request with no content, operationID=  " ,  msg->getRequestKeeper()->getOperationID());
                 }
             }
             break;
@@ -93,9 +91,9 @@ public:
 
     void onEntry() override
     {
-        mafMsg("Component is starting");
+        maf::Logger::debug("Component is starting");
         _stub = Stub::createStub(ServiceID);
-        mafMsg("Stub ready as well");
+        maf::Logger::debug("Stub ready as well");
     }
 };
 

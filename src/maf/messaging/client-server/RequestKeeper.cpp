@@ -1,6 +1,5 @@
 #include <maf/messaging/client-server/RequestKeeper.h>
 #include <maf/messaging/client-server/ServiceStubBase.h>
-#include <maf/utils/debugging/Debug.h>
 #include "ServiceStubBaseImpl.h"
 
 
@@ -115,13 +114,13 @@ bool RequestKeeperBase::sendMsgToClient(const CSMsgContentPtr &answer, bool done
         }
         else
         {
-            mafErr("Mismatched of OperationId between response data id[" << answer->operationID() << "] and request data id[" << _csMsg->operationID());
+            Logger::error("Mismatched of OperationId between response data id[" ,  answer->operationID() ,  "] and request data id[" ,  _csMsg->operationID());
             return false;
         }
     }
     else
     {
-        mafErr("IPCReplyHelper is no longer valid, might be the operation id [" << _csMsg->operationID() << "]");
+        Logger::error("IPCReplyHelper is no longer valid, might be the operation id [" ,  _csMsg->operationID() ,  "]");
         return false;
     }
 }

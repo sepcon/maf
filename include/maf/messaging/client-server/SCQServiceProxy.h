@@ -23,7 +23,7 @@ public:
 
         if(serviceRequester && typeid (*serviceRequester) != typeid(SCQServiceProxy))
         {
-            mafErr("Already had different Proxy type[" << typeid(serviceRequester.get()).name() << "] register to this service id [" << sid << "]!");
+            Logger::error("Already had different Proxy type[" ,  typeid(serviceRequester.get()).name() ,  "] register to this service id [" ,  sid ,  "]!");
             throw std::runtime_error("ClientBase::createProxy -> mismatch between existing Proxy with requested one!");
         }
         else if(!serviceRequester)

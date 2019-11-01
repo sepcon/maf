@@ -1,15 +1,18 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+/***
+ * To wish that the timer will work only in thread of its Component, then don't allow any assignment
+*/
+
 #include <maf/patterns/Patterns.h>
 #include <functional>
 #include <memory>
 
 namespace maf {
-namespace threading { class TimerManager; }
 namespace messaging {
 
-//To wish that the timer will work only in thread of its Component, then don't allow any assignment
+class TimerManager;
 class Timer : public pattern::Unasignable
 {
 public:
@@ -24,7 +27,7 @@ public:
     void setCyclic(bool cyclic = true);
 
 private:
-    std::shared_ptr<threading::TimerManager> _myMgr;
+    std::shared_ptr<messaging::TimerManager> _myMgr;
     unsigned int _id;
 	bool _cyclic;
 };

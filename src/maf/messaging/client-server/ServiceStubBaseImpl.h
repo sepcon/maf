@@ -3,7 +3,6 @@
 #include <maf/messaging/client-server/ServerInterface.h>
 #include <maf/messaging/client-server/RequestKeeper.h>
 #include <maf/utils/cppextension/Lockable.h>
-#include <maf/utils/debugging/Debug.h>
 #include <map>
 #include <set>
 #include <list>

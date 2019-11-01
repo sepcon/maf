@@ -4,8 +4,9 @@
 #ifndef MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICEPROXY_H
 #   include "QueueingServiceProxy.h"
 #endif
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 template<class MessageTrait>
@@ -25,12 +26,12 @@ QueueingServiceProxy<MessageTrait>::addInterestedComponent(ComponentRef compref)
         }
         else // Component had already been registered to Proxy
         {
-            mafWarn("The component: " << comp->name() << " had already got one instance of proxy for service id [" << serviceID() <<"]");
+            Logger::warn("The component: " ,  comp->name() ,  " had already got one instance of proxy for service id [" ,  serviceID() , "]");
         }
     }
     else
     {
-        mafErr("Trying to get reference to service proxy from non-component thread: ServiceID: " << serviceID());
+        Logger::error("Trying to get reference to service proxy from non-component thread: ServiceID: " ,  serviceID());
     }
 }
 
@@ -56,7 +57,7 @@ QueueingServiceProxy<MessageTrait>::updateServiceStatusToComponent
 {
     if(auto component = compref.lock())
     {
-        component->postMessage(messaging::createMessage<ServiceStatusMsg>(serviceID(), oldStatus, newStatus));
+        component->postMessage(messaging::makeMessage<ServiceStatusMsg>(serviceID(), oldStatus, newStatus));
         return true;
     }
     return false;
@@ -67,7 +68,7 @@ void
 QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
     assert(sid == serviceID());
-    mafInfo("Service id " << serviceID() << " has changed Status: " << static_cast<int>(oldStatus) << " - " << static_cast<int>(newStatus));
+    Logger::info("Service id " ,  serviceID() ,  " has changed Status: " ,  static_cast<int>(oldStatus) ,  " - " ,  static_cast<int>(newStatus));
     std::lock_guard lock(_components);
     for(auto itCompref = _components->begin(); itCompref != _components->end(); )
     {
@@ -77,7 +78,7 @@ QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(ServiceID sid, Availa
         }
         else
         {
-            mafWarn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
+            Logger::warn("[[[[ - ]]]Component has no longer existed then has been removed![[[[ - ]]]\n");
             itCompref = _components->erase(itCompref);
         }
     }
@@ -109,32 +110,32 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(PayloadProcess
                             }
                             else
                             {
-                                mafWarn("The component that sending the request to [serviceID:" <<
-                                        msg->serviceID() << "-operationID: " <<
-                                        msg->operationID() << "] has no longer existed");
+                                Logger::warn("The component that sending the request to [serviceID:" ,
+                                        msg->serviceID() ,  "-operationID: " ,
+                                        msg->operationID() ,  "] has no longer existed");
                             }
                         }
                         else
                         {
-                            mafErr("Could not decode incomming message with id: " <<  msg->operationID());
+                            Logger::error("Could not decode incomming message with id: " ,   msg->operationID());
                         }
                     }
                     catch(const std::exception& e)
                     {
-                        mafErr(e.what());
+                        Logger::error(e.what());
                     }
                 }
                 else
                 {
-                    mafErr("mismatched of OpID between client[" << MessageTrait::template getOperationID<IncomingMsgContent>() <<
-                           "] and server[" << msg->operationID() << "]");
+                    Logger::error("mismatched of OpID between client[" ,  MessageTrait::template getOperationID<IncomingMsgContent>() ,
+                           "] and server[" ,  msg->operationID() ,  "]");
                 }
             };
         return ipcMessageHandlerCB;
     }
     else
     {
-        if(!Component::getActiveWeakPtr().lock()) { mafErr("Trying to create callback with no running component"); }
+        if(!Component::getActiveWeakPtr().lock()) { Logger::error("Trying to create callback with no running component"); }
     }
     return nullptr;
 }

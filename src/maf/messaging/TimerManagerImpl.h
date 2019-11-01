@@ -1,7 +1,7 @@
 #pragma once
 
-#include <maf/threading/TimerManager.h>
 #include <maf/utils/cppextension/Lockable.h>
+#include "TimerManager.h"
 #include <chrono>
 #include <set>
 #include <vector>
@@ -12,7 +12,7 @@
 
 
 namespace maf {
-namespace threading {
+namespace messaging {
 
 struct JobDesc;
 struct TimerManagerImpl

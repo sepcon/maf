@@ -13,7 +13,7 @@ constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;
 constexpr const char* const SERVER_ADDRESS = "nocpes.github.com";
 constexpr const maf::messaging::ServiceID SID_WeatherService = 0;
 constexpr const int SERVER_UPDATE_CYCLE = 10;
-constexpr const int SERVER_TOTAL_UPDATES_PER_REQUEST = 100;
+constexpr const int SERVER_TOTAL_UPDATES_PER_REQUEST = 10000000;
 
 FUNCTION(WeatherStatus)
     enum StatusType{

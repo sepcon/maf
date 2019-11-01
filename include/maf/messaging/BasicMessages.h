@@ -7,11 +7,7 @@
 namespace maf {
 namespace messaging {
 
-struct InternalMessage : public messaging::MessageBase {};
-struct ExternalMessage : public messaging::MessageBase {};
-struct StartupMessage : public InternalMessage{};
-struct ShutdownMessage : public InternalMessage{};
-struct CallbackExcMsg : public InternalMessage
+struct CallbackExcMsg : public MessageBase
 {
     CallbackExcMsg(std::function<void()> callback_ = nullptr) : callback(std::move(callback_)) {}
     void execute() { if(callback) callback(); }

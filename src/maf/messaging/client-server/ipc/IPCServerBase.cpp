@@ -1,13 +1,14 @@
+#include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ipc/IPCServerBase.h>
 #include <maf/messaging/client-server/ipc/BytesCommunicator.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
-IPCServerBase::IPCServerBase() :
-    _communicator(new BytesCommunicator(this))
+IPCServerBase::IPCServerBase(IPCType ipctype) :
+    _communicator(new BytesCommunicator(ipctype, this, /*isclient = */false))
 {
 }
 
@@ -16,15 +17,14 @@ IPCServerBase::~IPCServerBase()
     delete _communicator;
 }
 
-void IPCServerBase::init(IPCType type, const Address &serverAddress)
+bool IPCServerBase::init(const Address &serverAddress)
 {
-    _communicator->init(type, serverAddress, /*isClient = */false);
+    return _communicator->init(serverAddress);
 }
 
-void IPCServerBase::deinit()
+bool IPCServerBase::deinit()
 {
-    _communicator->deinit();
-    ServerBase::deinit();
+    return _communicator->deinit() && ServerBase::deinit();
 }
 
 DataTransmissionErrorCode IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, const Address &addr)
@@ -55,7 +55,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
 
 bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    mafInfo(csMsg);
+    Logger::info(csMsg);
     if(csMsg->operationCode() == OpCode::RegisterServiceStatus)
     {
         _registedClAddrs.atomic()->insert(csMsg->sourceAddress());
@@ -78,7 +78,7 @@ void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, ServiceID
 {
     if(oldStatus != newStatus)
     {
-        mafInfo("Update service id " << sid << " status to client at address: " << clAddr.dump());
+        Logger::info("Update service id " ,  sid ,  " status to client at address: " ,  clAddr.dump());
         auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
         auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
         if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))

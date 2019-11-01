@@ -59,10 +59,10 @@ void applyResponseCode(const CSMessagePtr& csMsg, bool done = true)
 
 bool ServiceStubBaseImpl::onIncomingMessage(const CSMessagePtr &msg)
 {
-    mafInfo("Received Incoming Message: " <<
-            "\n\tCode: " << msg->operationCode() <<
-            "\n\tID: " << msg->operationID() <<
-            "\n\tSenderAddress: " << msg->sourceAddress().dump(2));
+    Logger::info("Received Incoming Message: " ,
+            "\n\tCode: " ,  msg->operationCode() ,
+            "\n\tID: " ,  msg->operationID() ,
+            "\n\tSenderAddress: " ,  msg->sourceAddress().dump(2));
     bool handled = true;
     switch (msg->operationCode())
     {
@@ -81,7 +81,7 @@ bool ServiceStubBaseImpl::onIncomingMessage(const CSMessagePtr &msg)
         break;
     default:
         handled = false;
-        mafWarn("Unhandled OpCode: " << msg->operationCode());
+        Logger::warn("Unhandled OpCode: " ,  msg->operationCode());
         break;
     }
     return handled;
@@ -143,7 +143,7 @@ bool ServiceStubBaseImpl::sendStatusUpdate(const CSMessagePtr &msg)
 
     if(addresses.empty())
     {
-        mafWarn("There's no register for property: " << msg->operationID());
+        Logger::warn("There's no register for property: " ,  msg->operationID());
     }
     else
     {
@@ -155,7 +155,7 @@ bool ServiceStubBaseImpl::sendStatusUpdate(const CSMessagePtr &msg)
                 auto errCode = _server->sendMessageToClient(msg, addr);
                 if(errCode == DataTransmissionErrorCode::Success)
                 {
-                    //                    mafInfo("Sent message id: " << msg->operationID() << " from server side!");
+                    //                    Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
                 }
                 else if(errCode == DataTransmissionErrorCode::ReceiverBusy)
                 {
@@ -164,7 +164,7 @@ bool ServiceStubBaseImpl::sendStatusUpdate(const CSMessagePtr &msg)
                 else
                 {
                     this->removeRegistersOfAddress(addr);
-                    mafWarn("Failed to send message id [" << msg->operationID() << "] to client " << addr.dump());
+                    Logger::warn("Failed to send message id [" ,  msg->operationID() ,  "] to client " ,  addr.dump());
                 }
             }
             return busyReceivers;
@@ -174,7 +174,7 @@ bool ServiceStubBaseImpl::sendStatusUpdate(const CSMessagePtr &msg)
         if(!busyReceivers.empty())
         {
             //If someones are busy, try with them once
-            mafWarn("Trying to send message to busy addresses once again!");
+            Logger::warn("Trying to send message to busy addresses once again!");
             busyReceivers = trySendToDestinations(busyReceivers);
         }
 
@@ -206,7 +206,7 @@ void ServiceStubBaseImpl::onStatusChangeRegister(const CSMessagePtr &msg)
         }
         else
         {
-            mafErr("The client side did not provide address " << msg->sourceAddress().dump());
+            Logger::error("The client side did not provide address " ,  msg->sourceAddress().dump());
         }
     }
 }
@@ -231,7 +231,7 @@ void ServiceStubBaseImpl::forwardToStubHandler(const ServiceStubBaseImpl::Reques
     }
     else
     {
-        mafWarn("hasn't set stub handler for this service stub yet!");
+        Logger::warn("hasn't set stub handler for this service stub yet!");
     }
 }
 
@@ -243,7 +243,7 @@ void ServiceStubBaseImpl::forwardToStubHandler(RequestKeeperBase::AbortCallback 
     }
     else
     {
-        mafWarn("hasn't set stub handler for this service stub yet!");
+        Logger::warn("hasn't set stub handler for this service stub yet!");
     }
 }
 

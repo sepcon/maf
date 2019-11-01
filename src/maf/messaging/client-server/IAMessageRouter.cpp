@@ -1,22 +1,19 @@
 #include <maf/messaging/client-server/IAMessageRouter.h>
 #include <maf/messaging/client-server/ServiceRequesterInterface.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
-#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace messaging {
 
 
-void IAMessageRouter::init()
+bool IAMessageRouter::init(const Address &, long long)
 {
-    ClientBase::init(); 
-    ServerBase::init();
+    return ClientBase::init({}, {}) && ServerBase::init({});
 } 
 
-void IAMessageRouter::deinit()
+bool IAMessageRouter::deinit()
 {
-    ClientBase::deinit();
-    ClientBase::deinit();
+    return ClientBase::deinit() && ClientBase::deinit();
 }
 
 bool IAMessageRouter::registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface> &requester)

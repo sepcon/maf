@@ -4,11 +4,11 @@
 #include <chrono>
 
 namespace maf {
-namespace util {
 
 class TimeMeasurement
 {
 public:
+    using MicroSeconds = std::chrono::microseconds;
 	TimeMeasurement() = default;
     TimeMeasurement(std::function<void(long long)> onReportCallback) :
         _onReportCallback(std::move(onReportCallback))
@@ -20,21 +20,28 @@ public:
         stop();
     }
 
-	long long elapsedTime() const 
+    MicroSeconds elapsedTime() const
 	{
-        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - _startTime).count();
+        return std::chrono::duration_cast<MicroSeconds>(std::chrono::system_clock::now() - _startTime);
 	}
 
-    void stop()
+    MicroSeconds stop()
     {
+        auto elapsed = this->elapsedTime();
         if(_onReportCallback)
         {
-            _onReportCallback(this->elapsedTime());
+            _onReportCallback(elapsed.count());
             _onReportCallback = nullptr;
         }
+        return elapsed;
+    }
+
+    MicroSeconds abort()
+    {
+        _onReportCallback = {};
+        return elapsedTime();
     }
     std::function<void(long long)> _onReportCallback;
     std::chrono::system_clock::time_point _startTime;
 };
-}
 }

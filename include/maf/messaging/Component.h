@@ -8,13 +8,13 @@
 
 
 namespace maf {
-namespace threading { class TimerManager; }
 namespace messaging {
 
+class TimerManager;
 class Component;
 using ComponentRef = std::weak_ptr<Component>;
 using ComponentPtr = std::shared_ptr<Component>;
-using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
+using TimerMgrPtr = std::shared_ptr<TimerManager>;
 
 enum class LaunchMode
 {
@@ -70,14 +70,14 @@ private:
 template<class SignalMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SignalMsg>, bool>>
 Component &Component::onSignal(SignalMsgHandlerFunc handler)
 {
-    registerMessageHandler(MessageBase::idof<SignalMsg>(), [handler](messaging::CMessageBasePtr){ handler(); });
+    registerMessageHandler(msgID<SignalMsg>(), [handler](messaging::CMessageBasePtr){ handler(); });
     return *this;
 }
 
 template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool>>
 Component &Component::onMessage(MessageHandlerFunc<SpecificMsg> f)
 {
-    registerMessageHandler(MessageBase::idof<SpecificMsg>(), [f](messaging::CMessageBasePtr& msg) {
+    registerMessageHandler(msgID<SpecificMsg>(), [f](messaging::CMessageBasePtr& msg) {
         auto specifigMsg = std::static_pointer_cast<SpecificMsg>(msg);
         if(specifigMsg) { f(specifigMsg); }
     });
@@ -87,14 +87,14 @@ Component &Component::onMessage(MessageHandlerFunc<SpecificMsg> f)
 template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool>>
 Component &Component::onMessage(MessageHandler *handler)
 {
-    registerMessageHandler(MessageBase::idof<SpecificMsg>(), handler);
+    registerMessageHandler(msgID<SpecificMsg>(), handler);
     return *this;
 }
 
 template<class Msg, typename ...Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool>>
 void Component::postMessage(Args&&... args)
 {
-    postMessage(createMessage<Msg>(std::forward<Args>(args)...));
+    postMessage(makeMessage<Msg>(std::forward<Args>(args)...));
 }
 
 #define mc_maf_tlcomp_invoke(method, ...)      \

@@ -7,7 +7,6 @@
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
 #include <maf/utils/cppextension/Lockable.h>
-#include <maf/utils/debugging/Debug.h>
 #include <set>
 
 

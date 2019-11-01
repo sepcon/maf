@@ -1,4 +1,4 @@
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include "LocalIPCReceiverImpl.h"
 #include "PipeShared.h"
 #include <maf/messaging/client-server/Connection.h>
@@ -9,7 +9,7 @@
 #define MAX_INSTANCES 5
 #define PIPE_TIMEOUT 5000
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -86,7 +86,7 @@ bool LocalIPCReceiverImpl::initPipes()
 
         if (_hEvents.back() == nullptr)
         {
-            mafErr("CreateEvent failed with " << GetLastError());
+            Logger::error("CreateEvent failed with " ,  GetLastError());
             return false;
         }
 
@@ -107,7 +107,7 @@ bool LocalIPCReceiverImpl::initPipes()
 
         if (_pipeInstances[index]->hPipeInst == INVALID_HANDLE_VALUE)
         {
-            mafErr("CreateNamedPipe failed with " << GetLastError());
+            Logger::error("CreateNamedPipe failed with " ,  GetLastError());
             return false;
         }
 
@@ -135,7 +135,7 @@ void LocalIPCReceiverImpl::listningThreadFunction()
         int i = static_cast<int>(dwWait - WAIT_OBJECT_0);  // determines which pipe
         if (i < 0 || i > (static_cast<int>(_pipeInstances.size()) - 1))
         {
-            mafErr("Index out of range.");
+            Logger::error("Index out of range.");
             return;
         }
 
@@ -146,7 +146,7 @@ void LocalIPCReceiverImpl::listningThreadFunction()
         }
         else
         {
-            mafWarn("Read nothing, GLE = " << GetLastError() << "-->" << _pipeInstances[index]->ba << "<--");
+            Logger::warn("Read nothing, GLE = " ,  GetLastError() ,  "-->" ,  _pipeInstances[index]->ba ,  "<--");
         }
 
         disconnectAndReconnect(index);
@@ -195,7 +195,7 @@ void LocalIPCReceiverImpl::disconnectAndReconnect(size_t index)
 
     if (! DisconnectNamedPipe(_pipeInstances[index]->hPipeInst) )
     {
-        mafErr("DisconnectNamedPipe failed with" << GetLastError());
+        Logger::error("DisconnectNamedPipe failed with" ,  GetLastError());
     }
 
     // Call a subroutine to connect to the new client.
@@ -217,7 +217,7 @@ bool connectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo)
     // Overlapped ConnectNamedPipe should return zero.
     if (fConnected)
     {
-        mafErr("ConnectNamedPipe failed with " << GetLastError());
+        Logger::error("ConnectNamedPipe failed with " ,  GetLastError());
         return true;
     }
 
@@ -237,7 +237,7 @@ bool connectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo)
         // If an error occurs during the connect operation...
         [[fallthrough]]; default:
     {
-        mafErr("ConnectNamedPipe failed with " << GetLastError());
+        Logger::error("ConnectNamedPipe failed with " ,  GetLastError());
         return false;
     }
     }

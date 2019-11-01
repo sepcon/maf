@@ -1,10 +1,10 @@
 #include <maf/messaging/client-server/ipc/BytesCommunicator.h>
 #include <maf/messaging/client-server/ipc/IPCFactory.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <cassert>
 
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -13,29 +13,31 @@ BytesCommunicator::~BytesCommunicator()
     deinit();
 }
 
-BytesCommunicator::BytesCommunicator(CSMessageReceiver *receiver) :
-    _ipcMsgReceiver(receiver)
+BytesCommunicator::BytesCommunicator(IPCType type, CSMessageReceiver *receiver, bool isClient) :
+    _ipcMsgReceiver(receiver),
+    _isClient(isClient)
 {
-
-}
-
-void BytesCommunicator::init(IPCType type, const Address &serverAddress, bool isClient)
-{
-    _isClient = isClient;
     _pSender = IPCFactory::createSender(type);
     _pReceiver = IPCFactory::createReceiver(type);
-
-    assert(_pSender && _pReceiver);
-
-    _pSender->initConnection(serverAddress);
-    _pReceiver->initConnection(serverAddress, isClient);
-    _pReceiver->registerObserver(this);
-    _pReceiver->startListening();
 }
 
-void BytesCommunicator::deinit()
+bool BytesCommunicator::init(const Address &serverAddress)
 {
-    _pReceiver->stopListening();
+    bool success = true;
+    _pReceiver->registerObserver(this);
+    success &= _pSender->initConnection(serverAddress);
+    success &= _pReceiver->initConnection(serverAddress, _isClient);
+    success &= _pReceiver->startListening();
+    return success;
+}
+
+bool BytesCommunicator::deinit()
+{
+    if(isWaiting())
+    {
+        _pReceiver->stopListening();
+    }
+    return true;
 }
 
 bool BytesCommunicator::isWaiting() const
@@ -62,13 +64,13 @@ DataTransmissionErrorCode BytesCommunicator::send(const std::shared_ptr<IPCMessa
 		}
 		catch (const std::bad_alloc& e)
 		{
-			mafErr("Message is too large to be serialized: " << e.what());
+			Logger::error("Message is too large to be serialized: " ,  e.what());
             return DataTransmissionErrorCode::FailedUnknown;
 		}
     }
     else
     {
-        mafErr("Cannot send message due to null sender, please call init function before send function");
+        Logger::error("Cannot send message due to null sender, please call init function before send function");
         return DataTransmissionErrorCode::ReceiverUnavailable;
     }
 }
@@ -86,7 +88,7 @@ void BytesCommunicator::onBytesCome(const std::shared_ptr<srz::ByteArray>& bytes
     }
     else
     {
-        mafErr("incoming message is not wellformed" << "\n:The bytes are:[" << bytes->size() << "] " << *bytes);
+        Logger::error("incoming message is not wellformed" ,  "\n:The bytes are:[" ,  bytes->size() ,  "] " ,  *bytes);
     }
 }
 

@@ -11,6 +11,7 @@ using namespace maf::messaging;
 using namespace maf::srz;
 using namespace maf;
 
+using maf::logging::Logger;
 
 class ClientCompTest : public ExtensibleComponent
 {
@@ -26,25 +27,25 @@ public:
         _timer.setCyclic(true);
 		onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
 			if (msg->newStatus == Availability::Available) {
-                mafMsg("Client component recevies status update of service: " << msg->serviceID);
-                mafMsg("Send request to server");
+                maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
+                maf::Logger::debug("Send request to server");
                 _proxy->sendRequest<WeatherStatus::Result>([](const std::shared_ptr<WeatherStatus::Result>& msg) {
                     static int totalResponse = 0;
-                    mafMsg("Received update for request of weather status result " << msg->sStatus() << " - " << ++totalResponse);
-                    mafMsg(msg->dump());
+                    maf::Logger::debug("Received update for request of weather status result " ,  msg->sStatus() ,  " - " ,  ++totalResponse);
+                    maf::Logger::debug(msg->dump());
                 });
                 _timer.start(SERVER_UPDATE_CYCLE * SERVER_TOTAL_UPDATES_PER_REQUEST + 1000, [this]{
                     _proxy->sendRequest<WeatherStatus::Result>([](const std::shared_ptr<WeatherStatus::Result>& msg) {
                         static int totalResponse = 0;
-                        mafMsg("Received update for request of weather status result " << msg->sStatus() << " - " << ++totalResponse);
-                        mafMsg(msg->dump());
+                        maf::Logger::debug("Received update for request of weather status result " ,  msg->sStatus() ,  " - " ,  ++totalResponse);
+                        maf::Logger::debug(msg->dump());
                     });
                 });
 
 			}
 			else
 			{
-				mafMsg("Service is off for sometime, please wait for him to be available again!");
+                maf::Logger::debug("Service is off for sometime, please wait for him to be available again!");
 			}
 			}
 		);
@@ -59,17 +60,17 @@ private:
 
 int main()
 {
-    maf::debugging::initLogging(maf::debugging::LogLevel::LEVEL_ERROR, [](const std::string& msg) {
+    maf::Logger::initLogging(maf::logging::LogLevel::LL_ERROR, [](const std::string& msg) {
         std::cout << msg << std::endl;
     });
 
-	maf::util::TimeMeasurement tmeasure([](auto time) {
-		mafMsg("Total execution time = " << time);
+    maf::TimeMeasurement tmeasure([](auto time) {
+        maf::Logger::debug("Total execution time = " ,  time);
         });
-	mafMsg("Client is starting up!");
+    maf::Logger::debug("Client is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
     LocalIPCClient::instance().init(addr, 10);
 	ClientCompTest cl(SID_WeatherService);
 	cl.run(LaunchMode::AttachToCurrentThread);
-	mafMsg("Client shutdown!");
+    maf::Logger::debug("Client shutdown!");
 }

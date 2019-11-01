@@ -3,7 +3,7 @@
 
 #include <maf/threading/IThreadPool.h>
 #include <maf/threading/ThreadJoiner.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <thread>
 #include <vector>
 #include <list>
@@ -11,7 +11,7 @@
 #include <atomic>
 #include <functional>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace threading {
 
 /*! \brief The base class used for implement the variants of threadpool
@@ -52,7 +52,7 @@ public:
             }
             catch(const std::system_error& err)
             {
-                mafWarn( "Cannot launch new thread due to: " << err.what() );
+                Logger::warn( "Cannot launch new thread due to: " ,  err.what() );
             }
         }
     }

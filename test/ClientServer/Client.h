@@ -1,7 +1,6 @@
 #pragma once
 
 #include "maf/messaging/Timer.h"
-#include "maf/utils/debugging/Debug.h"
 #include "maf/utils/TimeMeasurement.h"
 #include "maf/messaging/ExtensibleComponent.h"
 #include "maf/messaging/client-server/SCQServiceProxy.h"
@@ -27,12 +26,12 @@ struct ClientComponent : public ExtensibleComponent
                 auto request = WeatherStatus::makeRequest();
                 _proxy->template sendStatusChangeRegister<WeatherStatus::Result>
                     ([this](const std::shared_ptr<WeatherStatus::Result>& result){
-                        mafMsg("Component " << name() << " Got Status update from server: \n" << result->dump());
+                        maf::Logger::debug("Component " ,  name() ,  " Got Status update from server: \n" ,  result->dump());
                     });
 
                 request->set_command(1);
                 _proxy->template sendRequest<WeatherStatus::Result>([](const std::shared_ptr<WeatherStatus::Result>& result) {
-                    mafMsg(result->dump());
+                    maf::Logger::debug(result->dump());
                 });
             }
             else
@@ -52,7 +51,7 @@ struct ClientComponent : public ExtensibleComponent
     void onEntry() override
     {
         _proxy = Proxy::createProxy(ServiceID);
-        mafMsg("proxy for service 1 ready ! Component  = " << name());
+        maf::Logger::debug("proxy for service 1 ready ! Component  = " ,  name());
     }
 };
 

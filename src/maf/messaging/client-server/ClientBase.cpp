@@ -1,8 +1,8 @@
 #include <maf/messaging/client-server/ClientBase.h>
 #include <maf/messaging/client-server/ServiceRequesterInterface.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
@@ -48,7 +48,7 @@ void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newS
 
 void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
-    mafInfo("Client receives service status update from server: [" << sid << "-" << static_cast<int>(oldStatus) << "-" << static_cast<int>(newStatus));
+    Logger::info("Client receives service status update from server: [" ,  sid ,  "-" ,  static_cast<int>(oldStatus) ,  "-" ,  static_cast<int>(newStatus));
     {
         (*_serviceStatusMap.atomic())[sid] = newStatus;
     }
@@ -59,7 +59,7 @@ void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, A
     }
     else
     {
-        mafWarn("There's no requester for this service id: " << sid);
+        Logger::warn("There's no requester for this service id: " ,  sid);
     }
 }
 
@@ -72,7 +72,7 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 {
     if(msg->operationCode() == OpCode::ServiceStatusUpdate && msg->serviceID() != ServiceIDInvalid)
     {
-        mafInfo("Receive Service status update from server: sid[" << msg->serviceID() << "]-status[" << msg->operationID() << "]");
+        Logger::info("Receive Service status update from server: sid[" ,  msg->serviceID() ,  "]-status[" ,  msg->operationID() ,  "]");
         if(msg->operationID() == OpID_ServiceAvailable)
         {
             storeServiceStatus(msg->serviceID(), Availability::Available);
@@ -120,15 +120,16 @@ Availability ClientBase::getServiceStatus(ServiceID sid)
     }
 }
 
-void ClientBase::init()
+bool ClientBase::init(const Address &, long long)
 {
-    //TBD: add if needed
+    return true;
 }
 
-void ClientBase::deinit()
+bool ClientBase::deinit()
 {
     _requesters.atomic()->clear();
     _serviceStatusMap.atomic()->clear();
+    return true;
 }
 
 }

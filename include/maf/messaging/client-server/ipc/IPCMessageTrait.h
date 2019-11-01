@@ -1,9 +1,9 @@
 #pragma once
 
 #include "IPCMessage.h"
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -41,7 +41,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            mafErr("Could not translate message, OperationID = " << csMsgContent->operationID() << ", exception: " << e.what());
+            Logger::error("Could not translate message, OperationID = " ,  csMsgContent->operationID() ,  ", exception: " ,  e.what());
         }
 
         return nullptr;

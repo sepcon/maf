@@ -1,15 +1,15 @@
 #include <maf/messaging/client-server/ClientInterface.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include "ServiceProxyBaseImpl.h"
 
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 bool ServiceProxyBaseImpl::onIncomingMessage(const CSMessagePtr &csMsg)
 {
     bool handled = true;
-    mafInfo("New Incoming message from server: sid[" << csMsg->serviceID() << "]-opID[" << csMsg->operationID() << "]-opCode[" << csMsg->operationCode() << "]");
+    Logger::info("New Incoming message from server: sid[" ,  csMsg->serviceID() ,  "]-opID[" ,  csMsg->operationID() ,  "]-opCode[" ,  csMsg->operationCode() ,  "]");
     if(csMsg && csMsg->serviceID() == serviceID())
     {
         switch (csMsg->operationCode()) {
@@ -28,7 +28,7 @@ bool ServiceProxyBaseImpl::onIncomingMessage(const CSMessagePtr &csMsg)
             break;
         default:
             handled = false;
-            mafErr("Invalid RESPONSE operation code, then cannot match to any REQUEST code[" << csMsg->operationCode() << "]");
+            Logger::error("Invalid RESPONSE operation code, then cannot match to any REQUEST code[" ,  csMsg->operationCode() ,  "]");
             break;
         }
     }
@@ -104,7 +104,7 @@ bool ServiceProxyBaseImpl::sendRequestSync(const CSMsgContentPtr &msgContent, CS
     }
     catch (const std::exception& e)
     {
-        mafErr("Exception when executing callback: " << e.what());
+        Logger::error("Exception when executing callback: " ,  e.what());
     }
     return success;
 }
@@ -138,7 +138,7 @@ CSMessagePtr ServiceProxyBaseImpl::sendRequestSync(OpID operationID, const CSMsg
                 }
                 else
                 {
-                    mafWarn("Request id: " << regID.requestID << " has been cancelled");
+                    Logger::warn("Request id: " ,  regID.requestID ,  " has been cancelled");
                 }
             }
             else
@@ -148,11 +148,11 @@ CSMessagePtr ServiceProxyBaseImpl::sendRequestSync(OpID operationID, const CSMsg
         }
         catch(const std::exception& e)
         {
-            mafErr("Error while waiting for result from server(Exception): " << e.what());
+            Logger::error("Error while waiting for result from server(Exception): " ,  e.what());
         }
         catch(...)
         {
-            mafErr("Unknown exception when sending sync request to server");
+            Logger::error("Unknown exception when sending sync request to server");
         }
     }
     else
@@ -164,7 +164,7 @@ CSMessagePtr ServiceProxyBaseImpl::sendRequestSync(OpID operationID, const CSMsg
 
 void ServiceProxyBaseImpl::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
-    mafInfo("Server Status changed from: " << static_cast<int>(oldStatus) << " to " << static_cast<int>(newStatus));
+    Logger::info("Server Status changed from: " ,  static_cast<int>(oldStatus) ,  " to " ,  static_cast<int>(newStatus));
     if(newStatus == Availability::Unavailable)
     {
         abortAllSyncRequest();
@@ -175,7 +175,7 @@ void ServiceProxyBaseImpl::onServerStatusChanged(Availability oldStatus, Availab
 
 void ServiceProxyBaseImpl::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
 {
-    mafInfo("ServiceID [" << sid << "] has changed status from: " << static_cast<int>(oldStatus) << " to " << static_cast<int>(newStatus));
+    Logger::info("ServiceID [" ,  sid ,  "] has changed status from: " ,  static_cast<int>(oldStatus) ,  " to " ,  static_cast<int>(newStatus));
 }
 
 CSMessagePtr ServiceProxyBaseImpl::createCSMessage(OpID opID, OpCode opCode, const CSMsgContentPtr &msgContent)
@@ -209,7 +209,7 @@ void ServiceProxyBaseImpl::sendStatusChangeUnregister(RegID regID)
     }
     else
     {
-        mafWarn("Try to Unregister invalid RegID");
+        Logger::warn("Try to Unregister invalid RegID");
     }
 }
 
@@ -274,7 +274,7 @@ void ServiceProxyBaseImpl::onRequestResult(const CSMessagePtr& msg, bool done)
     }
 	else
 	{
-		mafWarn("The request entry for requset OpID[" << msg->operationID() << "] - RequestiD[" << msg->requestID() <<"] could not be found!");
+        Logger::warn("The request entry for requset OpID[" ,  msg->operationID() ,  "] - RequestiD[" ,  msg->requestID() , "] could not be found!");
 	}
 }
 
@@ -286,7 +286,7 @@ void ServiceProxyBaseImpl::onRequestSyncResult(const CSMessagePtr &msg)
     }
     else
     {
-        mafWarn("Could not find RegEntry for operationID [" << msg->operationID() << "] and requestID [" << msg->requestID() << "]");
+        Logger::warn("Could not find RegEntry for operationID [" ,  msg->operationID() ,  "] and requestID [" ,  msg->requestID() ,  "]");
     }
 }
 
@@ -306,7 +306,7 @@ void ServiceProxyBaseImpl::abortAllSyncRequest()
 
     if(totalAborted > 0)
     {
-        mafWarn("Aborting " << totalAborted << " Sync requests!");
+        Logger::warn("Aborting " ,  totalAborted ,  " Sync requests!");
     }
 }
 

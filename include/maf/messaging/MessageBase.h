@@ -13,7 +13,8 @@ template <typename Msg> using CMessagePtr = const std::shared_ptr<Msg>;
 using MessageBasePtr = MessagePtr<MessageBase>;
 using CMessageBasePtr = CMessagePtr<MessageBase>;
 template<class Msg, typename... Args>
-MessagePtr<Msg> createMessage(Args&&... args) { return std::make_shared<Msg>(std::forward<Args>(args)...); }
+MessagePtr<Msg> makeMessage(Args&&... args) { return std::make_shared<Msg>(std::forward<Args>(args)...); }
+
 
 class MessageBase
 {
@@ -21,8 +22,6 @@ public:
     using Type = std::type_index;
     virtual ~MessageBase();
     virtual Type id() const;
-    template<typename T> static Type idof() { return typeid (T); }
-    template<typename T> static Type idof(const T& obj) { return typeid (obj); }
     int priority() const;
     void setPriority(int p);
 
@@ -39,6 +38,8 @@ private:
 };
 
 
+template<typename T> static MessageBase::Type msgID() { return typeid (T); }
+template<typename T> static MessageBase::Type msgID(const T& obj) { return typeid (obj); }
 
 }
 }

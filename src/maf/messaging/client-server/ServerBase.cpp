@@ -1,8 +1,8 @@
 #include <maf/messaging/client-server/ServerBase.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 
@@ -11,7 +11,7 @@ bool ServerBase::registerServiceProvider(const IServiceProviderPtr &provider)
     auto newProvider = addIfNew(_providers, provider);
     if(newProvider)
     {
-        mafInfo("New Service provider was successfully registered, service id = " << provider->serviceID());
+        Logger::info("New Service provider was successfully registered, service id = " ,  provider->serviceID());
         notifyServiceStatusToClient(provider->serviceID(), Availability::Unavailable, Availability::Available);
         return true;
     }
@@ -64,14 +64,15 @@ IServiceProviderPtr ServerBase::getServiceProvider(ServiceID sid)
     return findByID(_providers, sid);
 }
 
-void ServerBase::init()
+bool ServerBase::init(const Address &)
 {
-// TBD: add if needed
+    return true;
 }
 
-void ServerBase::deinit()
+bool ServerBase::deinit()
 {
     _providers.atomic()->clear();
+    return true;
 }
 
 }

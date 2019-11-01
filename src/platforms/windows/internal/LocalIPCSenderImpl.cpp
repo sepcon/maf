@@ -1,10 +1,10 @@
 #include "LocalIPCSenderImpl.h"
 #include "PipeShared.h"
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <thread>
 #include <atomic>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -45,24 +45,24 @@ static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const c
                 {
                     CancelIo(pipeHandle);
                     GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
-                    mafErr("Error while waiting for bytes to be transffered to receiver");
+                    Logger::error("Error while waiting for bytes to be transffered to receiver");
                 }
                 else
                 {
                     success = GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
                     if(success && (writtenByteCount == buffSize))
                     {
-                        mafInfo("Sent " << buffSize << " bytes to receiver successful!");
+                        Logger::info("Sent " ,  buffSize ,  " bytes to receiver successful!");
                     }
                     else
                     {
-                        mafErr("Could not transfer completely " << buffSize << " bytes to receiver!");
+                        Logger::error("Could not transfer completely " ,  buffSize ,  " bytes to receiver!");
                     }
                 }
             }
             else
             {
-                mafErr("sending bytes failed with error: " << GetLastError());
+                Logger::error("sending bytes failed with error: " ,  GetLastError());
             }
         }
     }
@@ -105,7 +105,7 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
             }
             else
             {
-                mafErr("Connect pipe with error: " << GetLastError());
+                Logger::error("Connect pipe with error: " ,  GetLastError());
             }
 
             if (success || !shouldRetry)
@@ -116,7 +116,7 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
             else
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
-                mafWarn("Retry to send " << ba.size() << " bytes " << ++retryTimes << " times to address " << _pipeName);
+                Logger::warn("Retry to send " ,  ba.size() ,  " bytes " ,  ++retryTimes ,  " times to address " ,  _pipeName);
             }
         }
 
@@ -129,7 +129,7 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
             errCode = DataTransmissionErrorCode::ReceiverBusy;
             if(retryTimes >= MAX_ATEMPTS)
             {
-                mafErr("Give up trying send byte to receiver!");
+                Logger::error("Give up trying send byte to receiver!");
             }
         }
         else
@@ -140,7 +140,7 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
     else
     {
         //        errCode = DataTransmissionErrorCode::ReceiverUnavailable; //dont need to set here, it must be default failed
-        mafWarn("Receiver is not available for receiving message, receiver's address = " << _pipeName);
+        Logger::warn("Receiver is not available for receiving message, receiver's address = " ,  _pipeName);
     }
 
     return errCode;

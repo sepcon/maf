@@ -19,9 +19,9 @@ namespace ipc {
 class BytesCommunicator : BytesComeObserver
 {
 public:
-    BytesCommunicator(CSMessageReceiver* receiver);
-    void init(IPCType type, const Address& serverAddress, bool isClient);
-    void deinit();
+    BytesCommunicator(IPCType type, CSMessageReceiver* receiver, bool isClient);
+    bool init(const Address& serverAddress);
+    bool deinit();
     bool isWaiting() const;
     DataTransmissionErrorCode send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
     ~BytesCommunicator() override; //Not allow to make instance of this class

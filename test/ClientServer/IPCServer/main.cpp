@@ -36,7 +36,7 @@ std::string createBigString(size_t size, const std::string& tobeCloned)
 	}
 	return s;
 }
-static std::vector<std::string> extraInfomation = createBigExtraInfomation(1000);
+static std::vector<std::string> extraInfomation = createBigExtraInfomation(1);
 static std::string SStatus = createBigString(10, "Hello world"); //"{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"dlp_info\":{},\"file_info\":{\"display_name\":\"componentsplugin4.dll\",\"file_size\":100864,\"file_type\":\"application/x-dosexec\",\"file_type_description\":\"Dynamic Link Library\",\"md5\":\"c713c6f0ea073c1822933aa5be4f1794\",\"sha1\":\"70a4cdf21b39bae2721a0fa84716eca6229ff946\",\"sha256\":\"4644c6f5556414d92eecd3792358fa2ca80a0988469a82f33e928be237420881\",\"upload_timestamp\":\"2019-07-19T03:01:13.471Z\"},\"process_info\":{\"blocked_reason\":\"\",\"file_type_skipped_scan\":false,\"post_processing\":{\"actions_failed\":\"\",\"actions_ran\":\"\",\"converted_destination\":\"\",\"converted_to\":\"\",\"copy_move_destination\":\"\"},\"processing_time\":76,\"profile\":\"File process\",\"progress_percentage\":100,\"queue_time\":7,\"result\":\"Allowed\",\"user_agent\":\"MetaAccess\"},\"scan_results\":{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"progress_percentage\":100,\"scan_all_result_a\":\"No Threat Detected\",\"scan_all_result_i\":0,\"scan_details\":{\"Ahnlab\":{\"def_time\":\"2019-07-19T00:00:00.000Z\",\"eng_id\":\"ahnlab_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":21,\"threat_found\":\"\",\"wait_time\":7},\"Avira\":{\"def_time\":\"2019-07-17T00:00:00.000Z\",\"eng_id\":\"avira_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":7,\"threat_found\":\"\",\"wait_time\":7},\"ClamAV\":{\"def_time\":\"2019-07-18T08:12:00.000Z\",\"eng_id\":\"clamav_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":23,\"threat_found\":\"\",\"wait_time\":11},\"ESET\":{\"def_time\":\"2019-07-18T00:00:00.000Z\",\"eng_id\":\"eset_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":17,\"threat_found\":\"\",\"wait_time\":11}},\"start_time\":\"2019-07-19T03:01:13.478Z\",\"total_avs\":4,\"total_time\":69},\"vulnerability_info\":{\"verdict\":0},\"yara_info\":{}}";
 
 class ServerComp : public maf::messaging::ExtensibleComponent
@@ -58,7 +58,7 @@ public:
                 result->set_sStatus(SStatus);
                 result->set_extra_information(extraInfomation);
                 result->set_index(it->second);
-                mafMsg("Send update to client " << clientId << ": " << it->second++);
+                maf::Logger::debug("Send update to client " ,  clientId ,  ": " ,  it->second++);
                 it->first->update(result);
                 _totalUpdate++;
                 if (it->second == SERVER_TOTAL_UPDATES_PER_REQUEST - 1)
@@ -67,7 +67,7 @@ public:
                     result->set_sStatus("100");
                     it->first->respond(result);
                     it = _keeperResponses.erase(it);
-                    mafMsg("Complete update for a request ");
+                    maf::Logger::debug("Complete update for a request ");
                     stop();
                 }
                 else
@@ -77,11 +77,11 @@ public:
             }
             if(_keeperResponses.size() > 0)
             {
-                mafMsg("total updated till now: " << _totalUpdate);
+                maf::Logger::debug("total updated till now: " ,  _totalUpdate);
             }
             else
             {
-                mafMsg("theres no client request, _total update is now still " << _totalUpdate);
+                maf::Logger::debug("theres no client request, _total update is now still " ,  _totalUpdate);
             }
         });
         onMessage<LocalIPCClientRequestMsg>([this](const MessagePtr<LocalIPCClientRequestMsg>& msg) {
@@ -89,7 +89,7 @@ public:
 			switch (requestKeeper->getOperationCode())
 			{
             case OpCode::Register:
-                mafMsg("Server does not handler for operation register");
+                maf::Logger::debug("Server does not handler for operation register");
 				break;
             case OpCode::Request:
                 _keeperResponses.emplace_back(std::move(requestKeeper), 0);
@@ -97,7 +97,7 @@ public:
             case OpCode::Abort:
                 if (msg->getRequestKeeper() && msg->getRequestKeeper()->getOperationID() == WeatherStatus::ID())
 				{
-					mafMsg("Receive abort request from clients, but currently no handler");
+                    maf::Logger::debug("Receive abort request from clients, but currently no handler");
 				}
 				break;
 			default:
@@ -108,7 +108,7 @@ public:
 
 	void onExit() override
 	{
-		mafMsg("Server Component is shutting down!");
+        maf::Logger::debug("Server Component is shutting down!");
 	}
 
 private:
@@ -123,14 +123,14 @@ private:
 
 int main()
 {
-    maf::debugging::initLogging(maf::debugging::LogLevel::LEVEL_ERROR, [](const std::string& msg) {
+    maf::Logger::initLogging(maf::logging::LogLevel::LL_ERROR, [](const std::string& msg) {
         std::cout << msg << std::endl;
     });
 
-	mafMsg("Server is starting up!");
+    maf::Logger::debug("Server is starting up!");
 	auto addr = Address(SERVER_ADDRESS, WEATHER_SERVER_PORT);
 	LocalIPCServer::instance().init(addr);
 	ServerComp s(SID_WeatherService);
 	s.run(LaunchMode::AttachToCurrentThread);
-    mafMsg("Component shutdown!");
+    maf::Logger::debug("Component shutdown!");
 }

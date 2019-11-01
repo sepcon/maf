@@ -4,11 +4,11 @@
 #include <maf/messaging/client-server/RequestKeeper.h>
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
 namespace maf {
 namespace messaging {
-
+using logging::Logger;
 
 template<class MessageTrait>
 struct ClientRequestMessage : public MessageBase
@@ -93,6 +93,7 @@ void QueueingServiceStub<MessageTrait>::onClientRequest(const std::shared_ptr<Re
     }
     else
     {
+        requestKeeper->respond(nullptr);
         onComponentUnavailable();
     }
 }
@@ -114,7 +115,7 @@ void QueueingServiceStub<MessageTrait>::onClientAbortRequest(RequestKeeperBase::
 template<class MessageTrait>
 void QueueingServiceStub<MessageTrait>::onComponentUnavailable()
 {
-    mafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
+    Logger::error("The stub handler for service ID " ,  this->serviceID() ,  " has no longer existed, then unregister this Stub to server");
 }
 
 }

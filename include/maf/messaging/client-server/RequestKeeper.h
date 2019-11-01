@@ -2,11 +2,12 @@
 
 #include "CSMessage.h"
 #include <maf/patterns/Patterns.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <mutex>
 
 namespace maf {
 namespace messaging {
+using logging::Logger;
 
 class CSMessage;
 class ServiceStubBase;
@@ -58,7 +59,7 @@ std::shared_ptr<CSMessageContentSpecific> RequestKeeper<MessageTrait>::getReques
     }
     catch(const std::exception& e)
     {
-        mafErr("Trying to get content of message that carries no payload: " << e.what());
+        Logger::error("Trying to get content of message that carries no payload: " ,  e.what());
     }
     return {};
 }

@@ -11,8 +11,7 @@ namespace ipc {
 class LocalIPCServer : public IPCServerBase, public pattern::SingletonObject<LocalIPCServer>
 {
 public:
-    LocalIPCServer(Invisible){}
-    void init(const Address& addr) { IPCServerBase::init(IPCType::Local, addr); }
+    LocalIPCServer(Invisible) : IPCServerBase ( IPCType::Local ) {}
 };
 
 
