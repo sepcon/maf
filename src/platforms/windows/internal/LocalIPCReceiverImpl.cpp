@@ -1,8 +1,6 @@
 #include <maf/logging/Logger.h>
 #include "LocalIPCReceiverImpl.h"
 #include "PipeShared.h"
-#include <maf/messaging/client-server/Connection.h>
-//#include <strsafe.h>
 
 #define CONNECTING_STATE 0
 #define READING_STATE 1
@@ -33,18 +31,26 @@ static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED& overlapStructure, char* 
 
         if (fSuccess && bytesRead != 0)
         {
-			totalBytesRead += bytesRead;
+            totalBytesRead += bytesRead;
             break;
         }
         else
         {
             fSuccess = GetOverlappedResult(pipeHandle, &overlapStructure, &bytesRead, true);
-			totalBytesRead += bytesRead;
+            totalBytesRead += bytesRead;
         }
 
     } while(!fSuccess && GetLastError() == ERROR_MORE_DATA);
 
     return totalBytesRead ;
+}
+static void disconnectAndClosePipeInstances(const PipeInstances& pipeInstances)
+{
+    for(auto& instance : pipeInstances)
+    {
+        DisconnectNamedPipe(instance->hPipeInst);
+        CloseHandle(instance->hPipeInst);
+    }
 }
 LocalIPCReceiverImpl::LocalIPCReceiverImpl()
 {
@@ -94,12 +100,12 @@ bool LocalIPCReceiverImpl::initPipes()
 
         _pipeInstances[index]->hPipeInst = CreateNamedPipeA(
             _pipeName.c_str(),          // pipe name
-            PIPE_ACCESS_INBOUND |		// Read only
+            PIPE_ACCESS_INBOUND |        // Read only
             FILE_FLAG_OVERLAPPED,       // overlapped mode
-            PIPE_TYPE_MESSAGE |			// * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
+            PIPE_TYPE_MESSAGE |            // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
             PIPE_READMODE_MESSAGE |     // * block of bytes that greater than buffer_size
             PIPE_WAIT,                  // blocking mode
-            static_cast<DWORD>(_pipeInstances.size()),		// number of instances
+            static_cast<DWORD>(_pipeInstances.size()),        // number of instances
             0,                          // output buffer size
             BUFFER_SIZE*sizeof(char),   // input buffer size
             PIPE_TIMEOUT,               // client time-out
@@ -126,7 +132,7 @@ void LocalIPCReceiverImpl::listningThreadFunction()
     {
         dwWait = WaitForMultipleObjects(
             static_cast<DWORD>(_hEvents.size()),    // number of event objects
-            &_hEvents[0],		// array of event objects
+            &_hEvents[0],        // array of event objects
             FALSE,              // does not wait for all
             INFINITE);          // waits indefinitely
 
@@ -151,6 +157,8 @@ void LocalIPCReceiverImpl::listningThreadFunction()
 
         disconnectAndReconnect(index);
     }
+
+    disconnectAndClosePipeInstances(_pipeInstances);
 }
 
 bool LocalIPCReceiverImpl::readOnPipe(size_t index)

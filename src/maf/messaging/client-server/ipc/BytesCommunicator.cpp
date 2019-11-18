@@ -46,13 +46,13 @@ bool BytesCommunicator::isWaiting() const
 }
 
 
-DataTransmissionErrorCode BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg, const Address &recvAddr)
+ActionCallStatus BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg, const Address &recvAddr)
 {
     assert(msg != nullptr);
     if(_pSender)
     {
-		try
-		{
+        try
+        {
             if(recvAddr.valid())
             {
                 return _pSender->send(msg->toBytes(), recvAddr);
@@ -61,17 +61,17 @@ DataTransmissionErrorCode BytesCommunicator::send(const std::shared_ptr<IPCMessa
             {
                 return _pSender->send(msg->toBytes());
             }
-		}
-		catch (const std::bad_alloc& e)
-		{
-			Logger::error("Message is too large to be serialized: " ,  e.what());
-            return DataTransmissionErrorCode::FailedUnknown;
-		}
+        }
+        catch (const std::bad_alloc& e)
+        {
+            Logger::error("Message is too large to be serialized: " ,  e.what());
+            return ActionCallStatus::FailedUnknown;
+        }
     }
     else
     {
         Logger::error("Cannot send message due to null sender, please call init function before send function");
-        return DataTransmissionErrorCode::ReceiverUnavailable;
+        return ActionCallStatus::ReceiverUnavailable;
     }
 }
 

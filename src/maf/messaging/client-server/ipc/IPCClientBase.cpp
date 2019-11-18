@@ -43,7 +43,7 @@ IPCClientBase::~IPCClientBase()
     deinit();
 }
 
-DataTransmissionErrorCode IPCClientBase::sendMessageToServer(const CSMessagePtr &msg)
+ActionCallStatus IPCClientBase::sendMessageToServer(const CSMessagePtr &msg)
 {
     msg->setSourceAddress(_pReceiver->address());
     return BytesCommunicator::send(std::static_pointer_cast<IPCMessage>(msg));
@@ -51,18 +51,18 @@ DataTransmissionErrorCode IPCClientBase::sendMessageToServer(const CSMessagePtr 
 
 void IPCClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
-	ClientBase::onServerStatusChanged(oldStatus, newStatus);
+    ClientBase::onServerStatusChanged(oldStatus, newStatus);
     if(newStatus == Availability::Available)
     {
         auto registeredMsg = messaging::createCSMessage<IPCMessage>(ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
-		if (sendMessageToServer(registeredMsg) == DataTransmissionErrorCode::Success)
-		{
-			Logger::info("Send service status change register to server successfully!");
-		}
-		else
-		{
-			Logger::info("Could not send service status register request to server");
-		}
+        if (sendMessageToServer(registeredMsg) == ActionCallStatus::Success)
+        {
+            Logger::info("Send service status change register to server successfully!");
+        }
+        else
+        {
+            Logger::info("Could not send service status register request to server");
+        }
     }
 }
 

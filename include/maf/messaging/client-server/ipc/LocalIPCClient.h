@@ -2,17 +2,17 @@
 
 #include "IPCClientBase.h"
 #include <maf/patterns/Patterns.h>
-#include "IPCMessageTrait.h"
+#include <maf/messaging/client-server/SerializableMessageTrait.h>
 #include <maf/messaging/client-server/QueueingServiceProxy.h>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCClient : public IPCClientBase, public pattern::SingletonObject<LocalIPCClient>
+class LocalIPCClient : public IPCClientBase
 {
 public:
-    LocalIPCClient(Invisible) : IPCClientBase{ IPCType::Local }{}
+    LocalIPCClient() : IPCClientBase{ IPCType::Local }{}
 };
 
 } // ipc

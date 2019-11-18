@@ -3,7 +3,7 @@
 #include "ClientInterface.h"
 #include "ServerInterface.h"
 #include <maf/patterns/Patterns.h>
-#include "IAMessageTrait.h"
+#include "DefaultMessageTrait.h"
 #include "ClientBase.h"
 #include "ServerBase.h"
 
@@ -11,15 +11,16 @@ namespace maf {
 namespace messaging {
 
 
-class IAMessageRouter : public ClientBase, public ServerBase, public pattern::SingletonObject<IAMessageRouter>
+class IAMessageRouter :
+    public ClientBase,
+    public ServerBase,
+    pattern::Unasignable
 {
 public:
-    IAMessageRouter(Invisible){}
-    bool init(const Address &, long long) override;
+    static std::shared_ptr<IAMessageRouter> instance();
     bool deinit() override;
-    bool registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface>& requester)  override;
-    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
-    DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg) override;
+    ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
+    ActionCallStatus sendMessageToServer(const CSMessagePtr& msg) override;
     void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
 };
 

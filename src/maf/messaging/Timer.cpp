@@ -81,14 +81,14 @@ bool Timer::running()
 
 void Timer::setCyclic(bool cyclic)
 {
-	if (cyclic != _cyclic)
-	{
-		_cyclic = cyclic;
+    if (cyclic != _cyclic)
+    {
+        _cyclic = cyclic;
         if(_myMgr)
         {
             _myMgr->setCyclic(_id, cyclic);
         }
-	}
+    }
 }
 
 

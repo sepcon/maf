@@ -11,7 +11,7 @@ namespace ipc {
 static constexpr int MAX_ATEMPTS = 10;
 namespace
 {
-	static HANDLE openPipe(const std::string& pipeName);
+    static HANDLE openPipe(const std::string& pipeName);
 }
 
 static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const char* buffer, size_t buffSize)
@@ -79,9 +79,9 @@ LocalIPCSenderImpl::~LocalIPCSenderImpl()
 
 }
 
-DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
+ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
 {
-    auto errCode = DataTransmissionErrorCode::ReceiverUnavailable;
+    auto errCode = ActionCallStatus::ReceiverUnavailable;
     bool success = false;
     if(checkReceiverStatus() == Availability::Available)
     {
@@ -122,11 +122,11 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
 
         if(success)
         {
-            errCode = DataTransmissionErrorCode::Success;
+            errCode = ActionCallStatus::Success;
         }
         else if(GetLastError() == ERROR_PIPE_BUSY)
         {
-            errCode = DataTransmissionErrorCode::ReceiverBusy;
+            errCode = ActionCallStatus::ReceiverBusy;
             if(retryTimes >= MAX_ATEMPTS)
             {
                 Logger::error("Give up trying send byte to receiver!");
@@ -134,12 +134,12 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
         }
         else
         {
-            errCode = DataTransmissionErrorCode::ReceiverUnavailable;
+            errCode = ActionCallStatus::ReceiverUnavailable;
         }
     }
     else
     {
-        //        errCode = DataTransmissionErrorCode::ReceiverUnavailable; //dont need to set here, it must be default failed
+        //        errCode = ActionCallStatus::ReceiverUnavailable; //dont need to set here, it must be default failed
         Logger::warn("Receiver is not available for receiving message, receiver's address = " ,  _pipeName);
     }
 
@@ -148,18 +148,18 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
 
 namespace
 {
-	HANDLE openPipe(const std::string &pipeName)
-	{
-		return CreateFileA(
-			pipeName.c_str(),                                                                   // pipe name
-			GENERIC_WRITE |                                                                     // write only
-			FILE_FLAG_OVERLAPPED,
-			0,                                                                                  // no sharing
-			nullptr,                                                                            // default security attributes
-			OPEN_EXISTING,                                                                      // opens existing pipe
-			0,                                                                                  // write overlapped
-			nullptr);                                                                           // no template file
-	}
+    HANDLE openPipe(const std::string &pipeName)
+    {
+        return CreateFileA(
+            pipeName.c_str(),                                                                   // pipe name
+            GENERIC_WRITE |                                                                     // write only
+            FILE_FLAG_OVERLAPPED,
+            0,                                                                                  // no sharing
+            nullptr,                                                                            // default security attributes
+            OPEN_EXISTING,                                                                      // opens existing pipe
+            0,                                                                                  // write overlapped
+            nullptr);                                                                           // no template file
+    }
 }
 
 } // ipc

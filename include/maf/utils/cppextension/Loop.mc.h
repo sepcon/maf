@@ -9,7 +9,7 @@
 //EXPAND((A, B)) -> STRIP_PARENS(Args_(a,b)) -> 
 
 // Make a FOREACH macro
-#define mc_maf_foreach_1(WHAT, X)		WHAT(X)
+#define mc_maf_foreach_1(WHAT, X)        WHAT(X)
 #define mc_maf_foreach_2(WHAT, X, ...)WHAT(X)mc_maf_msvc_expand_va_args( mc_maf_foreach_1( WHAT, __VA_ARGS__) )
 #define mc_maf_foreach_3(WHAT, X, ...)WHAT(X)mc_maf_msvc_expand_va_args( mc_maf_foreach_2( WHAT, __VA_ARGS__) )
 #define mc_maf_foreach_4(WHAT, X, ...)WHAT(X)mc_maf_msvc_expand_va_args( mc_maf_foreach_3( WHAT, __VA_ARGS__) )

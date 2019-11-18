@@ -8,7 +8,7 @@
 namespace maf {
 namespace messaging {
 
-struct ServiceStatusMsg : public MessageBase
+struct ServiceStatusMsg : public CompMessageBase
 {
     ServiceStatusMsg(ServiceID sid_, Availability old_, Availability new_):
         serviceID(sid_), oldStatus(old_), newStatus(new_){}

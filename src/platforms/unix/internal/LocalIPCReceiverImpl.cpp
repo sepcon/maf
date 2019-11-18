@@ -1,4 +1,4 @@
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include "SocketShared.h"
 #include "LocalIPCReceiverImpl.h"
 
@@ -6,10 +6,8 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-//#include <fcntl.h> // for open
-#include <pthread.h>
 
-namespace maf {
+namespace maf { using  logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -65,20 +63,20 @@ bool LocalIPCReceiverImpl::startListening()
                 // Max 5 pending connections
                 if(listen(fdMySock, 5) == 0)
                 {
-                    mafInfo("Listening on address " << _myaddr.dump());
+                    Logger::info("Listening on address ", _myaddr.dump());
                     _stopped = false;
                     _listeningThread = std::thread{&LocalIPCReceiverImpl::listeningThreadFunc, this, fdMySock};
                     startable = true;
                 }
                 else
                 {
-                    mafErr("Could not listen on socket");
+                    Logger::error("Could not listen on socket");
                 }
             }
         }
         else
         {
-            mafErr("Coud not bind socket to address " << _myaddr.dump());
+            Logger::error("Coud not bind socket to address ", _myaddr.dump());
         }
     }
 
@@ -148,7 +146,7 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock)
         auto totalSD = select( maxSd + 1 , &readfds , nullptr , nullptr , &timeout);
         if(_stopped.load(std::memory_order_acquire))
         {
-            mafInfo("Finish listening due to flag STOP was turned on, address: " << _myaddr.dump());
+            Logger::info("Finish listening due to flag STOP was turned on, address: ", _myaddr.dump());
             break;
         }
 
@@ -164,7 +162,7 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock)
             auto acceptedSD = accept(fdMySock, _2sockAddr(&_mySockAddr), &sockLen);
             if (acceptedSD < 0)
             {
-                mafErr("Failed on accepting new socket connection");
+                Logger::error("Failed on accepting new socket connection");
                 return false;
             }
 
@@ -203,7 +201,7 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock)
                         }
                         else
                         {
-                            mafUssErr("Could not read bytes from socket total read = " << totalRead << " total expected = " << messageLength);
+                            socketError("Could not read bytes from socket total read = ", totalRead, " total expected = ", messageLength);
                             break;
                         }
                     }
@@ -219,7 +217,7 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock)
                     //Somebody disconnected , get his details and print
 //                    sockaddr_in peerAddr;
 //                    getpeername(sd , _2sockAddr(&peerAddr), (socklen_t*)&addrlen);
-//                     mafWarn("Disconnected from sender " << inet_ntoa(peerAddr.sin_addr)  << ntohs(peerAddr.sin_port));
+//                     mafWarn("Disconnected from sender ", inet_ntoa(peerAddr.sin_addr) , ntohs(peerAddr.sin_port));
                 }
                 close( sd );
                 fdClientSocks[i] = 0;

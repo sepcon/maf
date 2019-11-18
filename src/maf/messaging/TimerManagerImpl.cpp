@@ -109,7 +109,7 @@ private:
         bool isCyclic;
     };
 
-    nstl::Lockable<D> _d;
+    threading::Lockable<D> _d;
 };
 
 struct JobComp
@@ -160,39 +160,39 @@ bool TimerManagerImpl::start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCa
 
 void TimerManagerImpl::restart(TimerManagerImpl::JobID jid)
 {
-	if (!test(_shutdowned))
-	{
-		std::unique_lock<JobsContainer> jobslock(_runningJobs);
-		auto itJob = findJob__(_runningJobs, jid);
-		if (itJob != _runningJobs->end())
-		{
+    if (!test(_shutdowned))
+    {
+        std::unique_lock<JobsContainer> jobslock(_runningJobs);
+        auto itJob = findJob__(_runningJobs, jid);
+        if (itJob != _runningJobs->end())
+        {
             Logger::info("Timer " ,  jid ,  " is restarted with duration = " ,  (*itJob)->duration());
 
-			(*itJob)->reset();
-			jobslock.unlock();
-			_condvar.notify_one();
-		}
-	}
+            (*itJob)->reset();
+            jobslock.unlock();
+            _condvar.notify_one();
+        }
+    }
 }
 
 void TimerManagerImpl::stop(TimerManagerImpl::JobID jid)
 {
-	if (!test(_shutdowned))
-	{
-		if (removeAndInvalidateJob(_pendingJobs, jid))
-		{
+    if (!test(_shutdowned))
+    {
+        if (removeAndInvalidateJob(_pendingJobs, jid))
+        {
             Logger::info("Job " ,  jid ,  " is canceled");
-		}
-		else if (removeAndInvalidateJob(_runningJobs, jid))
-		{
+        }
+        else if (removeAndInvalidateJob(_runningJobs, jid))
+        {
             Logger::info("Job " ,  jid ,  " is canceled");
-			_condvar.notify_one();
-		}
-		else
-		{
+            _condvar.notify_one();
+        }
+        else
+        {
             Logger::warn("Job " ,  jid ,  " does not exist or is already canceled");
-		}
-	}
+        }
+    }
 }
 
 bool TimerManagerImpl::isRunning(TimerManagerImpl::JobID jid)
@@ -220,23 +220,23 @@ bool TimerManagerImpl::isRunning(TimerManagerImpl::JobID jid)
 
 void TimerManagerImpl::setCyclic(TimerManagerImpl::JobID jid, bool cyclic)
 {
-	if (!test(_shutdowned))
-	{
-		auto setCyclic = [](JobsContainer& jobs, JobID jid, bool value) -> bool {
+    if (!test(_shutdowned))
+    {
+        auto setCyclic = [](JobsContainer& jobs, JobID jid, bool value) -> bool {
             std::lock_guard lock(jobs);
-			auto itJob = findJob__(jobs, jid);
-			if (itJob != jobs->end())
-			{
-				(*itJob)->setCyclic(value);
-			}
-			return itJob != jobs->end();
-		};
+            auto itJob = findJob__(jobs, jid);
+            if (itJob != jobs->end())
+            {
+                (*itJob)->setCyclic(value);
+            }
+            return itJob != jobs->end();
+        };
 
-		if (!setCyclic(_pendingJobs, jid, cyclic))
-		{
-			setCyclic(_runningJobs, jid, cyclic);
-		}
-	}
+        if (!setCyclic(_pendingJobs, jid, cyclic))
+        {
+            setCyclic(_runningJobs, jid, cyclic);
+        }
+    }
 }
 
 void TimerManagerImpl::stop()
@@ -321,7 +321,6 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
     bool executed = false;
     if (job->expired())
     {
-        Logger::info("Timer " ,  job->id() ,  " expired!");
         try
         {
             if(job->valid()) // for case of job has been stopped when waiting to be expired
@@ -358,34 +357,34 @@ void TimerManagerImpl::run() noexcept
             this->reorderRunningJobs__();
             auto job = getShorttestDurationJob__(_runningJobs);
 
-			if (job)
-			{
+            if (job)
+            {
                 if (runJobIfExpired__(job))
                 {
                     this->scheduleShorttestJob__();
-				}
-				else
-				{
-					if (test(_shutdowned)) { break; }
-					//TBD: _shutdowned might be set here
-					_condvar.wait_for(jobsLock, milliseconds(job->remainTime()));
+                }
+                else
+                {
+                    if (test(_shutdowned)) { break; }
+                    //TBD: _shutdowned might be set here
+                    _condvar.wait_for(jobsLock, milliseconds(job->remainTime()));
 
-					if (test(_shutdowned)) { break; }
+                    if (test(_shutdowned)) { break; }
 
                     if (runJobIfExpired__(job))
                     {
                         this->scheduleShorttestJob__();
                     }
-				}
-			}
+                }
+            }
             else // there's no job to do
-			{
+            {
 //                LOG("Exit due to no more job to do");
 //                break;
                 _condvar.wait(ccMutex, [this]{
                     return (this->_pendingJobs->size() > 0) || (test(_shutdowned) == true);
                 });
-			}
+            }
 
             this->adoptPendingJobs__();
 

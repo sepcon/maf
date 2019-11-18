@@ -45,18 +45,18 @@
 
 #include "Internal/TplkdefBegin.mc.h"
 
-#	ifdef OBJECT
-#		pragma push_macro("OBJECT")
-#		define maf_restore_macro_OBJECT
-#	endif
-#	ifdef PROPERTIES
-#		pragma push_macro("PROPERTIES")
-#		define maf_restore_macro_PROPERTIES
-#	endif
-#	ifdef ENDOBJECT
-#		pragma push_macro("ENDOBJECT")
-#		define maf_restore_macro_END_OBJECT
-#	endif
+#    ifdef OBJECT
+#        pragma push_macro("OBJECT")
+#        define maf_restore_macro_OBJECT
+#    endif
+#    ifdef PROPERTIES
+#        pragma push_macro("PROPERTIES")
+#        define maf_restore_macro_PROPERTIES
+#    endif
+#    ifdef ENDOBJECT
+#        pragma push_macro("ENDOBJECT")
+#        define maf_restore_macro_END_OBJECT
+#    endif
 
 #define OBJECT mc_maf_tuple_like_object
 

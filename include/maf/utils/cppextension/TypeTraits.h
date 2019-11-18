@@ -72,8 +72,8 @@ using to_void = void;
 template <typename T, typename = void>
 struct is_iterable : std::false_type {};
 template <typename T>
-struct is_iterable<T, to_void<decltype(std::declval<T>().begin()),
-                                  decltype(std::declval<T>().end())>>
+struct is_iterable<T, to_void<decltype(std::begin(std::declval<T>())),
+                              decltype(std::end(std::declval<T>()))>>
     : std::true_type {};
 template<typename T>
 static constexpr bool is_iterable_v = is_iterable<T>::value;

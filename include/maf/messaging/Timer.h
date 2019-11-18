@@ -29,7 +29,7 @@ public:
 private:
     std::shared_ptr<messaging::TimerManager> _myMgr;
     unsigned int _id;
-	bool _cyclic;
+    bool _cyclic;
 };
 }
 }

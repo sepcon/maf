@@ -4,7 +4,7 @@
 #include <memory>
 
 namespace maf {
-namespace nstl {
+namespace threading {
 
 template<class Protected, class Mutex = std::mutex>
 class Lockable

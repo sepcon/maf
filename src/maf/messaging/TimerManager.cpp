@@ -71,7 +71,7 @@ void TimerManager::stop(TimerManager::JobID jid)
 
 void TimerManager::stop()
 {
-	_pImpl->stop();
+    _pImpl->stop();
 }
 
 bool TimerManager::isRunning(TimerManager::JobID jid)

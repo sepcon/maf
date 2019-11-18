@@ -22,13 +22,13 @@ namespace threading {
 template< class TaskQueue>
 class ThreadPoolImplBase
 {
-	
+    
 public:
     typedef typename TaskQueue::value_type Task;
     typedef typename TaskQueue::reference TaskRef;
     typedef typename TaskQueue::const_reference TaskCRef;
     typedef std::function<void (TaskRef)> TaskExc;
-	static inline void fDoNothing(TaskRef) {}
+    static inline void fDoNothing(TaskRef) {}
     ThreadPoolImplBase(unsigned int maxCount, TaskExc fRun, TaskExc fStop = &fDoNothing, TaskExc fDone = &fDoNothing):
         _maxThreadCount(maxCount != 0 ? maxCount : std::thread::hardware_concurrency()),
         _fRun(fRun),

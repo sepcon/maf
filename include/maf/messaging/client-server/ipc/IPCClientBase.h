@@ -17,7 +17,7 @@ public:
 
     bool init(const Address& serverAddress, long long sersverMonitoringCycleMS = 1000) override;
     bool deinit() override;
-    DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg)  override;
+    ActionCallStatus sendMessageToServer(const CSMessagePtr& msg)  override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
 
 protected:

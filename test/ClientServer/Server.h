@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/messaging/client-server/SSQServiceStub.h>
+#include <maf/messaging/client-server/QueueingServiceStub.h>
 #include <maf/messaging/ExtensibleComponent.h>
 #include <maf/messaging/Timer.h>
 #include <maf/utils/TimeMeasurement.h>
@@ -10,92 +10,85 @@ namespace maf {
 using namespace messaging;
 namespace test {
 
+using weather_contract::today_weather;
 
-template <class MessageTrait, class Server, int ServiceID>
+template <class MessageTrait, int ServiceID>
 class ServerComponent : public ExtensibleComponent
 {
-    using RequestMessage = ClientRequestMessage<MessageTrait>;
-    using Stub = SSQServiceStub<MessageTrait, Server>;
-    std::shared_ptr<Stub> _stub;
+    using Stub = QueueingServiceStub<MessageTrait>;
     Timer _serverTimer;
-
+    std::shared_ptr<Stub> _stub;
+    ConnectionType _contype;
+    Address _serverAddr;
+    int _responseCount = 0;
+    maf::util::TimeMeasurement::MicroSeconds _totalupdateTime;
 public:
-    void startTest(bool detached = true)
+    void startTest(
+            const ConnectionType& contype,
+            const Address& addr,
+            bool detached = true
+            )
     {
-        _serverTimer.setCyclic(true);
-        onMessage<RequestMessage>([this](const std::shared_ptr<RequestMessage>& msg) {
-            auto requestKeeper = msg->getRequestKeeper();
-            switch(requestKeeper->getOperationCode())
-            {
-            case OpCode::Register:
-            {
-                maf::Logger::debug("Client registered to status " ,  msg->getRequestKeeper()->getOperationID());
-                auto msg = WeatherStatus::makeResult();
-                msg->set_the_status("Response to register");
-                requestKeeper->respond(msg);
-            }
-            break;
-            case OpCode::Request:
-            {
-                _serverTimer.start(10, [this, requestKeeper] {
-                    static thread_local int responseCount = 0;
-                    static thread_local long long totalupdateTime = 0;
-
-                    maf::Logger::debug("Component " ,  name() ,  " Timer expired , total request: " ,  ++responseCount);
-                    auto res = std::make_shared<WeatherStatus::Result>();
-                    res->set_shared_list_of_places({"hello", "world"});
-
-                    {
-                        maf::TimeMeasurement updateMeasure = [](long long elapsed) {
-                                totalupdateTime += elapsed; };
-                        updateMeasure.stop();
-
-                        requestKeeper->update(res);
-                    }
-                    if(responseCount >= 10000000)
-                    {
-                        maf::Logger::debug("Send final update to client");
-                        maf::Logger::debug("Avarage time to send an update " ,  " = " ,  static_cast<double>(totalupdateTime) / static_cast<double>(responseCount) ,  "ms") ;
-                        requestKeeper->respond(res);
-                        _serverTimer.stop();
-                        this->stop();
-                    }
-                });
-                auto req = msg->template getRequestContent<WeatherStatus::Request>();
-                if(req)
-                {
-                    maf::Logger::debug("Receiver request from client: " ,  req->client_name());
-                }
-                else
-                {
-                    maf::Logger::debug("Get request with no content, operationID=  " ,  msg->getRequestKeeper()->getOperationID());
-                }
-            }
-            break;
-
-            default:
-                break;
-
-            }
-
-        });
-
-
+        _stub = Stub::createStub(contype, addr, ServiceID);
+        _stub->setMainComponent(component());
         run(detached ? LaunchMode::Async : LaunchMode::AttachToCurrentThread);
     }
     void stopTest()
     {
-        _stub.reset();
         this->stop();
     }
 
     void onEntry() override
     {
         maf::Logger::debug("Component is starting");
-        _stub = Stub::createStub(ServiceID);
+        _serverTimer.setCyclic(true);
+        _stub->template setRequestHandler<today_weather::request>(
+            std::bind(&ServerComponent::handleWeatherRequest, this, std::placeholders::_1)
+            );
+
+        auto simpleStatus = weather_contract::simple_status::make_status();
+        simpleStatus->headers() = {{"g", "d"},{"d", "k"}};
+        _stub->setStatus(simpleStatus);
+        _stub->template setStatus<weather_contract::simple_status::status>();
+        _stub->startServing();
         maf::Logger::debug("Stub ready as well");
+    }
+
+    void handleWeatherRequest(const std::shared_ptr<RequestT<MessageTrait>>& request)
+    {
+        maf::Logger::debug("Component " ,  name() ,  " Timer expired , total request: " ,  ++_responseCount);
+        auto req = request->template getRequestContent<weather_contract::today_weather::request>();
+        if(req)
+        {
+            maf::Logger::debug("Receiver request from client: " ,  req->client_name());
+        }
+        else
+        {
+            maf::Logger::debug("Get request with no content, operationID=  " ,  request->getOperationID());
+        }
+
+        auto res = weather_contract::today_weather::make_result();
+        res->set_shared_list_of_places({"hello", "world"});
+
+        {
+            maf::util::TimeMeasurement updateMeasure{
+                [this](maf::util::TimeMeasurement::MicroSeconds elapsed) {
+                    _totalupdateTime += elapsed;
+                    Logger::debug("Time for one update = ", elapsed.count(), "microsecond");
+                }
+            };
+            request->respond(res);
+        }
+
+        if(_responseCount >= 100)
+        {
+            maf::Logger::debug("Send final update to client");
+            maf::Logger::debug("Avarage time to send an update " ,  " = " ,  static_cast<double>(_totalupdateTime.count()) / static_cast<double>(_responseCount) / 1000 ,  "ms") ;
+            this->stop();
+        }
     }
 };
 
 }
 }
+

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/utils/cppextension/Lockable.h>
+#include <maf/threading/Lockable.h>
 #include "TimerManager.h"
 #include <chrono>
 #include <set>
@@ -33,7 +33,7 @@ struct TimerManagerImpl
 
 private:
     using JobDescRef = std::shared_ptr<JobDesc>;
-    using JobsContainer = nstl::Lockable<std::vector<JobDescRef>>;
+    using JobsContainer = threading::Lockable<std::vector<JobDescRef>>;
     using JobsIterator = JobsContainer::DataType::iterator;
     using JobsCIterator = JobsContainer::DataType::const_iterator;
     friend struct JobComp;

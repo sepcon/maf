@@ -1,26 +1,22 @@
 #pragma once
 
 #include "ClientInterface.h"
-#include "ServiceStatusObserverInterface.h"
 #include "ServiceRequesterInterface.h"
-#include "internal/CSShared.h"
+#include <maf/threading/Lockable.h>
 #include <map>
 
 namespace maf {
 namespace messaging {
 
-class ClientBase : public ClientInterface
+class ClientBase : public ClientInterface, public std::enable_shared_from_this<ClientBase>
 {
 public:
     //Dervied class must provide implementation for this method
-    DataTransmissionErrorCode sendMessageToServer(const CSMessagePtr& msg) override = 0;
-    bool registerServiceRequester(const IServiceRequesterPtr& requester)  override;
-    bool unregisterServiceRequester(const IServiceRequesterPtr& requester)  override;
-    bool unregisterServiceRequester(ServiceID sid) override;
+    ActionCallStatus sendMessageToServer(const CSMessagePtr& msg) override = 0;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
     void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool hasServiceRequester(ServiceID sid) override;
-    IServiceRequesterPtr getServiceRequester(ServiceID sid) override;
+    ServiceRequesterInterfacePtr getServiceRequester(ServiceID sid) override;
     Availability getServiceStatus(ServiceID sid) override;
 
     bool init(const Address& serverAddress, long long sersverMonitoringCycleMS) override;
@@ -29,10 +25,12 @@ public:
 protected:
     bool onIncomingMessage(const CSMessagePtr& msg) override;
     void storeServiceStatus(ServiceID sid, Availability status);
-    using Requesters = SMList<ServiceRequesterInterface>;
-    using ServiceStatusMap = nstl::Lockable<std::map<ServiceID, Availability>>;
-    Requesters _requesters;
-    ServiceStatusMap _serviceStatusMap;
+
+    using ServiceStatusMap  = threading::Lockable<std::map<ServiceID, Availability>>;
+    using ProxyMap          = threading::Lockable<std::map<ServiceID, ServiceRequesterInterfacePtr>>;
+    ProxyMap                _requestersMap;
+    ServiceStatusMap        _serviceStatusMap;
+
 };
 
 } // messaging

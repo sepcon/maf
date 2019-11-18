@@ -21,7 +21,18 @@ mafMacroBackUpRestoreGenerate()
         restore=${destination}/"${restore/.mc/End.mc}"
     fi
     
-    local pp="`grep -oE '#define [^\(]*' $header | sort | uniq`"
+    local pp="`grep -oE '#\s*define [^\(]*' $header | 
+		awk ' { 
+			macro_name=\"\"
+			if($1 == \"#\")
+			{
+				print $3
+			}
+			else
+			{
+				print $2
+			}
+		} ' | sort | uniq`"
     
     # pp will look like this:
     #   #define macro_name_xxx
@@ -30,26 +41,27 @@ mafMacroBackUpRestoreGenerate()
     echo "Generate backup file at ${backup} ... "
     
     echo "#pragma once" > ${backup}
-    echo "${pp}" | awk ' { 
-        print "#\tifdef " $2
-        print "#\t\tpragma push_macro(\"" $2 "\")"
-        print "#\t\tdefine maf_restore_macro_" $2
-        print "#\tendif" 
+    echo "${pp}" | awk ' {
+		macro_name=$0
+		print "#\tifdef " macro_name
+		print "#\t\tpragma push_macro(\"" macro_name "\")"
+		print "#\t\tdefine maf_restore_macro_" macro_name
+		print "#\tendif"
         }' >> ${backup}
       
-    cat $header >> ${backup}
-#     echo "#include \"$(basename ${header})\"" >> ${backup}
+    # cat $header >> ${backup}
+	# echo "#include \"$(basename ${header})\"" >> ${backup}
         
     echo "Generate restore file at ${restore}..."
     
     echo "#pragma once" > ${restore}
     echo "${pp}" | awk ' {
-        print "#\tifdef " $2
-        print "#\t\tundef " $2
+        print "#\tifdef " $0
+        print "#\t\tundef " $0
         print "#\tendif" 
-        print "#\tifdef maf_restore_macro_" $2
-        print "#\t\tpragma pop_macro(\"" $2 "\")"
-        print "#\t\tundef maf_restore_macro_" $2
+        print "#\tifdef maf_restore_macro_" $0
+        print "#\t\tpragma pop_macro(\"" $0 "\")"
+        print "#\t\tundef maf_restore_macro_" $0
         print "#\tendif" 
         }' >> ${restore}
 }

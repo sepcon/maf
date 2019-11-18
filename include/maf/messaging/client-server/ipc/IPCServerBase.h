@@ -16,12 +16,12 @@ public:
     ~IPCServerBase() override;
     bool init(const Address& serverAddress) override;
     bool deinit() override  ;
-    DataTransmissionErrorCode sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override;
+    ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override;
     void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 protected:
     void notifyServiceStatusToClient(const Address& clAddr, ServiceID sid, Availability oldStatus, Availability newStatus);
-    using RegistedClientAddresses = nstl::Lockable<std::set<Address>>;
+    using RegistedClientAddresses = threading::Lockable<std::set<Address>>;
     class BytesCommunicator* _communicator;
     RegistedClientAddresses _registedClAddrs;
 };

@@ -1,51 +1,7 @@
-#include <maf/utils/serialization/Serializer.h>
+#include <maf/utils/serialization/StreamSerializer.h>
 
 namespace maf {
 namespace srz {
-
-Serializer &Serializer::operator<<(const ByteArray &value)
-{
-    return this->operator<<(static_cast<const std::string&>(value));
-}
-
-void Serializer::flush() {}
-void Serializer::sync() {}
-
-Deserializer &Deserializer::operator>>(ByteArray &obj)
-{
-    return this->operator>>(static_cast<std::string&>(obj));
-}
-
-void Deserializer::fetchMoreBytes(const char **, const char **, SizeType) {}
-
-char *BASerializer::getNextWriteArea(SizeType length)
-{
-    auto currentSize = _ba.size();
-    _ba.resize(currentSize + length);
-    return _ba.firstpos() + currentSize;
-}
-
-BADeserializer::BADeserializer(const ByteArray &stream) : _cpByteArray(&stream)
-{
-    _curpos = _cpByteArray->firstpos();
-    _lastpos = _cpByteArray->lastpos();
-}
-
-bool BADeserializer::exhausted() const
-{
-    if(_cpByteArray)
-        return _curpos > _cpByteArray->lastpos();
-    else
-        return true;
-}
-
-void BADeserializer::reset()
-{
-    if (_cpByteArray)
-    {
-        _curpos = _cpByteArray->firstpos();
-    }
-}
 
 StreamSerializer::StreamSerializer(std::ostream &stream) : _ostream(stream), _totalWrite(0)
 {
@@ -168,5 +124,5 @@ void StreamDeserializer::fetchMoreBytes(const char **startp, const char **lastp,
     *lastp = (*startp) + read - 1;
 }
 
-}
-}
+} // srz
+} // maf

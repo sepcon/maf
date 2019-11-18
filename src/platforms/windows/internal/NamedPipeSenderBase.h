@@ -28,10 +28,10 @@ public:
             return false;
         }
     }
-    DataTransmissionErrorCode send(const maf::srz::ByteArray &/*ba*/, const Address& /*destination*/) override
+    ActionCallStatus send(const maf::srz::ByteArray &/*ba*/, const Address& /*destination*/) override
     {
         Logger::error("Derived class must override this function[NamedPipeSenderBase::send]");
-        return DataTransmissionErrorCode::ReceiverUnavailable;
+        return ActionCallStatus::ReceiverUnavailable;
     }
     const Address& receiverAddress() const override
     {

@@ -8,9 +8,9 @@ namespace
 {
 struct Statics
 {
-    LoggingFunctionType out = [](const std::string&) {};
-    LoggingFunctionType err = [](const std::string&) {};
-    LogLevel filteredLevel = LogLevel::LL_WARN;
+    Logger::LoggingFunctionType out = [](const std::string&) {};
+    Logger::LoggingFunctionType err = [](const std::string&) {};
+    LogLevels allowedLevels = LOG_LEVEL_SILENCE;
 };
 
 static Statics& statics()
@@ -20,7 +20,7 @@ static Statics& statics()
 };
 }
 
-void Logger::initLogging(LogLevel filteredLevel, LoggingFunctionType outLogFunc, LoggingFunctionType errLogFunc)
+void Logger::init(LogLevels allowedLevels, LoggingFunctionType outLogFunc, LoggingFunctionType errLogFunc)
 {
     if(outLogFunc)
     {
@@ -34,15 +34,15 @@ void Logger::initLogging(LogLevel filteredLevel, LoggingFunctionType outLogFunc,
     {
         statics().err = statics().out;
     }
-    statics().filteredLevel = filteredLevel;
+    statics().allowedLevels = allowedLevels;
 }
 
 void Logger::logImpl(LogLevel filteredLevel, const std::string &msg)
 {
     switch (filteredLevel)
     {
-    case LogLevel::LL_INFO:
-    case LogLevel::LL_DEBUG:
+    case LOG_LEVEL_INFO:
+    case LOG_LEVEL_DEBUG:
         statics().out(msg);
         break;
     default:
@@ -51,9 +51,9 @@ void Logger::logImpl(LogLevel filteredLevel, const std::string &msg)
     }
 }
 
-bool Logger::allowLog(LogLevel level)
+bool Logger::allowed(LogLevel level)
 {
-    return statics().filteredLevel <= level;
+    return statics().allowedLevels & level;
 }
 
 }

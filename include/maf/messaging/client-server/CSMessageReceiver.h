@@ -8,7 +8,6 @@ namespace messaging {
 class CSMessageReceiver
 {
 public:
-    virtual ~CSMessageReceiver() = default;
     virtual bool onIncomingMessage(const CSMessagePtr& csMsg) = 0;
 };
 

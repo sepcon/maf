@@ -85,7 +85,7 @@ protected:
     std::thread _workerThread;
     Address _myaddr;
     std::atomic_bool _stopped;
-	bool _isClient;
+    bool _isClient;
 };
 
 }

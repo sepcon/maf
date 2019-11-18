@@ -1,108 +1,108 @@
 // NO INCLUDE GUARD
-#	ifdef mc_maf_choose_correct_default_value_macro
-#		pragma push_macro("mc_maf_choose_correct_default_value_macro")
-#		define maf_restore_macro_mc_maf_choose_correct_default_value_macro
-#	endif
-#	ifdef mc_maf_declare_get_set_func
-#		pragma push_macro("mc_maf_declare_get_set_func")
-#		define maf_restore_macro_mc_maf_declare_get_set_func
-#	endif
-#	ifdef mc_maf_declare_get_set_funcs_
-#		pragma push_macro("mc_maf_declare_get_set_funcs_")
-#		define maf_restore_macro_mc_maf_declare_get_set_funcs_
-#	endif
-#	ifdef mc_maf_declare_get_set_funcs_with_index
-#		pragma push_macro("mc_maf_declare_get_set_funcs_with_index")
-#		define maf_restore_macro_mc_maf_declare_get_set_funcs_with_index
-#	endif
-#	ifdef mc_maf_define_constructors_
-#		pragma push_macro("mc_maf_define_constructors_")
-#		define maf_restore_macro_mc_maf_define_constructors_
-#	endif
-#	ifdef mc_maf_define_dump_helper_func
-#		pragma push_macro("mc_maf_define_dump_helper_func")
-#		define maf_restore_macro_mc_maf_define_dump_helper_func
-#	endif
-#	ifdef mc_maf_define_dump_helper_func
-#		pragma push_macro("mc_maf_define_dump_helper_func")
-#		define maf_restore_macro_mc_maf_define_dump_helper_func
-#	endif
-#	ifdef mc_maf_get_default_value
-#		pragma push_macro("mc_maf_get_default_value")
-#		define maf_restore_macro_mc_maf_get_default_value
-#	endif
-#	ifdef mc_maf_get_default_value_
-#		pragma push_macro("mc_maf_get_default_value_")
-#		define maf_restore_macro_mc_maf_get_default_value_
-#	endif
-#	ifdef mc_maf_get_nth_option
-#		pragma push_macro("mc_maf_get_nth_option")
-#		define maf_restore_macro_mc_maf_get_nth_option
-#	endif
-#	ifdef mc_maf_get_overload
-#		pragma push_macro("mc_maf_get_overload")
-#		define maf_restore_macro_mc_maf_get_overload
-#	endif
-#	ifdef mc_maf_has_default
-#		pragma push_macro("mc_maf_has_default")
-#		define maf_restore_macro_mc_maf_has_default
-#	endif
-#	ifdef mc_maf_no_default
-#		pragma push_macro("mc_maf_no_default")
-#		define maf_restore_macro_mc_maf_no_default
-#	endif
-#	ifdef mc_maf_properties_map
-#		pragma push_macro("mc_maf_properties_map")
-#		define maf_restore_macro_mc_maf_properties_map_
-#	endif
-#	ifdef mc_maf_take_2_first_params_param
-#		pragma push_macro("mc_maf_take_2_first_params_param")
-#		define maf_restore_macro_mc_maf_take_2_first_params_param
-#	endif
-#	ifdef mc_maf_take_2_first_params_param_
-#		pragma push_macro("mc_maf_take_2_first_params_param_")
-#		define maf_restore_macro_mc_maf_take_2_first_params_param_
-#	endif
-#	ifdef mc_maf_take_only_first_arg
-#		pragma push_macro("mc_maf_take_only_first_arg")
-#		define maf_restore_macro_mc_maf_take_only_first_arg
-#	endif
-#	ifdef mc_maf_take_only_first_arg_
-#		pragma push_macro("mc_maf_take_only_first_arg_")
-#		define maf_restore_macro_mc_maf_take_only_first_arg_
-#	endif
-#	ifdef mc_maf_take_only_first_arg__
-#		pragma push_macro("mc_maf_take_only_first_arg__")
-#		define maf_restore_macro_mc_maf_take_only_first_arg__
-#	endif
-#	ifdef mc_maf_tuple_like_object
-#		pragma push_macro("mc_maf_tuple_like_object")
-#		define maf_restore_macro_mc_maf_tuple_like_object
-#	endif
-#	ifdef mc_maf_tuple_like_object_
-#		pragma push_macro("mc_maf_tuple_like_object_")
-#		define maf_restore_macro_mc_maf_tuple_like_object_
-#	endif
-#	ifdef mc_maf_tuple_like_object_end
-#		pragma push_macro("mc_maf_tuple_like_object_end")
-#		define maf_restore_macro_mc_maf_tuple_like_object_end_
-#	endif
-#	ifdef mc_maf_tuple_like_object_has_base_
-#		pragma push_macro("mc_maf_tuple_like_object_has_base_")
-#		define maf_restore_macro_mc_maf_tuple_like_object_has_base_
-#	endif
-#	ifdef mc_maf_tuple_like_object_has_base_end_
-#		pragma push_macro("mc_maf_tuple_like_object_has_base_end_")
-#		define maf_restore_macro_mc_maf_tuple_like_object_has_base_end_
-#	endif
-#	ifdef mc_maf_tuple_value_at
-#		pragma push_macro("mc_maf_tuple_value_at")
-#		define maf_restore_macro_mc_maf_tuple_value_at
-#	endif
-#	ifdef mc_maf_define_load_from_json_functions
-#		pragma push_macro("mc_maf_define_load_from_json_functions")
-#		define maf_restore_macro_mc_maf_define_load_from_json_functions
-#	endif
+#    ifdef mc_maf_choose_correct_default_value_macro
+#        pragma push_macro("mc_maf_choose_correct_default_value_macro")
+#        define maf_restore_macro_mc_maf_choose_correct_default_value_macro
+#    endif
+#    ifdef mc_maf_declare_get_set_func
+#        pragma push_macro("mc_maf_declare_get_set_func")
+#        define maf_restore_macro_mc_maf_declare_get_set_func
+#    endif
+#    ifdef mc_maf_declare_get_set_funcs_
+#        pragma push_macro("mc_maf_declare_get_set_funcs_")
+#        define maf_restore_macro_mc_maf_declare_get_set_funcs_
+#    endif
+#    ifdef mc_maf_declare_get_set_funcs_with_index
+#        pragma push_macro("mc_maf_declare_get_set_funcs_with_index")
+#        define maf_restore_macro_mc_maf_declare_get_set_funcs_with_index
+#    endif
+#    ifdef mc_maf_define_constructors_
+#        pragma push_macro("mc_maf_define_constructors_")
+#        define maf_restore_macro_mc_maf_define_constructors_
+#    endif
+#    ifdef mc_maf_define_dump_helper_func
+#        pragma push_macro("mc_maf_define_dump_helper_func")
+#        define maf_restore_macro_mc_maf_define_dump_helper_func
+#    endif
+#    ifdef mc_maf_define_dump_helper_func
+#        pragma push_macro("mc_maf_define_dump_helper_func")
+#        define maf_restore_macro_mc_maf_define_dump_helper_func
+#    endif
+#    ifdef mc_maf_get_default_value
+#        pragma push_macro("mc_maf_get_default_value")
+#        define maf_restore_macro_mc_maf_get_default_value
+#    endif
+#    ifdef mc_maf_get_default_value_
+#        pragma push_macro("mc_maf_get_default_value_")
+#        define maf_restore_macro_mc_maf_get_default_value_
+#    endif
+#    ifdef mc_maf_get_nth_option
+#        pragma push_macro("mc_maf_get_nth_option")
+#        define maf_restore_macro_mc_maf_get_nth_option
+#    endif
+#    ifdef mc_maf_get_overload
+#        pragma push_macro("mc_maf_get_overload")
+#        define maf_restore_macro_mc_maf_get_overload
+#    endif
+#    ifdef mc_maf_has_default
+#        pragma push_macro("mc_maf_has_default")
+#        define maf_restore_macro_mc_maf_has_default
+#    endif
+#    ifdef mc_maf_no_default
+#        pragma push_macro("mc_maf_no_default")
+#        define maf_restore_macro_mc_maf_no_default
+#    endif
+#    ifdef mc_maf_properties_map
+#        pragma push_macro("mc_maf_properties_map")
+#        define maf_restore_macro_mc_maf_properties_map_
+#    endif
+#    ifdef mc_maf_take_2_first_params_param
+#        pragma push_macro("mc_maf_take_2_first_params_param")
+#        define maf_restore_macro_mc_maf_take_2_first_params_param
+#    endif
+#    ifdef mc_maf_take_2_first_params_param_
+#        pragma push_macro("mc_maf_take_2_first_params_param_")
+#        define maf_restore_macro_mc_maf_take_2_first_params_param_
+#    endif
+#    ifdef mc_maf_take_only_first_arg
+#        pragma push_macro("mc_maf_take_only_first_arg")
+#        define maf_restore_macro_mc_maf_take_only_first_arg
+#    endif
+#    ifdef mc_maf_take_only_first_arg_
+#        pragma push_macro("mc_maf_take_only_first_arg_")
+#        define maf_restore_macro_mc_maf_take_only_first_arg_
+#    endif
+#    ifdef mc_maf_take_only_first_arg__
+#        pragma push_macro("mc_maf_take_only_first_arg__")
+#        define maf_restore_macro_mc_maf_take_only_first_arg__
+#    endif
+#    ifdef mc_maf_tuple_like_object
+#        pragma push_macro("mc_maf_tuple_like_object")
+#        define maf_restore_macro_mc_maf_tuple_like_object
+#    endif
+#    ifdef mc_maf_tuple_like_object_
+#        pragma push_macro("mc_maf_tuple_like_object_")
+#        define maf_restore_macro_mc_maf_tuple_like_object_
+#    endif
+#    ifdef mc_maf_tuple_like_object_end
+#        pragma push_macro("mc_maf_tuple_like_object_end")
+#        define maf_restore_macro_mc_maf_tuple_like_object_end_
+#    endif
+#    ifdef mc_maf_tuple_like_object_has_base_
+#        pragma push_macro("mc_maf_tuple_like_object_has_base_")
+#        define maf_restore_macro_mc_maf_tuple_like_object_has_base_
+#    endif
+#    ifdef mc_maf_tuple_like_object_has_base_end_
+#        pragma push_macro("mc_maf_tuple_like_object_has_base_end_")
+#        define maf_restore_macro_mc_maf_tuple_like_object_has_base_end_
+#    endif
+#    ifdef mc_maf_tuple_value_at
+#        pragma push_macro("mc_maf_tuple_value_at")
+#        define maf_restore_macro_mc_maf_tuple_value_at
+#    endif
+#    ifdef mc_maf_define_load_from_json_functions
+#        pragma push_macro("mc_maf_define_load_from_json_functions")
+#        define maf_restore_macro_mc_maf_define_load_from_json_functions
+#    endif
 
 #include <maf/utils/cppextension/Loop.mc.h>
 #include <maf/utils/serialization/BasicTypes.h>
