@@ -1,10 +1,9 @@
 #include "LocalIPCSenderImpl.h"
 #include "SocketShared.h"
-#include <maf/utils/debugging/Debug.h>
 
 #define ns_global
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -17,21 +16,21 @@ namespace
         {
             if( fd = socket(AF_UNIX, SOCK_STREAM, 0); fd == INVALID_FD)
             {
-                mafUssErr("Cannot create socket on sockpath " << sockpath);
+                socketError("Cannot create socket on sockpath ", sockpath);
             }
             else
             {
                 auto addr = createUnixAbstractSocketAddr(sockpath);
                 if (connect(fd, _2sockAddr(&addr), sizeof(addr)) == INVALID_FD)
                 {
-                    mafUssErr("Can't connect to address " << sockpath);
+                    socketError("Can't connect to address ", sockpath);
                     fd.reset();
                 }
             }
         }
         else
         {
-            mafErr("Length of address exeeds the limitation of unix domain socket path");
+            Logger::error("Length of address exeeds the limitation of unix domain socket path");
         }
 
         return fd;
@@ -46,9 +45,9 @@ LocalIPCSenderImpl::~LocalIPCSenderImpl()
 {
 }
 
-DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &payload, const Address &destination)
+ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &payload, const Address &destination)
 {
-    DataTransmissionErrorCode ec = DataTransmissionErrorCode::FailedUnknown;
+    ActionCallStatus ec = ActionCallStatus::FailedUnknown;
     SocketPath sockpath;
 
     if(destination.valid())
@@ -79,21 +78,21 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &payload
                 }
                 else
                 {
-                    mafUssErr("Failed to send bytes to receiver, total written = " << totalWritten);
-                    ec = DataTransmissionErrorCode::FailedUnknown;
+                    socketError("Failed to send bytes to receiver, total written = ", totalWritten);
+                    ec = ActionCallStatus::FailedUnknown;
                     break;
                 }
             }
             while(totalWritten < payloadSize);
 
-            ec = DataTransmissionErrorCode::Success;
+            ec = ActionCallStatus::Success;
         }
         else
         {
-            mafUssErr("Failed to send payload size[" << payloadSize << "] to receiver");
+            socketError("Failed to send payload size[", payloadSize, "] to receiver");
         }
 
-        if(ec != DataTransmissionErrorCode::Success)
+        if(ec != ActionCallStatus::Success)
         {
             if(totalWritten == 0)
             {
@@ -102,13 +101,13 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &payload
             else
             {
                 //ec = FailedUnknown, must provide more info for debugging purpose
-                mafErr("Failed to send payload to receiver, expected is " << sizeof(SizeType) << ", sent was " << totalWritten);
+                Logger::error("Failed to send payload to receiver, expected is ", sizeof(SizeType), ", sent was ", totalWritten);
             }
         }
     }
     else
     {
-        ec = DataTransmissionErrorCode::ReceiverUnavailable;
+        ec = ActionCallStatus::ReceiverUnavailable;
     }
 
     return ec;

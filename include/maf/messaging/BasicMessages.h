@@ -1,20 +1,28 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-#include "MessageBase.h"
+#include "CompMessageBase.h"
+#include <maf/utils/cppextension/Invoker.h>
 #include <functional>
 
 namespace maf {
 namespace messaging {
 
-struct InternalMessage : public messaging::MessageBase {};
-struct ExternalMessage : public messaging::MessageBase {};
-struct StartupMessage : public InternalMessage{};
-struct ShutdownMessage : public InternalMessage{};
-struct CallbackExcMsg : public InternalMessage
+struct CallbackExcMsg : public CompMessageBase
 {
-    CallbackExcMsg(std::function<void()> callback_ = nullptr) : callback(std::move(callback_)) {}
-    void execute() { if(callback) callback(); }
+    template<class Callback, class... Args>
+    CallbackExcMsg(Callback&& callback_, Args&&... args) {
+        auto invoker = util::makeInvoker(std::forward<Callback>(callback_), std::forward<Args>(args)...);
+        callback = [invoker = std::move(invoker)]() mutable {
+            invoker.invoke();
+        };
+    }
+    void execute()
+    {
+        if(callback) callback();
+    }
+
+private:
     std::function<void()> callback;
 };
 struct TimeoutMessage : public CallbackExcMsg

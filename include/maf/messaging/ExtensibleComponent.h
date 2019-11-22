@@ -17,8 +17,8 @@ public:
     inline void run(LaunchMode launchMode = LaunchMode::Async) { _comp->run(launchMode, [this]{ onEntry(); }, [this]{onExit(); }); }
     inline void stop() { _comp->stop(); }
     inline void postMessage(messaging::MessageBasePtr msg) { _comp->postMessage(std::move(msg)); }
-    inline void registerMessageHandler(MessageBase::Type msgType, MessageHandler* handler) { _comp->registerMessageHandler(msgType, handler);}
-    inline void registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _comp->registerMessageHandler(msgType, std::move(onMessageFunc));}
+    inline void registerMessageHandler(CompMessageBase::Type msgType, MessageHandler* handler) { _comp->registerMessageHandler(msgType, handler);}
+    inline void registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _comp->registerMessageHandler(msgType, std::move(onMessageFunc));}
     template<class Msg, typename... Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
     inline void postMessage(Args&&... args){ _comp->postMessage<Msg>(std::forward<Args>(args)...);}
     mc_maf_tpl_with_a_message(SpecificMsg)
@@ -27,6 +27,7 @@ public:
         ExtensibleComponent& onMessage(MessageHandlerFunc<SpecificMsg> f) {_comp->onMessage<SpecificMsg>(f); return *this;}
     mc_maf_tpl_with_a_message(SpecificMsg)
     ExtensibleComponent& onSignal(SignalMsgHandlerFunc handler) { _comp->onSignal<SpecificMsg>(handler); return *this;}
+    ComponentPtr component() const { return _comp; }
 
 protected:
     virtual void onEntry() {}

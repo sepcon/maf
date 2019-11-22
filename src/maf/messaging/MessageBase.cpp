@@ -1,15 +1,15 @@
-#include <maf/messaging/MessageBase.h>
+#include <maf/messaging/CompMessageBase.h>
 
 namespace maf {
 namespace messaging {
 
-MessageBase::~MessageBase() = default;
+CompMessageBase::~CompMessageBase() = default;
 
-MessageBase::Type MessageBase::id() const { return typeid (*this); }
+CompMessageBase::Type CompMessageBase::id() const { return typeid (*this); }
 
-int MessageBase::priority() const { return _priority; }
+int CompMessageBase::priority() const { return _priority; }
 
-void MessageBase::setPriority(int p) { _priority = p; }
+void CompMessageBase::setPriority(int p) { _priority = p; }
 
 }
 }

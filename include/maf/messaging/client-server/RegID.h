@@ -10,12 +10,28 @@ namespace messaging {
 struct RegID
 {
     using RequestIDType = util::IDManager::IDType;
-    static void allocateUniqueID(RegID& regid, util::IDManager& idmgr) { regid.requestID = idmgr.allocateNewID();}
-    static void reclaimID(RegID regid, util::IDManager& idmgr) { idmgr.reclaimUsedID(regid.requestID); regid.requestID = util::IDManager::INVALID_ID;}
-    bool valid() const { return util::IDManager::isValidID(requestID) && opID != OpIDInvalid; }
+    static void allocateUniqueID(RegID& regid, util::IDManager& idmgr)
+    {
+        regid.requestID = idmgr.allocateNewID();
+    }
+    static void reclaimID(const RegID& regid, util::IDManager& idmgr)
+    {
+        idmgr.reclaimUsedID(regid.requestID);
+    }
+
+    bool valid() const
+    {
+        return util::IDManager::isValidID(requestID) && opID != OpIDInvalid;
+    }
+
+    void clear()
+    {
+        requestID = util::IDManager::INVALID_ID;
+        opID = OpIDInvalid;
+    }
 
     RequestIDType requestID = util::IDManager::INVALID_ID;
-    OpID opID = OpIDInvalid;
+    OpID opID               = OpIDInvalid;
 };
 
 } // messaging

@@ -1,7 +1,7 @@
 #ifndef IPCCOMMUNICATOR_H
 #define IPCCOMMUNICATOR_H
 
-#include <maf/messaging/MessageBase.h>
+#include <maf/messaging/CompMessageBase.h>
 #include <maf/messaging/client-server/ipc/IPCReceiver.h>
 #include <maf/messaging/client-server/ipc/IPCSender.h>
 #include <maf/messaging/client-server/ipc/MessageValidator.h>
@@ -19,11 +19,11 @@ namespace ipc {
 class BytesCommunicator : BytesComeObserver
 {
 public:
-    BytesCommunicator(CSMessageReceiver* receiver);
-    void init(IPCType type, const Address& serverAddress, bool isClient);
-    void deinit();
+    BytesCommunicator(IPCType type, CSMessageReceiver* receiver, bool isClient);
+    bool init(const Address& serverAddress);
+    bool deinit();
     bool isWaiting() const;
-    DataTransmissionErrorCode send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
+    ActionCallStatus send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
     ~BytesCommunicator() override; //Not allow to make instance of this class
 
 protected:

@@ -2,26 +2,21 @@
 #define THREADSAFEQUEUE_H
 
 #include <queue>
-#include <mutex>
 #include <atomic>
 #include <condition_variable>
 #include <functional>
-
-// mutex auto lock
-#define MT_ALOCK_NUM_SUB(mt, line) std::lock_guard<std::mutex> lock##line(mt)
-#define MT_ALOCK_NUM(mt, line) MT_ALOCK_NUM_SUB(mt, line)
-#define MT_ALOCK(mt) MT_ALOCK_NUM(mt, __LINE__)
+#include "Lockable.h"
 
 namespace maf {
 namespace threading {
 
-template<class Impl>
+template<class QueueClass>
 class ThreadSafeQueue
 {
 public:
-    using reference = typename Impl::reference;
-    using const_reference = typename Impl::const_reference;
-    using value_type = typename Impl::value_type;
+    using reference = typename QueueClass::reference;
+    using const_reference = typename QueueClass::const_reference;
+    using value_type = typename QueueClass::value_type;
     using ApplyAction = std::function<void(value_type&)>;
 
     ThreadSafeQueue() : _closed(false)
@@ -33,46 +28,45 @@ public:
     }
     bool empty()
     {
-        MT_ALOCK(_mt);
-        return _queue.empty();
+        return _queue.atomic()->empty();
     }
     void push(const value_type& data)
     {
         if(!isClosed())
         {
-            MT_ALOCK(_mt);
-            _queue.push(data);
-            _condVar.notify_all();
+            std::lock_guard lock(_queue);
+            _queue->push(data);
+            _condVar.notify_one();
         }
     }
     void push(value_type&& data)
     {
         if(!isClosed())
         {
-            MT_ALOCK(_mt);
-            _queue.emplace(data);
+            std::lock_guard lock(_queue);
+            _queue->emplace(data);
             _condVar.notify_one();
         }
     }
 
-    bool waitFor(value_type& value, long duration)
+    bool waitFor(value_type& value, long milliseconds)
     {
-        std::unique_lock<std::mutex> lock(_mt);
+        std::unique_lock lock(_queue);
         std::cv_status waitResult = std::cv_status::no_timeout;
-        if( !isClosed() && _queue.empty())
+        if( !isClosed() && _queue->empty())
         {
-			if (!_condVar.wait_for(lock, std::chrono::milliseconds(duration), [this] {
-				return !_queue.empty();
-				}))
-			{
-				return false;
-			}
+            if (!_condVar.wait_for(lock, std::chrono::milliseconds(milliseconds), [this] {
+                return !_queue->empty();
+                }))
+            {
+                return false;
+            }
         }
 
         if(waitResult == std::cv_status::no_timeout && !isClosed())
         {
-            value = _queue.front();
-            _queue.pop();
+            value = _queue->front();
+            _queue->pop();
             return true;
         }
         else
@@ -83,15 +77,15 @@ public:
 
     bool wait(value_type& value)
     {
-        std::unique_lock<std::mutex> lock(_mt);
-        while(!isClosed() && _queue.empty())
+        std::unique_lock lock(_queue);
+        while(!isClosed() && _queue->empty())
         {
             _condVar.wait(lock);
         }
         if(!isClosed())
         {
-            value = _queue.front();
-            _queue.pop();
+            value = _queue->front();
+            _queue->pop();
             return true;
         }
         else
@@ -102,11 +96,11 @@ public:
 
     bool tryPop(value_type& value)
     {
-        MT_ALOCK(_mt);
-        if(!isClosed() && !_queue.empty())
+        std::lock_guard lock(_queue);
+        if(!isClosed() && !_queue->empty())
         {
-            value = _queue.front();
-            _queue.pop();
+            value = _queue->front();
+            _queue->pop();
             return true;
         }
         else
@@ -128,33 +122,42 @@ public:
 
     void clear(ApplyAction onClearCallback = nullptr)
     {
-        MT_ALOCK(_mt);
-        while(!_queue.empty())
+        std::lock_guard lock(_queue);
+        if( onClearCallback )
         {
-            value_type v = _queue.front();
-            if( onClearCallback ) onClearCallback(v);
-            _queue.pop();
+            while(!_queue->empty())
+            {
+                auto v = _queue->front();
+                onClearCallback(v);
+                _queue->pop();
+            }
+        }
+        else
+        {
+            while(!_queue->empty())
+            {
+                _queue->pop();
+            }
         }
     }
 
     size_t size()
     {
-        MT_ALOCK(_mt);
-        return _queue.size();
+        return _queue.atomic()->size();
     }
 
 private:
-    Impl _queue;
-    std::mutex _mt;
-    std::condition_variable _condVar;
-    std::atomic_bool _closed;
+    Lockable<QueueClass>        _queue;
+    std::condition_variable_any _condVar;
+    std::atomic_bool            _closed;
 };
 
 }
 
 namespace stdwrap
 {
-template <typename T> using Queue = std::queue<T>;
+template <typename T>
+    using Queue = std::queue<T>;
 
 template <typename T, typename Comp>
 class PriorityQueue
@@ -175,7 +178,4 @@ public:
 }
 }
 
-#undef MT_ALOCK
-#undef MT_ALOCK_NUM
-#undef MT_ALOCK_NUM_SUB
 #endif // THREADSAFEQUEUE_H

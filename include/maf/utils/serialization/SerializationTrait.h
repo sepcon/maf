@@ -34,14 +34,14 @@ SizeType serializeSizeOf(const T& p)  noexcept;
 template <typename T>
 SizeType serialize(char* startp, const T& p) noexcept;
 template <typename T>
-T deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr);
+T deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes = {});
 
 
 namespace internal
 {
 
 inline SizeType byteCountInRangeOf(const char* const first, const char* const last);
-inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, RequestMoreBytesCallback requestMoreBytes);
+inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, const RequestMoreBytesCallback& requestMoreBytes);
 
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
 inline SizeType jsonSerializeSizeOf(const JsonType &value) noexcept;
@@ -50,7 +50,7 @@ template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>
 inline SizeType jsonSerialize(char *startp, const JsonType &value) noexcept;
 
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool> = true>
-inline JsonType jsonDeserialize(const char **startp, const char **lastp, RequestMoreBytesCallback requestMoreBytes);
+inline JsonType jsonDeserialize(const char **startp, const char **lastp, const RequestMoreBytesCallback& requestMoreBytes);
 
 template <class Container, typename = void>
 struct ContainerReserver
@@ -107,7 +107,7 @@ struct SerializationTrait
      * greater than size ofprovided byte_array
      * @return the deseralized object
      */
-    inline static T deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+    inline static T deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
     {
         return Impl::template deserialize<T>(startp, lastp, requestMoreBytes);
     }
@@ -127,7 +127,7 @@ struct SerializationTrait
         }
 
         mc_enable_if_is_tuplelike_(TupleLike)
-            inline static TupleLike deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+            inline static TupleLike deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
         {
             TupleLike value;
             value._data = SerializationTrait<typename TupleLike::data_type>::deserialize(startp, lastp, requestMoreBytes);
@@ -148,7 +148,7 @@ struct SerializationTrait
             return serializedCount;
         }
         mc_enable_if_is_number_or_enum_(NumberOrEnum)
-            inline static NumberOrEnum deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+            inline static NumberOrEnum deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
         {
             internal::makeSureDeserializable(startp, lastp, sizeof(NumberOrEnum), requestMoreBytes);
             auto value = *(reinterpret_cast<const pure_type_t<NumberOrEnum>*>(*startp));
@@ -188,7 +188,7 @@ struct SerializationTrait
         }
 
         mc_enable_if_is_ptr_(PointerType)
-        inline static PointerType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        inline static PointerType deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
         {
             mc_must_default_constructible(PointerType)
             using NormalTypeOfPointerType = std::remove_const_t<std::remove_pointer_t<PointerType>>;
@@ -196,7 +196,7 @@ struct SerializationTrait
             internal::makeSureDeserializable(startp, lastp, 1, requestMoreBytes);
             bool isNotNull = static_cast<bool>(**startp);
             *startp += 1;
-            NormalTypeOfPointerType* value = nullptr;
+            NormalTypeOfPointerType* value = {};
             if(isNotNull)
             {
                 value = new NormalTypeOfPointerType;
@@ -220,7 +220,7 @@ struct SerializationTrait
         }
 
         mc_enable_if_is_smartptr_(SmartPtrType)
-        inline static SmartPtrType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+        inline static SmartPtrType deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
         {
             using PtrType = typename SmartPtrType::element_type*;
             return SmartPtrType(SerializationTrait<PtrType>::deserialize(startp, lastp, requestMoreBytes));
@@ -239,7 +239,7 @@ struct SerializationTrait
         }
 
         mc_enable_if_is_json_(JsonType)
-            inline static JsonType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+            inline static JsonType deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
         {
             return internal::jsonDeserialize<JsonType>(startp, lastp, requestMoreBytes);
         }
@@ -266,7 +266,7 @@ struct SerializationTrait
         }
 
         template<typename Container, std::enable_if_t<nstl::is_iterable_v<Container> && nstl::is_back_insertible_v<Container>, bool> = true>
-        inline static Container deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+        inline static Container deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes = {}) {
             using SizeTypeSerializer = SerializationTrait<SizeType>;
             using ElemSerializer = SerializationTrait<typename Container::value_type>;
             Container c;
@@ -281,7 +281,7 @@ struct SerializationTrait
         }
 
         template<typename Container, std::enable_if_t<nstl::is_iterable_v<Container> && nstl::is_position_independent_insertible_v<Container>, bool> = true>
-        inline static Container deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+        inline static Container deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes = {}) {
             using SizeTypeSerializer = SerializationTrait<SizeType>;
             using ElemSerializer = SerializationTrait<typename Container::value_type>;
             Container c;
@@ -320,7 +320,7 @@ struct SerializationTrait<Pair,
         bytesCount += SerializationTrait<pure_type_t<decltype(p.second)>>::serialize(startp + bytesCount, p.second);
         return bytesCount;
     }
-    inline static NCDType deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr)
+    inline static NCDType deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes = {})
     {
         NCDType p;
         p.first = SerializationTrait<typename NCDType::first_type>::deserialize(startp, lastp, requestMoreBytes);
@@ -350,7 +350,7 @@ struct SerializationTrait<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>
         return serializedCount;
     }
 
-    inline static Tuple deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+    inline static Tuple deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes = {}) {
         Tuple tp;
         nstl::tuple_for_each(tp, [&startp, &lastp, requestMoreBytes](auto& elem) {
             elem = SerializationTrait<pure_type_t<decltype(elem)>>::deserialize(startp, lastp, requestMoreBytes);
@@ -377,7 +377,7 @@ struct SerializationTrait<std::basic_string<CharT, Trait, Allocator>, void>
         memcpy(startp + serializedCount, reinterpret_cast<const char*>(value.c_str()), bytesInString);
         return serializedCount + bytesInString;
     }
-    inline static ValueType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+    inline static ValueType deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {}) {
         ValueType value;
         auto size = SizeTypeSerializer::deserialize(startp, lastp, requestMoreBytes);
         if (size > 0) {
@@ -412,7 +412,7 @@ struct SerializationTrait<StringDerived,
     inline static SizeType serialize(char* startp, const ValueType& value) noexcept {
         return SerializationTrait<std::string>::serialize(startp, static_cast<const std::string&>(value));
     }
-    inline static ValueType deserialize(const char** startp, const char** lastp, RequestMoreBytesCallback requestMoreBytes = nullptr) {
+    inline static ValueType deserialize(const char** startp, const char** lastp, const RequestMoreBytesCallback& requestMoreBytes = {}) {
         ValueType value;
         static_cast<std::string&>(value) = SerializationTrait<std::string>::deserialize(startp, lastp, requestMoreBytes);
         return value;
@@ -431,7 +431,7 @@ SizeType serialize(char* startp, const T& v) noexcept
     return SerializationTrait<T>::serialize(startp, v);
 }
 template <typename T>
-T deserialize(const char** startp, const char**  lastp, RequestMoreBytesCallback requestMoreBytes)
+T deserialize(const char** startp, const char**  lastp, const RequestMoreBytesCallback& requestMoreBytes)
 {
     return SerializationTrait<T>::deserialize(startp, lastp, requestMoreBytes);
 }
@@ -451,11 +451,11 @@ inline SizeType byteCountInRangeOf(const char* const first, const char* const la
     }
 }
 
-inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, RequestMoreBytesCallback requestMoreBytes)
+inline void makeSureDeserializable(const char** startp, const char** lastp, SizeType neededBytes, const RequestMoreBytesCallback& requestMoreBytes)
 {
     if(byteCountInRangeOf(*startp, *lastp) < neededBytes)
     {
-        if(requestMoreBytes != nullptr)
+        if(requestMoreBytes)
         {
             requestMoreBytes(startp, lastp, neededBytes);
             if(byteCountInRangeOf(*startp, *lastp) >= neededBytes)
@@ -487,7 +487,7 @@ inline SizeType jsonSerialize(char *startp, const JsonType &value) noexcept
 }
 
 template<typename JsonType, std::enable_if_t<std::is_class_v<JsonTrait<JsonType>>, bool>>
-inline JsonType jsonDeserialize(const char **startp, const char **lastp, RequestMoreBytesCallback requestMoreBytes)
+inline JsonType jsonDeserialize(const char **startp, const char **lastp, const RequestMoreBytesCallback& requestMoreBytes)
 {
     auto str = SerializationTrait<std::string>::deserialize(startp, lastp, requestMoreBytes);
     return JsonTrait<JsonType>::unmarshall(str);

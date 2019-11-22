@@ -2,13 +2,13 @@
 
 #include "PipeShared.h"
 #include <maf/messaging/client-server/ipc/IPCReceiver.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <thread>
 #include <windows.h>
 #include <string>
 #include <atomic>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -72,7 +72,7 @@ public:
 
 protected:
     virtual void listningThreadFunction() {
-        mafWarn("listningThreadFunction must be overridden by derived class");
+        Logger::warn("listningThreadFunction must be overridden by derived class");
     }
     void waitForWorkerThreadToStop()
     {
@@ -85,7 +85,7 @@ protected:
     std::thread _workerThread;
     Address _myaddr;
     std::atomic_bool _stopped;
-	bool _isClient;
+    bool _isClient;
 };
 
 }

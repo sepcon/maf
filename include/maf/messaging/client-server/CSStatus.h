@@ -11,9 +11,12 @@ enum class Availability : char
     Unknown
 };
 
-enum class DataTransmissionErrorCode : char
+enum class ActionCallStatus : char
 {
     Success,
+    InvalidCall,
+    InvalidParam,
+    ServiceUnavailable,
     ReceiverBusy,
     ReceiverUnavailable,
     FailedUnknown

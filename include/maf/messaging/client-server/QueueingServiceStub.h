@@ -1,121 +1,91 @@
-#pragma once
+#ifndef MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICESTUB_H
+#define MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICESTUB_H
 
-#include <maf/messaging/client-server/ServiceStubBase.h>
-#include <maf/messaging/client-server/RequestKeeper.h>
+#include <maf/messaging/client-server/ServiceStubDefault.h>
+#include <maf/messaging/client-server/ServerFactory.h>
+#include <maf/messaging/client-server/RequestT.h>
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
 namespace maf {
 namespace messaging {
 
-
 template<class MessageTrait>
-struct ClientRequestMessage : public MessageBase
+struct ClientRequestMessage : public CompMessageBase
 {
-    using MyRequestKeeper = RequestKeeper<MessageTrait>;
-    using MyRequestKeeperPtr = std::shared_ptr<MyRequestKeeper>;
+    using RequestType = RequestT<MessageTrait>;
+    using RequestPtr  = std::shared_ptr<RequestType>;
 public:
-    ClientRequestMessage(MyRequestKeeperPtr clp): _requestKeeper(std::move(clp)){}
-    MyRequestKeeperPtr getRequestKeeper() { return _requestKeeper; }
+    ClientRequestMessage(RequestPtr clp): _request(std::move(clp)){}
+    RequestPtr getRequest() { return _request; }
+
     template<class CSMessageContentSpecific>
-    std::shared_ptr<CSMessageContentSpecific> getRequestContent() const noexcept {
-        return _requestKeeper->template getRequestContent<CSMessageContentSpecific>();
+    std::shared_ptr<CSMessageContentSpecific> getRequestContent() const noexcept
+    {
+        return _request->template getRequestContent<CSMessageContentSpecific>();
     }
 
 private:
-    MyRequestKeeperPtr _requestKeeper;
+    RequestPtr _request;
 };
 
 /**
- * @brief QueueingServiceStub class provides a generic interface of a ServiceStub that is tight coupling with
+ * @brief QueueingServiceStub class provides a generic interface of a ServiceProvider that is tight coupling with
  * a messaging::Component, to help handling Service Message in a queueing maner to prevent issue of data races
  * coping with multithreading application.
  * @class MessageTrait: must provide interfaces of translating specific type messages to CSMessage and vice versa
  * @class ControllingServer: must satisfy be a ServerInterface and is a pattern::SingletonObject (see patterns.h)
  */
 template <class MessageTrait>
-class QueueingServiceStub : public ServiceStubBase, public ServiceStubHandlerInterface
+class QueueingServiceStub final : public ServiceStubDefault
 {
-    friend class ServerBase;
-    using MyRequestKeeper = RequestKeeper<MessageTrait>;
-    using MyRequestMessage = ClientRequestMessage<MessageTrait>;
-    using MyRequestMessagePtr = std::shared_ptr<MyRequestMessage>;
-    using MyRequestKeeperPtr = std::shared_ptr<MyRequestKeeper>;
-    using MyType = QueueingServiceStub<MessageTrait>;
-    using MyPtr = std::shared_ptr<MyType>;
-
+    using Stub                      = QueueingServiceStub<MessageTrait>;
+    using StubPtr                   = std::shared_ptr<Stub>;
+    using MyBase                   = ServiceStubDefault;
 public:
+    using RequestType               = RequestT<MessageTrait>;
+    using RequestPtr                = std::shared_ptr<RequestType>;
+    using RequestMessageType        = ClientRequestMessage<MessageTrait>;
+    using RequestMessagePtr         = std::shared_ptr<RequestMessageType>;
 
-    template<class CSMessageContentSpecific>
-    bool sendStatusUpdate(const std::shared_ptr<CSMessageContentSpecific>& msgContent);
+    static StubPtr createStub(const ConnectionType& contype, const Address& addr, ServiceID sid);
 
-protected:
-    QueueingServiceStub(ServiceID sid, ServerInterface* server);
-    void onClientRequest(const std::shared_ptr<RequestKeeperBase>& requestKeeper) override;
-    void onClientAbortRequest(RequestKeeperBase::AbortCallback callback) override;
+    template<class Status>
+    ActionCallStatus setStatus(const std::shared_ptr<Status>& status);
+
+    template<class Status, typename... Args>
+    ActionCallStatus setStatus(Args&&...);
+
+    template<class Status>
+    std::shared_ptr<const Status> getStatus();
+
+    template <class RequestInput>
+    void setRequestHandler(
+            std::function<void(RequestPtr,const std::shared_ptr<RequestInput>&)>
+            handlerFunction
+            );
+
+    void setRequestHandler(
+            OpID actionID,
+            std::function<void(RequestPtr)> handlerFunction
+            );
+
+    void setMainComponent(ComponentRef copmref);
+private:
+    QueueingServiceStub(ServiceID sid, std::weak_ptr<ServerInterface> server);
+    void onClientAbortRequest(RequestAbortedCallback callback) override;
     void onComponentUnavailable();
+
     ComponentRef _compref;
 };
 
-template <class MessageTrait> template<class CSMessageContentSpecific>
-bool QueueingServiceStub<MessageTrait>::sendStatusUpdate(const std::shared_ptr<CSMessageContentSpecific> &msgContent)
-{
-    auto csMsgContent = MessageTrait::template translate(msgContent);
-
-    CSMessagePtr csMsg = createCSMessage(
-        this->serviceID(),
-        MessageTrait::template getOperationID<CSMessageContentSpecific>(),
-        OpCode::Register
-        );
-
-    csMsg->setContent(std::move(csMsgContent));
-    return ServiceStubBase::sendStatusUpdate(csMsg);
-}
-
-template<class MessageTrait>
-QueueingServiceStub<MessageTrait>::QueueingServiceStub(ServiceID sid, ServerInterface *server)
-    : ServiceStubBase(sid,   // service id
-                      server,// managing server
-                      this   // this is the message observer of itself
-                      )
-{
-    _compref = Component::getActiveWeakPtr();
-}
-
-template<class MessageTrait>
-void QueueingServiceStub<MessageTrait>::onClientRequest(const std::shared_ptr<RequestKeeperBase> &requestKeeper)
-{
-    auto comp = _compref.lock();
-    if(comp)
-    {
-        comp->template postMessage<MyRequestMessage>(std::static_pointer_cast<MyRequestKeeper>(requestKeeper) );
-    }
-    else
-    {
-        onComponentUnavailable();
-    }
-}
-
-template<class MessageTrait>
-void QueueingServiceStub<MessageTrait>::onClientAbortRequest(RequestKeeperBase::AbortCallback callback)
-{
-    auto comp = _compref.lock();
-    if(comp)
-    {
-        comp->template postMessage<CallbackExcMsg>(std::move(callback));
-    }
-    else
-    {
-        onComponentUnavailable();
-    }
-}
-
-template<class MessageTrait>
-void QueueingServiceStub<MessageTrait>::onComponentUnavailable()
-{
-    mafErr("The stub handler for service ID " << this->serviceID() << " has no longer existed, then unregister this Stub to server");
-}
 
 }
 }
+
+#ifndef MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICESTUB_IMPL_H
+#   include "internal/QueueingServiceStub.Impl.h"
+#endif
+
+#endif

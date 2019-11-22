@@ -1,61 +1,43 @@
 #include <maf/messaging/client-server/IAMessageRouter.h>
 #include <maf/messaging/client-server/ServiceRequesterInterface.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
-#include <maf/utils/debugging/Debug.h>
 
 namespace maf {
 namespace messaging {
 
 
-void IAMessageRouter::init()
+std::shared_ptr<IAMessageRouter> IAMessageRouter::instance()
 {
-    ClientBase::init(); 
-    ServerBase::init();
-} 
-
-void IAMessageRouter::deinit()
-{
-    ClientBase::deinit();
-    ClientBase::deinit();
+    static std::shared_ptr<IAMessageRouter> __instance = std::make_shared<IAMessageRouter>();
+    return __instance;
 }
 
-bool IAMessageRouter::registerServiceRequester(const std::shared_ptr<ServiceRequesterInterface> &requester)
+bool IAMessageRouter::deinit()
 {
-    if(ClientBase::registerServiceRequester(requester))
-    {
-        if(ServerBase::hasServiceProvider(requester->serviceID()))
-        {
-            requester->onServiceStatusChanged(requester->serviceID(), Availability::Unavailable, Availability::Available);
-        }
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return ClientBase::deinit() && ClientBase::deinit();
 }
 
-DataTransmissionErrorCode IAMessageRouter::sendMessageToClient(const CSMessagePtr &msg, const Address &/*addr*/)
+ActionCallStatus IAMessageRouter::sendMessageToClient(const CSMessagePtr &msg, const Address &/*addr*/)
 {
     if(ClientBase::onIncomingMessage(msg))
     {
-        return DataTransmissionErrorCode::Success;
+        return ActionCallStatus::Success;
     }
     else {
-        return DataTransmissionErrorCode::ReceiverUnavailable;
+        return ActionCallStatus::ReceiverUnavailable;
     }
 }
 
-DataTransmissionErrorCode IAMessageRouter::sendMessageToServer(const CSMessagePtr &msg)
+ActionCallStatus IAMessageRouter::sendMessageToServer(const CSMessagePtr &msg)
 {
     msg->setSourceAddress(Address{"", 0}); //BUG: later must be validated by validator
     if(ServerBase::onIncomingMessage(msg))
     {
-        return DataTransmissionErrorCode::Success;
+        return ActionCallStatus::Success;
     }
     else
     {
-        return DataTransmissionErrorCode::ReceiverUnavailable;
+        return ActionCallStatus::ReceiverUnavailable;
     }
 }
 

@@ -1,4 +1,3 @@
-#include <maf/utils/debugging/Debug.h>
 #include <internal/LocalIPCReceiverImpl.h>
 #include "LocalIPCReceiver.h"
 

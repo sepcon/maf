@@ -4,17 +4,19 @@
 #include <maf/patterns/Patterns.h>
 
 
-#define mc_maf_tpl_with_a_message(Message) template<class Message, std::enable_if_t<std::is_base_of_v<MessageBase, Message>, bool> = true>
+#define mc_maf_tpl_with_a_message(Message) template<class Message, std::enable_if_t<std::is_base_of_v<CompMessageBase, Message>, bool> = true>
 
 
 namespace maf {
-namespace threading { class TimerManager; }
 namespace messaging {
 
+class TimerManager;
 class Component;
-using ComponentRef = std::weak_ptr<Component>;
-using ComponentPtr = std::shared_ptr<Component>;
-using TimerMgrPtr = std::shared_ptr<threading::TimerManager>;
+struct ComponentImpl;
+
+using ComponentRef    = std::weak_ptr<Component>;
+using ComponentPtr    = std::shared_ptr<Component>;
+using TimerMgrPtr     = std::shared_ptr<TimerManager>;
 
 enum class LaunchMode
 {
@@ -22,12 +24,14 @@ enum class LaunchMode
     AttachToCurrentThread
 };
 
-class Component final : pattern::UnCopyable, public std::enable_shared_from_this<Component>
+
+class Component final : pattern::Unasignable, public std::enable_shared_from_this<Component>
 {
-    struct ComponentImpl;
+    std::string _name;
+    std::unique_ptr<ComponentImpl> _pImpl;
     Component();
 public:
-    using BaseMessageHandlerFunc = MessageHandlerFunc<MessageBase>;
+    using BaseMessageHandlerFunc = MessageHandlerFunc<CompMessageBase>;
 
     static std::shared_ptr<Component> create();
     static ComponentRef getActiveWeakPtr();
@@ -38,8 +42,8 @@ public:
     void run(LaunchMode LaunchMode = LaunchMode::Async, std::function<void()> onEntry = {}, std::function<void()> onExit = {});
     void stop();
     void postMessage(messaging::MessageBasePtr msg);
-    void registerMessageHandler(MessageBase::Type msgType, MessageHandler* handler);
-    void registerMessageHandler(MessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc);
+    void registerMessageHandler(CompMessageBase::Type msgType, MessageHandler* handler);
+    void registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc);
 
     template<class Msg, typename... Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
     void postMessage(Args&&... args);
@@ -58,8 +62,6 @@ public:
 private:
     static void setTLRef(ComponentRef ref);
     static TimerMgrPtr getTimerManager();
-    std::string _name;
-    ComponentImpl* _pImpl = nullptr;
 
     friend class Timer;
     friend struct ComponentImpl;
@@ -67,34 +69,34 @@ private:
 };
 
 
-template<class SignalMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SignalMsg>, bool>>
+template<class SignalMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SignalMsg>, bool>>
 Component &Component::onSignal(SignalMsgHandlerFunc handler)
 {
-    registerMessageHandler(MessageBase::idof<SignalMsg>(), [handler](messaging::CMessageBasePtr){ handler(); });
+    registerMessageHandler(msgID<SignalMsg>(), [handler](messaging::CMessageBasePtr){ handler(); });
     return *this;
 }
 
-template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool>>
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SpecificMsg>, bool>>
 Component &Component::onMessage(MessageHandlerFunc<SpecificMsg> f)
 {
-    registerMessageHandler(MessageBase::idof<SpecificMsg>(), [f](messaging::CMessageBasePtr& msg) {
+    registerMessageHandler(msgID<SpecificMsg>(), [f](messaging::CMessageBasePtr& msg) {
         auto specifigMsg = std::static_pointer_cast<SpecificMsg>(msg);
         if(specifigMsg) { f(specifigMsg); }
     });
     return *this;
 }
 
-template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool>>
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SpecificMsg>, bool>>
 Component &Component::onMessage(MessageHandler *handler)
 {
-    registerMessageHandler(MessageBase::idof<SpecificMsg>(), handler);
+    registerMessageHandler(msgID<SpecificMsg>(), handler);
     return *this;
 }
 
 template<class Msg, typename ...Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool>>
 void Component::postMessage(Args&&... args)
 {
-    postMessage(createMessage<Msg>(std::forward<Args>(args)...));
+    postMessage(makeCompMessage<Msg>(std::forward<Args>(args)...));
 }
 
 #define mc_maf_tlcomp_invoke(method, ...)      \
@@ -108,19 +110,19 @@ else                                           \
     return false;                              \
 }
 
-template<class SignalMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SignalMsg>, bool> = true>
+template<class SignalMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SignalMsg>, bool> = true>
 bool tlcompOnSignal(SignalMsgHandlerFunc handler)
 {
     mc_maf_tlcomp_invoke(onSignal<SignalMsg>, std::move(handler))
 }
 
-template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool> = true>
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SpecificMsg>, bool> = true>
 bool tlcompOnMessage(MessageHandlerFunc<SpecificMsg> f)
 {
     mc_maf_tlcomp_invoke(onMessage<SpecificMsg>, std::move(f))
 }
 
-template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<MessageBase, SpecificMsg>, bool> = true>
+template<class SpecificMsg, std::enable_if_t<std::is_base_of_v<CompMessageBase, SpecificMsg>, bool> = true>
 bool tlcompOnMessage(MessageHandler *handler)
 {
     mc_maf_tlcomp_invoke(onMessage<SpecificMsg>, handler)

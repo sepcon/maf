@@ -1,10 +1,11 @@
 #pragma once
 
 #include "maf/messaging/Timer.h"
-#include "maf/utils/debugging/Debug.h"
 #include "maf/utils/TimeMeasurement.h"
 #include "maf/messaging/ExtensibleComponent.h"
-#include "maf/messaging/client-server/SCQServiceProxy.h"
+#include "maf/messaging/client-server/QueueingServiceProxy.h"
+//#include "weather_stub_handler.h"
+
 #include "Contract.h"
 
 
@@ -14,25 +15,34 @@ using namespace messaging;
 
 namespace test {
 
-template<class MessageTrait, class Client, int ServiceID>
+template<class MessageTrait, int ServiceID>
 struct ClientComponent : public ExtensibleComponent
 {
-    using Proxy = SCQServiceProxy<MessageTrait, Client>;
+    using Proxy = QueueingServiceProxy<MessageTrait>;
     std::shared_ptr<Proxy> _proxy;
+    Timer _requestTimer;
+
+    ClientComponent(std::shared_ptr<Proxy> proxy) : _proxy{std::move(proxy)} {}
     void startTest()
     {
+        _requestTimer.setCyclic(true);
         onMessage<ServiceStatusMsg>([this](const std::shared_ptr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available)
             {
-                auto request = WeatherStatus::makeRequest();
-                _proxy->template sendStatusChangeRegister<WeatherStatus::Result>
-                    ([this](const std::shared_ptr<WeatherStatus::Result>& result){
-                        mafMsg("Component " << name() << " Got Status update from server: \n" << result->dump());
+                auto request = weather_contract::today_weather::make_request();
+                _proxy->template registerStatus<weather_contract::compliance::status>
+                    ([this](const std::shared_ptr<weather_contract::compliance::status>& status){
+                        maf::Logger::debug("Component " ,  name() ,  " Got status update from server: \n" ,  status->dump());
                     });
 
                 request->set_command(1);
-                _proxy->template sendRequest<WeatherStatus::Result>([](const std::shared_ptr<WeatherStatus::Result>& result) {
-                    mafMsg(result->dump());
+                auto resultDump = [](const std::shared_ptr<weather_contract::today_weather::result>& result) {
+                    maf::Logger::debug(result->dump());
+                };
+                _proxy->template requestActionAsync<weather_contract::today_weather::result>( resultDump );
+
+                _requestTimer.start(10, [this, resultDump]{
+                    _proxy->template requestActionAsync<weather_contract::today_weather::result>( resultDump );
                 });
             }
             else
@@ -51,8 +61,8 @@ struct ClientComponent : public ExtensibleComponent
 
     void onEntry() override
     {
-        _proxy = Proxy::createProxy(ServiceID);
-        mafMsg("proxy for service 1 ready ! Component  = " << name());
+        _proxy->setMainComponent(component());
+        maf::Logger::debug("proxy for service 1 ready ! Component  = " ,  name());
     }
 };
 

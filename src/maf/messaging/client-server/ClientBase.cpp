@@ -1,35 +1,9 @@
 #include <maf/messaging/client-server/ClientBase.h>
-#include <maf/messaging/client-server/ServiceRequesterInterface.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/messaging/client-server/ServiceRequester.h>
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
-
-bool ClientBase::registerServiceRequester(const IServiceRequesterPtr &requester)
-{
-    bool isNewRequester = true;
-    if( (isNewRequester = addIfNew(_requesters, requester)) )
-    {
-        std::lock_guard lock(_serviceStatusMap);
-        auto itServiceID = _serviceStatusMap->find(requester->serviceID());
-        if(itServiceID != _serviceStatusMap->end())
-        {
-            requester->onServiceStatusChanged(itServiceID->first, Availability::Unknown, itServiceID->second);
-        }
-    }
-    return isNewRequester;
-
-}
-
-bool ClientBase::unregisterServiceRequester(const IServiceRequesterPtr &requester)
-{
-    return remove(_requesters, requester);
-}
-
-bool ClientBase::unregisterServiceRequester(ServiceID sid)
-{
-    return removeByID(_requesters, sid);
-}
 
 void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
 {
@@ -38,41 +12,50 @@ void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newS
         _serviceStatusMap.atomic()->clear();
     }
     {
-        std::lock_guard lock(_requesters);
-        for(auto& requester : *_requesters)
+        std::lock_guard lock(_requestersMap);
+        for(auto& [sid, proxy] : *_requestersMap)
         {
-            requester->onServerStatusChanged(oldStatus, newStatus);
+            proxy->onServerStatusChanged(oldStatus, newStatus);
         }
     }
 }
 
-void ClientBase::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
+void ClientBase::onServiceStatusChanged(
+    ServiceID sid,
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
-    mafInfo("Client receives service status update from server: [" << sid << "-" << static_cast<int>(oldStatus) << "-" << static_cast<int>(newStatus));
+    Logger::info(
+        "Client receives service status update from server: [",
+        sid,
+        "-",
+        static_cast<int>(oldStatus),  "-" ,  static_cast<int>(newStatus)
+        );
+
+    (*_serviceStatusMap.atomic())[sid] = newStatus;
+    std::lock_guard lock(_requestersMap);
+    auto itProxy = _requestersMap->find(sid);
+    if(itProxy != _requestersMap->end())
     {
-        (*_serviceStatusMap.atomic())[sid] = newStatus;
-    }
-    auto requester = findByID(_requesters, sid);
-    if(requester)
-    {
-        requester->onServiceStatusChanged(sid, oldStatus, newStatus);
+        itProxy->second->onServiceStatusChanged(sid, oldStatus, newStatus);
     }
     else
     {
-        mafWarn("There's no requester for this service id: " << sid);
+        Logger::warn("There's no proxy for this service id: " ,  sid);
     }
 }
 
 bool ClientBase::hasServiceRequester(ServiceID sid)
 {
-    return hasItemWithID(_requesters, sid);
+    return _requestersMap.atomic()->count(sid) != 0;
 }
 
 bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 {
     if(msg->operationCode() == OpCode::ServiceStatusUpdate && msg->serviceID() != ServiceIDInvalid)
     {
-        mafInfo("Receive Service status update from server: sid[" << msg->serviceID() << "]-status[" << msg->operationID() << "]");
+        Logger::info("Receive Service status update from server: sid[" ,  msg->serviceID() ,  "]-status[" ,  msg->operationID() ,  "]");
         if(msg->operationID() == OpID_ServiceAvailable)
         {
             storeServiceStatus(msg->serviceID(), Availability::Available);
@@ -87,10 +70,10 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
     }
     else
     {
-        auto requester = findByID(_requesters, msg->serviceID());
-        if(requester)
+        std::lock_guard lock(_requestersMap);
+        if(auto itProxy = _requestersMap->find(msg->serviceID()); itProxy != _requestersMap->end())
         {
-            return requester->onIncomingMessage(msg);
+            return itProxy->second->onIncomingMessage(msg);
         }
         return false;
     }
@@ -101,9 +84,26 @@ void ClientBase::storeServiceStatus(ServiceID sid, Availability status)
     (*_serviceStatusMap.atomic())[sid] = status;
 }
 
-IServiceRequesterPtr ClientBase::getServiceRequester(ServiceID sid)
+ServiceRequesterInterfacePtr ClientBase::getServiceRequester(ServiceID sid)
 {
-    return findByID(_requesters, sid);
+    std::lock_guard lock(_requestersMap);
+
+    if(auto itRequester = _requestersMap->find(sid); itRequester != _requestersMap->end())
+    {
+        return itRequester->second;
+    }
+    else
+    {
+        ServiceRequesterInterfacePtr requester = std::make_shared<ServiceRequester>(sid, weak_from_this());
+        std::lock_guard lock(_serviceStatusMap);
+        auto itServiceStatus = _serviceStatusMap->find(sid);
+        if(itServiceStatus != _serviceStatusMap->end())
+        {
+            requester->onServiceStatusChanged(itServiceStatus->first, Availability::Unknown, itServiceStatus->second);
+        }
+        _requestersMap->emplace(sid, requester);
+        return requester;
+    }
 }
 
 Availability ClientBase::getServiceStatus(ServiceID sid)
@@ -120,15 +120,21 @@ Availability ClientBase::getServiceStatus(ServiceID sid)
     }
 }
 
-void ClientBase::init()
+bool ClientBase::init(const Address &, long long)
 {
-    //TBD: add if needed
+    return true;
 }
 
-void ClientBase::deinit()
+bool ClientBase::deinit()
 {
-    _requesters.atomic()->clear();
-    _serviceStatusMap.atomic()->clear();
+    _requestersMap.atomic()->clear();
+    std::lock_guard lock(_serviceStatusMap);
+    for(auto& [serviceID, status] : *_serviceStatusMap)
+    {
+        sendMessageToServer(createCSMessage(serviceID, OpIDInvalid, OpCode::UnregisterServiceStatus));
+    }
+    _serviceStatusMap->clear();
+    return true;
 }
 
 }

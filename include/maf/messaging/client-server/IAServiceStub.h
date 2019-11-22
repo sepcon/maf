@@ -1,14 +1,22 @@
 #pragma once
 
-#include "SSQServiceStub.h"
-#include "IAMessageTrait.h"
-#include "IAMessageRouter.h"
+#include "QueueingServiceStub.h"
+#include "DefaultMessageTrait.h"
 
 namespace maf {
 namespace messaging {
+namespace inapp {
 
-using IARequestMesasge = ClientRequestMessage<IAMessageTrait>;
-using IAServiceStub = SSQServiceStub<IAMessageTrait, IAMessageRouter>;
+using ClientRequestMesasge      = ClientRequestMessage<DefaultMessageTrait>;
+using ServiceStub               = QueueingServiceStub<DefaultMessageTrait>;
+using Request                   = RequestT<DefaultMessageTrait>;
+
+static std::shared_ptr<ServiceStub> createStub(ServiceID sid)
+{
+    return ServiceStub::createStub("app_internal", {}, sid);
+}
 
 }
 }
+}
+

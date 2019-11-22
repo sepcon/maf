@@ -1,37 +1,53 @@
 #include <maf/messaging/client-server/ServerBase.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 
 
-bool ServerBase::registerServiceProvider(const IServiceProviderPtr &provider)
+bool ServerBase::registerServiceProvider(
+        const ServiceProviderInterfacePtr& provider
+        )
 {
-    auto newProvider = addIfNew(_providers, provider);
-    if(newProvider)
+    std::lock_guard lock(_providers);
+    if(provider)
     {
-        mafInfo("New Service provider was successfully registered, service id = " << provider->serviceID());
-        notifyServiceStatusToClient(provider->serviceID(), Availability::Unavailable, Availability::Available);
-        return true;
+        auto [itInsertedPos, successInserted] =
+                _providers->try_emplace(provider->serviceID(), provider);
+        if(successInserted)
+        {
+            Logger::info("New Service provider was successfully registered, "
+                         "service id = " ,
+                         provider->serviceID()
+                         );
+            notifyServiceStatusToClient(provider->serviceID(),
+                                        Availability::Unavailable,
+                                        Availability::Available
+                                        );
+            return true;
+        }
     }
-    else
-    {
-        return false;
-    }
+
+    return false;
 }
 
-bool ServerBase::unregisterServiceProvider(const IServiceProviderPtr &provider)
+bool ServerBase::unregisterServiceProvider(
+        const ServiceProviderInterfacePtr& provider
+        )
 {
     return unregisterServiceProvider(provider->serviceID());
 }
 
 bool ServerBase::unregisterServiceProvider(ServiceID sid)
-{
-    auto providerRemoved = removeByID(_providers, sid);
-    if(providerRemoved)
+{ 
+    if(_providers.atomic()->erase(sid) != 0)
     {
-        notifyServiceStatusToClient(sid, Availability::Available, Availability::Unavailable);
+        notifyServiceStatusToClient(
+                    sid,
+                    Availability::Available,
+                    Availability::Unavailable
+                    );
         return true;
     }
     else
@@ -42,15 +58,17 @@ bool ServerBase::unregisterServiceProvider(ServiceID sid)
 
 bool ServerBase::hasServiceProvider(ServiceID sid)
 {
-    return hasItemWithID(_providers, sid);
+    return _providers.atomic()->count(sid) != 0;
 }
 
 bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    auto provider = findByID(_providers, csMsg->serviceID());
-    if(provider)
+    std::lock_guard lock(_providers);
+    if(auto itProvider = _providers->find(csMsg->serviceID());
+            itProvider != _providers->end()
+            )
     {
-        provider->onIncomingMessage(csMsg);
+        itProvider->second->onIncomingMessage(csMsg);
         return true;
     }
     else
@@ -59,19 +77,31 @@ bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     }
 }
 
-IServiceProviderPtr ServerBase::getServiceProvider(ServiceID sid)
+ServiceProviderInterfacePtr ServerBase::getServiceProvider(ServiceID sid)
 {
-    return findByID(_providers, sid);
+    std::lock_guard lock(_providers);
+    if(auto itProvider = _providers->find(sid);
+            itProvider != _providers->end()
+            )
+    {
+        return itProvider->second;
+    }
+    else
+    {
+        return {};
+    }
 }
 
-void ServerBase::init()
+bool ServerBase::init(const Address &)
 {
-// TBD: add if needed
+    return true;
 }
 
-void ServerBase::deinit()
+bool ServerBase::deinit()
 {
+    auto providers = *(_providers.atomic());
     _providers.atomic()->clear();
+    return true;
 }
 
 }

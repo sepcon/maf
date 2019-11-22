@@ -1,17 +1,17 @@
 #include "LocalIPCSenderImpl.h"
 #include "PipeShared.h"
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <thread>
 #include <atomic>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
 static constexpr int MAX_ATEMPTS = 10;
 namespace
 {
-	static HANDLE openPipe(const std::string& pipeName);
+    static HANDLE openPipe(const std::string& pipeName);
 }
 
 static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const char* buffer, size_t buffSize)
@@ -45,24 +45,24 @@ static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const c
                 {
                     CancelIo(pipeHandle);
                     GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
-                    mafErr("Error while waiting for bytes to be transffered to receiver");
+                    Logger::error("Error while waiting for bytes to be transffered to receiver");
                 }
                 else
                 {
                     success = GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
                     if(success && (writtenByteCount == buffSize))
                     {
-                        mafInfo("Sent " << buffSize << " bytes to receiver successful!");
+                        Logger::info("Sent " ,  buffSize ,  " bytes to receiver successful!");
                     }
                     else
                     {
-                        mafErr("Could not transfer completely " << buffSize << " bytes to receiver!");
+                        Logger::error("Could not transfer completely " ,  buffSize ,  " bytes to receiver!");
                     }
                 }
             }
             else
             {
-                mafErr("sending bytes failed with error: " << GetLastError());
+                Logger::error("sending bytes failed with error: " ,  GetLastError());
             }
         }
     }
@@ -79,9 +79,9 @@ LocalIPCSenderImpl::~LocalIPCSenderImpl()
 
 }
 
-DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
+ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
 {
-    auto errCode = DataTransmissionErrorCode::ReceiverUnavailable;
+    auto errCode = ActionCallStatus::ReceiverUnavailable;
     bool success = false;
     if(checkReceiverStatus() == Availability::Available)
     {
@@ -105,7 +105,7 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
             }
             else
             {
-                mafErr("Connect pipe with error: " << GetLastError());
+                Logger::error("Connect pipe with error: " ,  GetLastError());
             }
 
             if (success || !shouldRetry)
@@ -116,31 +116,31 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
             else
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
-                mafWarn("Retry to send " << ba.size() << " bytes " << ++retryTimes << " times to address " << _pipeName);
+                Logger::warn("Retry to send " ,  ba.size() ,  " bytes " ,  ++retryTimes ,  " times to address " ,  _pipeName);
             }
         }
 
         if(success)
         {
-            errCode = DataTransmissionErrorCode::Success;
+            errCode = ActionCallStatus::Success;
         }
         else if(GetLastError() == ERROR_PIPE_BUSY)
         {
-            errCode = DataTransmissionErrorCode::ReceiverBusy;
+            errCode = ActionCallStatus::ReceiverBusy;
             if(retryTimes >= MAX_ATEMPTS)
             {
-                mafErr("Give up trying send byte to receiver!");
+                Logger::error("Give up trying send byte to receiver!");
             }
         }
         else
         {
-            errCode = DataTransmissionErrorCode::ReceiverUnavailable;
+            errCode = ActionCallStatus::ReceiverUnavailable;
         }
     }
     else
     {
-        //        errCode = DataTransmissionErrorCode::ReceiverUnavailable; //dont need to set here, it must be default failed
-        mafWarn("Receiver is not available for receiving message, receiver's address = " << _pipeName);
+        //        errCode = ActionCallStatus::ReceiverUnavailable; //dont need to set here, it must be default failed
+        Logger::warn("Receiver is not available for receiving message, receiver's address = " ,  _pipeName);
     }
 
     return errCode;
@@ -148,18 +148,18 @@ DataTransmissionErrorCode LocalIPCSenderImpl::send(const srz::ByteArray &ba, con
 
 namespace
 {
-	HANDLE openPipe(const std::string &pipeName)
-	{
-		return CreateFileA(
-			pipeName.c_str(),                                                                   // pipe name
-			GENERIC_WRITE |                                                                     // write only
-			FILE_FLAG_OVERLAPPED,
-			0,                                                                                  // no sharing
-			nullptr,                                                                            // default security attributes
-			OPEN_EXISTING,                                                                      // opens existing pipe
-			0,                                                                                  // write overlapped
-			nullptr);                                                                           // no template file
-	}
+    HANDLE openPipe(const std::string &pipeName)
+    {
+        return CreateFileA(
+            pipeName.c_str(),                                                                   // pipe name
+            GENERIC_WRITE |                                                                     // write only
+            FILE_FLAG_OVERLAPPED,
+            0,                                                                                  // no sharing
+            nullptr,                                                                            // default security attributes
+            OPEN_EXISTING,                                                                      // opens existing pipe
+            0,                                                                                  // write overlapped
+            nullptr);                                                                           // no template file
+    }
 }
 
 } // ipc

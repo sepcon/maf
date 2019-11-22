@@ -1,5 +1,6 @@
 #ifndef SOCKETSHARED_H
 #define SOCKETSHARED_H
+#include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/Address.h>
 #include <sys/un.h>
 #include <sys/socket.h>
@@ -18,7 +19,12 @@ using SockFD = FD;
 static constexpr size_t MAXCLIENTS = 30;
 static constexpr SockFD INVALID_FD = -1;
 
-#define mafUssErr(messageChain) mafErr(messageChain << " with error <<" << errno << ">>")
+
+template <typename... Msgs>
+void socketError(Msgs&&... msgs)
+{
+    logging::Logger::error(std::forward<Msgs>(msgs)..., " with errno = ", errno, "!");
+}
 
 inline bool isValidSocketPath(const SocketPath& path)
 {

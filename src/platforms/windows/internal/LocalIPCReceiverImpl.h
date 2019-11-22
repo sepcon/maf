@@ -12,7 +12,7 @@ struct PipeInstance
     srz::ByteArray ba;
     OVERLAPPED oOverlap;
     HANDLE hPipeInst;
-	bool fPendingIO;
+    bool fPendingIO;
 };
 
 class LocalIPCReceiverImpl : public NamedPipeReceiverBase

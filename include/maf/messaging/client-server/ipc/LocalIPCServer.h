@@ -2,17 +2,16 @@
 
 #include "IPCServerBase.h"
 #include <maf/patterns/Patterns.h>
-#include "IPCMessageTrait.h"
+#include <maf/messaging/client-server/SerializableMessageTrait.h>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCServer : public IPCServerBase, public pattern::SingletonObject<LocalIPCServer>
+class LocalIPCServer : public IPCServerBase, pattern::Unasignable
 {
 public:
-    LocalIPCServer(Invisible){}
-    void init(const Address& addr) { IPCServerBase::init(IPCType::Local, addr); }
+    LocalIPCServer() : IPCServerBase ( IPCType::Local ) {}
 };
 
 

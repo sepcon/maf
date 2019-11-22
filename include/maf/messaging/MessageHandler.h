@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <functional>
-#include "MessageBase.h"
+#include "CompMessageBase.h"
 
 namespace maf {
 namespace messaging {

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <maf/utils/debugging/Debug.h>
+#include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ipc/IPCSender.h>
 #include <maf/messaging/client-server/Address.h>
 #include <maf/utils/serialization/ByteArray.h>
 #include "PipeShared.h"
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
@@ -28,10 +28,10 @@ public:
             return false;
         }
     }
-    DataTransmissionErrorCode send(const maf::srz::ByteArray &/*ba*/, const Address& /*destination*/) override
+    ActionCallStatus send(const maf::srz::ByteArray &/*ba*/, const Address& /*destination*/) override
     {
-        mafErr("Derived class must override this function[NamedPipeSenderBase::send]");
-        return DataTransmissionErrorCode::ReceiverUnavailable;
+        Logger::error("Derived class must override this function[NamedPipeSenderBase::send]");
+        return ActionCallStatus::ReceiverUnavailable;
     }
     const Address& receiverAddress() const override
     {

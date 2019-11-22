@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RequestKeeper.h"
+#include "RequestInterface.h"
 
 namespace maf {
 namespace messaging {
@@ -8,9 +8,10 @@ namespace messaging {
 class ServiceStubHandlerInterface
 {
 public:
-    virtual ~ServiceStubHandlerInterface() = default;
-    virtual void onClientRequest(const std::shared_ptr<RequestKeeperBase>& requestKeeper) = 0;
-    virtual void onClientAbortRequest(RequestKeeperBase::AbortCallback callback) = 0;
+    // Intended to not having destructor
+    // virtual ~ServiceStubHandlerInterface() = 0;
+    virtual void onClientRequest(const std::shared_ptr<RequestInterface>& request) = 0;
+    virtual void onClientAbortRequest(RequestAbortedCallback callback) = 0;
 };
 
 }

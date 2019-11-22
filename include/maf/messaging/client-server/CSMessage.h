@@ -10,19 +10,25 @@ namespace messaging {
 constexpr OpID OpID_ServiceAvailable = 0;
 constexpr OpID OpID_ServiceUnavailable = 1;
 
-using CSMsgContentPtr = std::shared_ptr<class CSMessageContentBase>;
+using CSMsgContentBasePtr = std::shared_ptr<class CSMessageContentBase>;
 using CSMessagePtr = std::shared_ptr<class CSMessage>;
 
 class CSMessage
 {
 public:
     CSMessage() = default;
-    CSMessage(ServiceID tid, OpID opID, OpCode opCode, RequestID reqID = RequestIDInvalid,
-              const CSMsgContentPtr msgContent = nullptr,
-              Address sourceAddr = {} );
+    CSMessage(
+        ServiceID tid,
+        OpID opID,
+        OpCode opCode,
+        RequestID reqID = RequestIDInvalid,
+        CSMsgContentBasePtr msgContent = nullptr,
+        Address sourceAddr = {} );
 
-    CSMessage(CSMessage&& other);
-    CSMessage& operator=(CSMessage&& other);
+    CSMessage(CSMessage&& other) = default;
+    CSMessage& operator=(CSMessage&& other) = default;
+    CSMessage(const CSMessage& other) = default;
+    CSMessage& operator=(const CSMessage& other) = default;
 
     virtual ~CSMessage();
 
@@ -42,16 +48,15 @@ public:
     const Address& sourceAddress() const;
     void setSourceAddress(Address sourceAddress);
 
-    CSMsgContentPtr content() const;
-    void setContent(CSMsgContentPtr content);
+    CSMsgContentBasePtr content() const;
+    void setContent(CSMsgContentBasePtr content);
 
 protected:
-    void take(CSMessage&& other);
     ServiceID _serviceID = ServiceIDInvalid;
     OpID _operationID = OpIDInvalid;
     RequestID _requestID = RequestIDInvalid;
     OpCode _operationCode = OpCode::Invalid;
-    CSMsgContentPtr _content;
+    CSMsgContentBasePtr _content;
     Address _sourceAddress = Address::INVALID_ADDRESS;
 };
 
@@ -59,15 +64,14 @@ class CSMessageContentBase
 {
 public:
     virtual ~CSMessageContentBase();
-    virtual void makesureTransferable();
-    virtual OpID operationID() const { return OpIDInvalid; }
+    virtual bool equal(const CSMessageContentBase* other) = 0;
 };
 
 template <class CSMessageDerived = CSMessage,
             std::enable_if_t
              <
                 (std::is_base_of_v<CSMessage, CSMessageDerived> || std::is_same_v<CSMessage, CSMessageDerived>) &&
-                std::is_constructible_v<CSMessageDerived, ServiceID, OpID, OpCode, RequestID, const CSMsgContentPtr, Address>,
+                std::is_constructible_v<CSMessageDerived, ServiceID, OpID, OpCode, RequestID, CSMsgContentBasePtr, Address>,
                 bool
              > = true
          >
@@ -76,7 +80,7 @@ std::shared_ptr<CSMessageDerived> createCSMessage (
     OpID opID,
     OpCode opCode,
     RequestID reqID = RequestIDInvalid,
-    const CSMsgContentPtr msgContent = nullptr,
+    CSMsgContentBasePtr msgContent = {},
     Address sourceAddr = {} )
 {
     return std::make_shared<CSMessageDerived>(std::move(sID), std::move(opID), std::move(opCode), std::move(reqID), std::move(msgContent), std::move(sourceAddr));
@@ -87,10 +91,10 @@ template <class CSMsg, std::enable_if_t<std::is_base_of_v<CSMessage, CSMsg>, boo
 std::ostream& operator<<(std::ostream& os, const std::shared_ptr<CSMsg>& msg) {
     if(msg)
     {
-        os << "\nServiceID: " << msg->serviceID()
-           << "\nOpCode: " << msg->operationCode()
-           << "\nOpID: " << msg->operationID()
-           << "\nRequestID: " << msg->requestID()
+        os << "\nServiceID:      " << msg->serviceID()
+           << "\nOpCode:         " << msg->operationCode()
+           << "\nOpID:           " << msg->operationID()
+           << "\nRequestID:      " << msg->requestID()
            << "\nSource Address: " << msg->sourceAddress().dump()
            << "\n";
     }

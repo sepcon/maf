@@ -1,13 +1,14 @@
+#include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ipc/IPCServerBase.h>
 #include <maf/messaging/client-server/ipc/BytesCommunicator.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
 
-namespace maf {
+namespace maf { using logging::Logger;
 namespace messaging {
 namespace ipc {
 
-IPCServerBase::IPCServerBase() :
-    _communicator(new BytesCommunicator(this))
+IPCServerBase::IPCServerBase(IPCType ipctype) :
+    _communicator(new BytesCommunicator(ipctype, this, /*isclient = */false))
 {
 }
 
@@ -16,18 +17,17 @@ IPCServerBase::~IPCServerBase()
     delete _communicator;
 }
 
-void IPCServerBase::init(IPCType type, const Address &serverAddress)
+bool IPCServerBase::init(const Address &serverAddress)
 {
-    _communicator->init(type, serverAddress, /*isClient = */false);
+    return _communicator->init(serverAddress);
 }
 
-void IPCServerBase::deinit()
+bool IPCServerBase::deinit()
 {
-    _communicator->deinit();
-    ServerBase::deinit();
+    return _communicator->deinit() && ServerBase::deinit();
 }
 
-DataTransmissionErrorCode IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, const Address &addr)
+ActionCallStatus IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, const Address &addr)
 {
     return _communicator->send(std::static_pointer_cast<IPCMessage>(msg), addr);
 }
@@ -40,7 +40,7 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
         std::lock_guard lock(_registedClAddrs);
         for (auto itAddr = _registedClAddrs->begin(); itAddr != _registedClAddrs->end(); /*intenedTobeEmpy*/) {
             auto ec = sendMessageToClient(serviceStatusMsg, *itAddr);
-            if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))
+            if((ec == ActionCallStatus::ReceiverUnavailable) || (ec == ActionCallStatus::FailedUnknown))
             {
                 //Client has been off, then don't keep their contact anymore
                 itAddr = _registedClAddrs->erase(itAddr);
@@ -55,33 +55,48 @@ void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldS
 
 bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    mafInfo(csMsg);
-    if(csMsg->operationCode() == OpCode::RegisterServiceStatus)
-    {
+    switch (csMsg->operationCode()) {
+    case OpCode::RegisterServiceStatus:
         _registedClAddrs.atomic()->insert(csMsg->sourceAddress());
         {
             std::lock_guard lock(_providers);
-            for(auto& provider : *_providers)
+            for(auto& [sid, provider] : *_providers)
             {
                 notifyServiceStatusToClient(csMsg->sourceAddress(), provider->serviceID(), Availability::Unavailable, Availability::Available);
             }
         }
         return true;
+
+    case OpCode::UnregisterServiceStatus:
+        if(csMsg->serviceID() == ServiceIDInvalid)
+        {
+            _registedClAddrs.atomic()->erase(csMsg->sourceAddress());
+            std::lock_guard lock(_providers);
+            for(auto& [sid, provider] : *_providers)
+            {
+                csMsg->setServiceID(sid);
+                provider->onIncomingMessage(csMsg);
+            }
+            return true;
+        }
+        else
+        {
+            break;
+        }
+    default: break;
     }
-    else
-    {
-        return ServerBase::onIncomingMessage(csMsg);
-    }
+
+    return ServerBase::onIncomingMessage(csMsg);
 }
 
 void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, ServiceID sid, Availability oldStatus, Availability newStatus)
 {
     if(oldStatus != newStatus)
     {
-        mafInfo("Update service id " << sid << " status to client at address: " << clAddr.dump());
+        Logger::info("Update service id " ,  sid ,  " status to client at address: " ,  clAddr.dump());
         auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
         auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
-        if((ec != DataTransmissionErrorCode::Success) && (ec != DataTransmissionErrorCode::ReceiverBusy))
+        if((ec != ActionCallStatus::Success) && (ec != ActionCallStatus::ReceiverBusy))
         {
             //Don't need to remove client if failed?
         }

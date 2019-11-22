@@ -1,13 +1,20 @@
 #pragma once
 
-#include "SCQServiceProxy.h"
+#include "QueueingServiceProxy.h"
 #include "IAMessageRouter.h"
-#include "IAMessageTrait.h"
+#include "DefaultMessageTrait.h"
 
 namespace maf {
 namespace messaging {
+namespace inapp {
 
-using IAServiceProxy = SCQServiceProxy<IAMessageTrait, IAMessageRouter>;
+using ServiceProxy = QueueingServiceProxy<DefaultMessageTrait>;
+static std::shared_ptr<ServiceProxy> createProxy(ServiceID sid)
+{
+    return ServiceProxy::createProxy("app_internal", {}, sid);
+}
 
+
+}
 } // messaging
 } // maf

@@ -21,7 +21,7 @@ bool LocalIPCSender::initConnection(const Address& addr)
     return _pImpl->initConnection(addr);
 }
 
-DataTransmissionErrorCode LocalIPCSender::send(const maf::srz::ByteArray& ba, const Address &destination)
+ActionCallStatus LocalIPCSender::send(const maf::srz::ByteArray& ba, const Address &destination)
 {
     return _pImpl->send(ba, destination);
 }
