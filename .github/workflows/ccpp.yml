@@ -12,6 +12,6 @@ jobs:
     - name: setup
       run: mkdir -p build
     - name: cmake 
-      run: cd build; cmake .. -D MAF_ENABLE_TEST=ON
+      run: cd build; cmake .. -DMAF_ENABLE_TEST=ON
     - name: build
       run: cmake --build ./build
