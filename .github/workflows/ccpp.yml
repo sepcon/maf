@@ -9,8 +9,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@master
-      -name: setup
-       run: mkdir -p build
+    - name: setup
+      run: mkdir -p build
     - name: cmake
       run: cd build; cmake ..
     - name: build
