@@ -39,8 +39,6 @@ void test(const ConnectionType& connectionType, const Address& addr)
 
 #include <iostream>
 
-
-
 int main()
 {
     maf::Logger::init(maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_FROM_INFO,
@@ -59,4 +57,5 @@ int main()
 
     return 0;
 }
+
 

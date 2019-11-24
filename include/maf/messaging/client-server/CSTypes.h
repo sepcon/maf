@@ -2,16 +2,17 @@
 
 #include <maf/utils/IDManager.h>
 #include <stdint.h>
-#include <ostream>
+#include <string>
 
 namespace maf {
 namespace messaging {
 
-using OpID      = uint32_t;
-using ServiceID = uint32_t;
-using RequestID = util::IDManager::IDType;
-using ConnectionType = std::string;
 
+using OpID              = std::string;
+using OpIDConstant      = const char*;
+using ServiceID         = uint32_t;
+using RequestID         = util::IDManager::IDType;
+using ConnectionType    = std::string;
 
 
 enum class OpCode : unsigned char
@@ -20,8 +21,8 @@ enum class OpCode : unsigned char
     Register,                           // \__
     UnRegister,                         // \__
     StatusGet,                          // \__ OpCodes for property status GET/BROADCAST
-    Request,                            // Send REQUEST to server (Doing actions/get properties' status...)
-    Abort,                              // Ask server to ABORT pending/ongoing REQUEST that has not been done yet
+    Request,                            // Send INPUT to server (Doing actions/get properties' status...)
+    Abort,                              // Ask server to ABORT pending/ongoing INPUT that has not been done yet
 //  Server Response
     RequestError,                       // \__
     SyncRequestError,                   // \__
@@ -32,17 +33,11 @@ enum class OpCode : unsigned char
     Invalid                             //
 };
 
-constexpr OpID      OpIDInvalid         = static_cast<OpID>(-1);
-constexpr ServiceID ServiceIDInvalid    = static_cast<ServiceID>(-1);
-constexpr RequestID RequestIDInvalid    = util::IDManager::INVALID_ID;
-
-template<typename EnumType, std::enable_if_t<std::is_enum_v<EnumType>, bool> = true>
-inline std::ostream& operator<<(std::ostream& ostr, EnumType code)
-{
-    return ostr << static_cast<int>(code);
-}
-
+static constexpr OpIDConstant   OpIDInvalid         = "";
+static constexpr ServiceID      ServiceIDInvalid    = static_cast<ServiceID>(-1);
+static constexpr RequestID      RequestIDInvalid    = util::IDManager::INVALID_ID;
 
 
 } // messaging
 } // maf
+

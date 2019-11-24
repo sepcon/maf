@@ -2,7 +2,7 @@
  * @brief Use below MACROS to define a serializable object like this:
  *
  * OBJECT(TheObject) // or OBJECT(TheObject, BaseObject)
- *     PROPERTIES
+ *     MEMBERS
  *     (
  *          (std::string, Name),
  *          (int, Type),
@@ -49,8 +49,8 @@
 #        pragma push_macro("OBJECT")
 #        define maf_restore_macro_OBJECT
 #    endif
-#    ifdef PROPERTIES
-#        pragma push_macro("PROPERTIES")
+#    ifdef MEMBERS
+#        pragma push_macro("MEMBERS")
 #        define maf_restore_macro_PROPERTIES
 #    endif
 #    ifdef ENDOBJECT
@@ -62,5 +62,5 @@
 
 #define ENDOBJECT mc_maf_tuple_like_object_end
 
-#define PROPERTIES mc_maf_properties_map
+#define MEMBERS mc_maf_properties_map
 

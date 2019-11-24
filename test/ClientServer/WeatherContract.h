@@ -22,9 +22,10 @@ constexpr const int SERVER_TOTAL_UPDATES_PER_REQUEST = 10000000;
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 
 SERVICE(weather)
-    FUNCTION(today_weather)
+
+    REQUEST(today_weather)
         ALIAS(using StringList = std::vector<std::string>);
-        RESULT
+        OUTPUT
         (
             (int, place_id, -1),
             (std::string, the_status, "It is going to rain now!"),
@@ -32,44 +33,45 @@ SERVICE(weather)
             (StringList, shared_list_of_places),
             (uint32_t, your_command, 0)
         )
-        REQUEST
+        INPUT
         (
             (std::string, client_name, "This s client"),
             (uint32_t, command, 0)
         )
 
-    ENDFUNC(today_weather)
+    ENDREQUEST(today_weather)
 
-    FUNCTION(today_weather1)
-    ALIAS(using StringList = std::vector<std::string>);
-    RESULT
-        (
-            (int, place_id, -1),
-            (std::string, the_status, "It is going to rain now!"),
-            (StringList, list_of_places),
-            (StringList, shared_list_of_places)
-            )
-    REQUEST
-        (
-            (std::string, client_name, "This s client"),
-            (uint32_t, command, 0)
-            )
+    REQUEST(today_weather1)
+        ALIAS(using StringList = std::vector<std::string>);
+        OUTPUT
+            (
+                (int, place_id, -1),
+                (std::string, the_status, "It is going to rain now!"),
+                (StringList, list_of_places),
+                (StringList, shared_list_of_places)
+                )
+        INPUT
+            (
+                (std::string, client_name, "This s client"),
+                (uint32_t, command, 0)
+                )
 
-    ENDFUNC(today_weather1)
+    ENDREQUEST(today_weather1)
 
-    FUNCTION(simple_status)
+
+    PROPERTY(simple)
         using CustomHeader = std::map<std::string, std::string>;
         using String = std::string;
         STATUS
-        (
-            (bool,              compliant,           true),
-            (bool,              critical,            false),
-            (CustomHeader,      headers                   ),
-            (String,            cloud_message,       "don't care")
-        )
-    ENDFUNC(simple_status)
+            (
+                (bool,              compliant,           true),
+                (bool,              critical,            false),
+                (CustomHeader,      headers                   ),
+                (String,            cloud_message,       "don't care")
+            )
+    ENDPROPERTY(simple)
 
-    FUNCTION(compliance)
+    PROPERTY(compliance)
         STATUS
         (
             (bool, compliant, true),
@@ -77,56 +79,60 @@ SERVICE(weather)
             (int, updated_count, 0),
             (std::string, cloud_message, "This device is compliant!")
         )
-    ENDFUNC(compliance)
-    FUNCTION(compliance1)
+    ENDPROPERTY(compliance)
+
+    PROPERTY(compliance1)
     STATUS
         (
             (bool, compliant, true),
             (bool, critical, false),
             (std::string, cloud_message, "This device is compliant1!")
             )
-    ENDFUNC(compliance1)
-    FUNCTION(compliance2)
+    ENDPROPERTY(compliance1)
+
+    PROPERTY(compliance2)
     STATUS
         (
             (bool, compliant, true),
             (bool, critical, false),
             (std::string, cloud_message, "This device is compliant2!")
             )
-    ENDFUNC(compliance2)
-    FUNCTION(compliance3)
+    ENDPROPERTY(compliance2)
+    PROPERTY(compliance3)
     STATUS
         (
             (bool, compliant, true),
             (bool, critical, false),
             (std::string, cloud_message, "This device is compliant3!")
             )
-    ENDFUNC(compliance3)
-    FUNCTION(compliance4)
+    ENDPROPERTY(compliance3)
+
+    PROPERTY(compliance4)
     STATUS
         (
             (bool, compliant, true),
             (bool, critical, false),
             (std::string, cloud_message, "This device is compliant4!")
             )
-    ENDFUNC(compliance4)
-    FUNCTION(compliance5)
+    ENDPROPERTY(compliance4)
+
+
+    PROPERTY(compliance5)
     STATUS
         (
             (bool, compliant, true),
             (bool, critical, false),
             (std::string, cloud_message, "This device is compliant5sdfds!")
             )
-    ENDFUNC(compliance5)
+    ENDPROPERTY(compliance5)
 
-    FUNCTION(boot_time)
+    PROPERTY(boot_time)
         STATUS((uint64_t, seconds, 0))
-        REQUEST((uint64_t, seconds, 0))
-    ENDFUNC(boot_time)
+    ENDPROPERTY(boot_time)
 
-    FUNCTION(shutdown)
-        EMPTY_REQUEST()
-    ENDFUNC(shutdown)
+    REQUEST(shutdown)
+        VOID_INPUT()
+    ENDREQUEST(shutdown)
 ENDSERVICE(weather);
 
 

@@ -8,9 +8,8 @@ namespace messaging {
 namespace ipc {
 namespace local {
 
-using ClientRequestMessage      = ClientRequestMessage<SerializableMessageTrait>;
 using ServiceStub               = QueueingServiceStub<SerializableMessageTrait>;
-using Request                   = RequestT<SerializableMessageTrait>;
+using Request                   = QueuedRequest<SerializableMessageTrait>;
 
 static std::shared_ptr<ServiceStub> createStub(const Address& addr, ServiceID sid)
 {

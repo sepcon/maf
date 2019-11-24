@@ -1,6 +1,6 @@
 #pragma once
 
-#include "internal/CSShared.h"
+#include "ServiceProviderShared.h"
 
 namespace maf {
 namespace messaging {
@@ -15,8 +15,8 @@ public:
     virtual RequestID getRequestID() const = 0;
     virtual bool valid() const = 0;
     virtual ActionCallStatus respond(const CSMsgContentBasePtr& answer) = 0;
-    virtual CSMsgContentBasePtr getRequestContent() = 0;
-    virtual void onAbortRequest(RequestAbortedCallback abortCallback) = 0;
+    virtual CSMsgContentBasePtr getInput() = 0;
+    virtual void onAbortRequest(AbortRequestCallback abortCallback) = 0;
 };
 
 } // messaging

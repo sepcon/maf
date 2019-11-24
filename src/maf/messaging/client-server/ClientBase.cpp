@@ -1,11 +1,15 @@
 #include <maf/messaging/client-server/ClientBase.h>
 #include <maf/messaging/client-server/ServiceRequester.h>
 #include <maf/logging/Logger.h>
+#include <cassert>
 
 namespace maf { using logging::Logger;
 namespace messaging {
 
-void ClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
+void ClientBase::onServerStatusChanged(
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
     if(newStatus != Availability::Available)
     {
@@ -53,25 +57,40 @@ bool ClientBase::hasServiceRequester(ServiceID sid)
 
 bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
 {
-    if(msg->operationCode() == OpCode::ServiceStatusUpdate && msg->serviceID() != ServiceIDInvalid)
+    if(msg->operationCode() == OpCode::ServiceStatusUpdate
+        && msg->serviceID() != ServiceIDInvalid)
     {
-        Logger::info("Receive Service status update from server: sid[" ,  msg->serviceID() ,  "]-status[" ,  msg->operationID() ,  "]");
+        Logger::info("Receive Service status update from server: sid[" ,
+                     msg->serviceID() ,
+                     "]-status[" ,
+                     msg->operationID() ,
+                     "]"
+                     );
         if(msg->operationID() == OpID_ServiceAvailable)
         {
             storeServiceStatus(msg->serviceID(), Availability::Available);
-            onServiceStatusChanged(msg->serviceID(), Availability::Unavailable, Availability::Available);
+            onServiceStatusChanged(
+                msg->serviceID(),
+                Availability::Unavailable,
+                Availability::Available
+                );
         }
         else if(msg->operationID() == OpID_ServiceUnavailable)
         {
             storeServiceStatus(msg->serviceID(), Availability::Unavailable);
-            onServiceStatusChanged(msg->serviceID(), Availability::Available, Availability::Unavailable);
+            onServiceStatusChanged(
+                msg->serviceID(),
+                Availability::Available,
+                Availability::Unavailable
+                );
         }
         return true;
     }
     else
     {
         std::lock_guard lock(_requestersMap);
-        if(auto itProxy = _requestersMap->find(msg->serviceID()); itProxy != _requestersMap->end())
+        if(auto itProxy = _requestersMap->find(msg->serviceID());
+            itProxy != _requestersMap->end())
         {
             return itProxy->second->onIncomingMessage(msg);
         }
@@ -88,18 +107,25 @@ ServiceRequesterInterfacePtr ClientBase::getServiceRequester(ServiceID sid)
 {
     std::lock_guard lock(_requestersMap);
 
-    if(auto itRequester = _requestersMap->find(sid); itRequester != _requestersMap->end())
+    if(auto itRequester = _requestersMap->find(sid);
+        itRequester != _requestersMap->end())
     {
         return itRequester->second;
     }
     else
     {
-        ServiceRequesterInterfacePtr requester = std::make_shared<ServiceRequester>(sid, weak_from_this());
+        assert(shared_from_this());
+        ServiceRequesterInterfacePtr requester =
+            std::make_shared<ServiceRequester>(sid, weak_from_this());
         std::lock_guard lock(_serviceStatusMap);
         auto itServiceStatus = _serviceStatusMap->find(sid);
         if(itServiceStatus != _serviceStatusMap->end())
         {
-            requester->onServiceStatusChanged(itServiceStatus->first, Availability::Unknown, itServiceStatus->second);
+            requester->onServiceStatusChanged(
+                itServiceStatus->first,
+                Availability::Unknown,
+                itServiceStatus->second
+                );
         }
         _requestersMap->emplace(sid, requester);
         return requester;
@@ -131,7 +157,13 @@ bool ClientBase::deinit()
     std::lock_guard lock(_serviceStatusMap);
     for(auto& [serviceID, status] : *_serviceStatusMap)
     {
-        sendMessageToServer(createCSMessage(serviceID, OpIDInvalid, OpCode::UnregisterServiceStatus));
+        sendMessageToServer(
+            createCSMessage(
+                serviceID,
+                OpIDInvalid,
+                OpCode::UnregisterServiceStatus
+                )
+            );
     }
     _serviceStatusMap->clear();
     return true;

@@ -7,9 +7,8 @@ namespace maf {
 namespace messaging {
 namespace inapp {
 
-using ClientRequestMesasge      = ClientRequestMessage<DefaultMessageTrait>;
 using ServiceStub               = QueueingServiceStub<DefaultMessageTrait>;
-using Request                   = RequestT<DefaultMessageTrait>;
+using Request                   = QueuedRequest<DefaultMessageTrait>;
 
 static std::shared_ptr<ServiceStub> createStub(ServiceID sid)
 {

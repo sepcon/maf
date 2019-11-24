@@ -13,35 +13,40 @@ namespace messaging {
 class ServerInterface;
 class ServiceProvider;
 class Request;
-class ServiceStubHandlerInterface;
 
 struct ServiceProviderImpl
 {
-    using RequestPtr                = std::shared_ptr<Request>;
-    using RequestMap                = threading::Lockable<std::map<OpID, std::list<RequestPtr>>>;
-    using Address2OpIDsMap          = threading::Lockable<std::map<Address, std::set<OpID>>>;
+    template <typename ValueType>
+    using OpIDMap                = threading::Lockable<std::map<OpID, ValueType>>;
 
-    Address2OpIDsMap                            _regEntriesMap;
-    RequestMap                                  _requestsMap;
-    std::weak_ptr<ServerInterface>              _server;
-    ServiceProvider*                            _holder;
-    ServiceStubHandlerInterface*                _stubHandler        = nullptr;
-    std::atomic_bool                            _stopped;
+    using RequestPtr             = std::shared_ptr<Request>;
+    using PropertyPtr            = CSMsgContentBasePtr;
+    using RequestMap             = OpIDMap<std::list<RequestPtr>>;
+    using PropertyMap            = OpIDMap<PropertyPtr>;
+    using RequestHandlerMap      = OpIDMap<RequestHandlerFunction>;
+    using Address2OpIDsMap       = threading::Lockable<std::map<Address, std::set<OpID>>>;
+
+    Address2OpIDsMap                _regEntriesMap;
+    RequestMap                      _requestsMap;
+    std::weak_ptr<ServerInterface>  _server;
+    ServiceProvider*                _delegator;
+    PropertyMap                     _propertyMap;
+    RequestHandlerMap               _requestHandlerMap;
 
     ServiceProviderImpl(
         ServiceProvider* holder,
-        std::weak_ptr<ServerInterface> server,
-        ServiceStubHandlerInterface* stubHandler = nullptr
+        std::weak_ptr<ServerInterface> server
         );
 
     ~ServiceProviderImpl();
 
-    void setStubHandler(ServiceStubHandlerInterface *stubHandler);
     ActionCallStatus respondToRequest(const CSMessagePtr &csMsg);
     ActionCallStatus setStatus(
         OpID propertyID,
         const CSMsgContentBasePtr& property
         );
+
+    CSMsgContentBasePtr getStatus(OpID propertyID);
 
     void startServing();
     void stopServing();
@@ -52,8 +57,7 @@ struct ServiceProviderImpl
     ActionCallStatus sendBackMessageToClient(const CSMessagePtr &csMsg);
     void onStatusChangeRegister(const CSMessagePtr& msg);
     void onStatusChangeUnregister(const CSMessagePtr& msg);
-    void forwardToStubHandler(const RequestPtr& request);
-    void forwardToStubHandler(RequestAbortedCallback callback);
+
 
     RequestPtr saveRequestInfo(const CSMessagePtr& msg);
     RequestPtr pickOutRequestInfo(const CSMessagePtr &msgContent);
@@ -67,8 +71,15 @@ struct ServiceProviderImpl
     void removeRegistersOfAddress(const Address& addr);
 
     void onAbortActionRequest(const CSMessagePtr& msg);
-    void onClientRequest(const CSMessagePtr& msg);
     void onClientGoesOff(const CSMessagePtr& msg);
+
+    void onActionRequest(const CSMessagePtr& msg);
+    void updateLatestStatus(const CSMessagePtr& registerMsg);
+    void onStatusGetRequest(const CSMessagePtr &getMsg);
+    bool invokeRequestHandlerCallback(const RequestPtr& request);
+
+    bool registerRequestHandler(OpID opID, RequestHandlerFunction handlerFunction);
+    bool unregisterRequestHandler( OpID opID );
 
 };
 

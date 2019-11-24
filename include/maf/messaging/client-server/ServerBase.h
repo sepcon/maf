@@ -19,7 +19,6 @@ public:
     bool unregisterServiceProvider(const ServiceProviderInterfacePtr& Provider)  override;
     bool unregisterServiceProvider(ServiceID sid) override;
     bool hasServiceProvider(ServiceID sid) override;
-    ServiceProviderInterfacePtr getServiceProvider(ServiceID sid) override;
 
     virtual bool init(const Address& serverAddr) override;
     bool deinit() override;

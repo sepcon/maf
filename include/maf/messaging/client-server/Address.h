@@ -20,7 +20,7 @@ OBJECT(Address)
         static const Address INVALID_ADDRESS;
         bool valid() const { return (port() != INVALID_PORT) || (name() != INVALID_NAME);}
 
-    PROPERTIES
+    MEMBERS
         (
             (Name, name, INVALID_NAME),
             (Port, port, INVALID_PORT)

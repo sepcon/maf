@@ -12,7 +12,7 @@ Request::Request(std::shared_ptr<CSMessage> csMsg, std::weak_ptr<ServiceProvider
 {
 }
 
-RequestAbortedCallback Request::getAbortCallback()
+AbortRequestCallback Request::getAbortCallback()
 {
     std::lock_guard lock(_mutex);
     return _abortCallback;
@@ -72,13 +72,13 @@ ActionCallStatus Request::respond(const CSMsgContentBasePtr& answer)
     }
 }
 
-CSMsgContentBasePtr Request::getRequestContent()
+CSMsgContentBasePtr Request::getInput()
 {
     std::lock_guard lock(_mutex);
     return _csMsg->content();
 }
 
-void Request::onAbortRequest(RequestAbortedCallback abortCallback)
+void Request::onAbortRequest(AbortRequestCallback abortCallback)
 {
     std::lock_guard lock(_mutex);
     if(!_valid)

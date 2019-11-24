@@ -19,7 +19,6 @@ public:
     virtual bool unregisterServiceProvider(const ServiceProviderInterfacePtr& serviceProvider) = 0;
     virtual bool unregisterServiceProvider(ServiceID sid) = 0;
     virtual bool hasServiceProvider(ServiceID sid) = 0;
-    virtual ServiceProviderInterfacePtr getServiceProvider(ServiceID sid) = 0;
     virtual bool init(const Address& serverAddr) = 0;
     virtual bool deinit() = 0;
 };

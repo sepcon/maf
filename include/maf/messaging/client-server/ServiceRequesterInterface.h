@@ -22,7 +22,7 @@ public:
     virtual RegID getStatusAsync(
             OpID propertyID,
             CSMessageContentHandlerCallback callback) = 0;
-    virtual RegID requestActionAsync(
+    virtual RegID sendRequestAsync(
             OpID opID,
             const CSMsgContentBasePtr& msgContent,
             CSMessageContentHandlerCallback callback
@@ -32,7 +32,7 @@ public:
             OpID propertyID,
             unsigned long maxWaitTimeMs
             ) = 0;
-    virtual CSMsgContentBasePtr requestAction(
+    virtual CSMsgContentBasePtr sendRequest(
             OpID opID,
             const CSMsgContentBasePtr& msgContent,
             unsigned long maxWaitTimeMs

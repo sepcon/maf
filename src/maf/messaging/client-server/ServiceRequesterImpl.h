@@ -37,24 +37,26 @@ struct ServiceRequesterImpl
         std::promise< std::shared_ptr<CSMessage> > _msgPromise;
     };
 
-    using ServiceStatusObserverIFPtr    = std::weak_ptr<ServiceStatusObserverInterface>;
-    using RegEntriesMap                 = threading::Lockable<std::map<OpID, std::list<RegEntry> >>;
-    using SyncRegEntriesMap             = threading::Lockable<std::map<OpID, std::list<SyncRegEntry>>>;
-    using SyncRequestPromises           = threading::Lockable<std::list<std::shared_ptr<std::promise<CSMsgContentBasePtr>>>>;
-    using ServiceStatusObservers        = threading::Lockable<std::list<ServiceStatusObserverIFPtr>>;
-    using CSMsgContentMap               = threading::Lockable<std::map<OpID, CSMsgContentBasePtr> >;
+    template <typename ValueType>
+    using OpIDMap                    = threading::Lockable<std::map<OpID, ValueType>>;
+    using RegEntriesMap              = OpIDMap<std::list<RegEntry>>;
+    using SyncRegEntriesMap          = OpIDMap<std::list<SyncRegEntry>>;
+    using CSMsgContentMap            = OpIDMap<CSMsgContentBasePtr>;
+    using ServiceStatusObserverIFPtr = std::weak_ptr<ServiceStatusObserverInterface>;
+    using SyncRequestPromises        = threading::Lockable<std::list<std::shared_ptr<std::promise<CSMsgContentBasePtr>>>>;
+    using ServiceStatusObservers     = threading::Lockable<std::list<ServiceStatusObserverIFPtr>>;
 
-    RegEntriesMap                       _registerEntriesMap;
-    RegEntriesMap                       _requestEntriesMap;
-    SyncRequestPromises                 _syncRequestPromises;
-    ServiceStatusObservers              _serviceStatusObservers;
-    CSMsgContentMap                     _propertiesCache;
-    std::thread                         _serviceMonitoringThread;
-    std::weak_ptr<ClientInterface>      _client;
-    util::IDManager                     _idMgr;
-    ServiceID                           _sid;
-    Availability                        _serviceStatus;
-    std::atomic_bool                    _stopFlag;
+    RegEntriesMap                    _registerEntriesMap;
+    RegEntriesMap                    _requestEntriesMap;
+    SyncRequestPromises              _syncRequestPromises;
+    ServiceStatusObservers           _serviceStatusObservers;
+    CSMsgContentMap                  _propertiesCache;
+    std::thread                      _serviceMonitoringThread;
+    std::weak_ptr<ClientInterface>   _client;
+    util::IDManager                  _idMgr;
+    ServiceID                        _sid;
+    Availability                     _serviceStatus;
+    std::atomic_bool                 _stopFlag;
 
 
     ServiceRequesterImpl(ServiceID sid, std::weak_ptr<ClientInterface> client);
@@ -74,7 +76,7 @@ struct ServiceRequesterImpl
         CSMessageContentHandlerCallback callback
         );
 
-    RegID requestActionAsync(
+    RegID sendRequestAsync(
         OpID opID,
         const CSMsgContentBasePtr& msgContent,
         CSMessageContentHandlerCallback callback
@@ -85,7 +87,7 @@ struct ServiceRequesterImpl
         unsigned long maxWaitTimeMs
         );
 
-    CSMsgContentBasePtr requestAction(
+    CSMsgContentBasePtr sendRequest(
         OpID opID,
         const CSMsgContentBasePtr& msgContent = {},
         unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD

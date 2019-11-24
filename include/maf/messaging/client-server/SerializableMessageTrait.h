@@ -2,6 +2,7 @@
 
 #include "internal/cs_param.h"
 #include "BytesCarrier.h"
+#include "MessageTraitBase.h"
 #include <maf/logging/Logger.h>
 
 namespace maf { using logging::Logger;
@@ -9,17 +10,20 @@ namespace messaging {
 namespace ipc {
 
 
-class SerializableMessageTrait
+class SerializableMessageTrait : public MessageTraitBase
 {
 public:
     template<class ContractParam>
-    static OpID getOperationID()
+    static OpIDConstant getOperationID()
     {
         return ContractParam::operationID();
     }
 
     template<class cs_param_type>
-    static std::shared_ptr<cs_param_type> decode(const CSMsgContentBasePtr& csMsgContent)
+    static std::shared_ptr<cs_param_type> decode(
+        const CSMsgContentBasePtr& csMsgContent,
+        EncodeDecodeStatus* status = nullptr
+        )
     {
         assert(csMsgContent);
         try
@@ -33,12 +37,18 @@ public:
             {
                 dataCarrier = std::make_shared<cs_param_pure_type>();
                 dataCarrier->fromBytes(byteCarrier->payload());
+                setStatus(status, EncodeDecodeStatus::Success);
+            }
+            else
+            {
+                setStatus(status, EncodeDecodeStatus::EmptyInput);
             }
             return dataCarrier;
 
         }
         catch(const std::exception& e)
         {
+            setStatus(status, EncodeDecodeStatus::MalformInput);
             Logger::error("Could not decode message, exception details: " ,  e.what());
         }
 

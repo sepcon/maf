@@ -7,20 +7,16 @@
 namespace maf {
 namespace messaging {
 
-struct cs_param          : public CSMessageContentBase {};
-struct cs_request        : public cs_param {};
-struct cs_result         : public cs_param {};
-struct cs_status         : public cs_param {};
+struct cs_param             : public CSMessageContentBase {};
+struct cs_request           : public cs_param {};
+struct cs_property          : public cs_param {};
+struct cs_input             : public cs_param {};
+struct cs_output            : public cs_param {};
+struct cs_status            : public cs_param {};
 
 
-template <class BaseParam, OpID OperationID>
-struct cs_param_t : public BaseParam
-{
-    static constexpr maf::messaging::OpID operationID() { return OperationID; }
-};
-
-template<class parent_class>
-struct serializable_cs_param_base : public parent_class
+template<class cs_param_type>
+struct serializable_cs_param_base : public cs_param_type
 {
     virtual maf::srz::ByteArray toBytes() { return "''"; }
     virtual void fromBytes(const maf::srz::ByteArray &) {}
@@ -28,9 +24,9 @@ struct serializable_cs_param_base : public parent_class
 };
 
 
-template <class SerializableCSParamClass, class BaseParam, OpID OperationID>
+template <class SerializableCSParamClass, class cs_param_type>
 struct serializable_cs_param_t :
-    public cs_param_t<serializable_cs_param_base<BaseParam>, OperationID>
+    public serializable_cs_param_base<cs_param_type>
 {
     bool equal(const CSMessageContentBase* other) override
     {

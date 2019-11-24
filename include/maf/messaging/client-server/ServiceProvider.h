@@ -10,25 +10,35 @@ class ServerInterface;
 class ServiceStubHandlerInterface;
 struct ServiceProviderImpl;
 
-class ServiceProvider : public ServiceProviderInterface, public std::enable_shared_from_this<ServiceProvider>
+class ServiceProvider :
+    public ServiceProviderInterface,
+    public std::enable_shared_from_this<ServiceProvider>
 {
 public:
     ServiceProvider(
         ServiceID sid,
-        std::weak_ptr<ServerInterface> server,
-        ServiceStubHandlerInterface* stubHandler = nullptr
+        std::weak_ptr<ServerInterface> server
         );
 
     ~ServiceProvider() override;
 
-    void setStubHandler(ServiceStubHandlerInterface *stubHandler) override;
+    bool registerRequestHandler(
+        OpID opID,
+        RequestHandlerFunction handlerFunction
+        ) override;
 
-    ActionCallStatus respondToRequest(const CSMessagePtr &csMsg) override;
+    bool unregisterRequestHandler( OpID opID ) override;
+
+    ActionCallStatus respondToRequest(
+        const CSMessagePtr &csMsg
+        ) override;
 
     ActionCallStatus setStatus(
         OpID propertyID,
         const CSMsgContentBasePtr& property
         ) override;
+
+    CSMsgContentBasePtr getStatus(OpID propertyID) override;
 
     void startServing() override;
     void stopServing() override;

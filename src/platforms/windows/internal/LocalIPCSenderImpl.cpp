@@ -90,33 +90,26 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Addres
         {
             memset(&_oOverlap, 0, sizeof(_oOverlap));
             AutoCloseHandle pipeHandle = openPipe(destination.valid() ? constructPipeName(destination) : _pipeName);
-            bool shouldRetry = false;
             if(pipeHandle != INVALID_HANDLE_VALUE)
             {
                 uint32_t baSize = static_cast<uint32_t>(ba.size());
                 if((success = writeToPipe(pipeHandle, _oOverlap, reinterpret_cast<const char*>(&baSize), sizeof(baSize))))
                 {
-                    success = writeToPipe(pipeHandle, _oOverlap, ba.firstpos(), ba.size());
+                    if ((success = writeToPipe(pipeHandle, _oOverlap, ba.firstpos(), ba.size())))
+                    {
+                        FlushFileBuffers(pipeHandle);
+                        break;
+                    }
                 }
             }
             else if(GetLastError() == ERROR_PIPE_BUSY)
             {
-                shouldRetry = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
+                Logger::warn("Retry to send " ,  ba.size() ,  " bytes " ,  ++retryTimes ,  " times to address " ,  _pipeName);
             }
             else
             {
                 Logger::error("Connect pipe with error: " ,  GetLastError());
-            }
-
-            if (success || !shouldRetry)
-            {
-                FlushFileBuffers(pipeHandle);
-                break;
-            }
-            else
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
-                Logger::warn("Retry to send " ,  ba.size() ,  " bytes " ,  ++retryTimes ,  " times to address " ,  _pipeName);
             }
         }
 

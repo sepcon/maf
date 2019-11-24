@@ -59,6 +59,7 @@ LocalIPCReceiverImpl::LocalIPCReceiverImpl()
 bool LocalIPCReceiverImpl::stopListening()
 {
     _stopped.store(true, std::memory_order_release);
+    disconnectAndClosePipeInstances(_pipeInstances);
     for(auto& hE : _hEvents)
     {
         SetEvent(hE);
@@ -158,7 +159,6 @@ void LocalIPCReceiverImpl::listningThreadFunction()
         disconnectAndReconnect(index);
     }
 
-    disconnectAndClosePipeInstances(_pipeInstances);
 }
 
 bool LocalIPCReceiverImpl::readOnPipe(size_t index)
