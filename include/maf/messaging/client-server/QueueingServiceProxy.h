@@ -36,63 +36,71 @@ public:
     template <class SpecificMsgContent> using PayloadProcessCallback
     = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
 
-    template<class Status>
+    template<class property_status>
     RegID registerStatus(
-            PayloadProcessCallback<Status> callback
+            PayloadProcessCallback<property_status> callback
             );
 
     void unregisterStatus(const RegID &regID);
     void unregisterStatusAll(OpID propertyID);
 
-    template<class Status>
+    template<class property_status>
     RegID getStatusAsync(
             CSMessageContentHandlerCallback callback
             );
 
-    template<class Status>
-    std::shared_ptr<Status> getStatus(
+    template<class property_status>
+    std::shared_ptr<property_status> getStatus(
             unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
             );
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_result, action_result)
-    RegID requestActionAsync
+    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
+    RegID sendRequestAsync
     (
-            const std::shared_ptr<cs_request>& requestInput,
-            PayloadProcessCallback<action_result> callback = {}
+            const std::shared_ptr<cs_input>& requestInput,
+            PayloadProcessCallback<request_output> callback = {}
             );
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_result, action_result)
-    RegID requestActionAsync
+    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
+    RegID sendRequestAsync
     (
-            PayloadProcessCallback<action_result> callback = {}
+            PayloadProcessCallback<request_output> callback = {}
             );
 
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_input)
-    RegID requestActionAsync
+    mc_maf_tpl_enable_if_is_base_of_d(cs_input, request_input)
+    RegID sendRequestAsync
     (
             const std::shared_ptr<request_input>& requestInput
             );
 
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_result, action_result)
-    std::shared_ptr<action_result> requestAction
+    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_class)
+    RegID sendRequestAsync();
+
+    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
+    std::shared_ptr<request_output> sendRequest
     (
-            const std::shared_ptr<cs_request>& requestInput,
+            const std::shared_ptr<cs_input>& requestInput,
             unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
             );
 
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_result, action_result)
-    std::shared_ptr<action_result> requestAction(
+    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
+    std::shared_ptr<request_output> sendRequest(
             unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
             );
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_input)
-    void requestAction(
+    mc_maf_tpl_enable_if_is_base_of_d(cs_input, request_input)
+    void sendRequest(
             const std::shared_ptr<request_input>& input,
             unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
             );
+
+    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_class)
+    void sendRequest(
+        unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
+        );
 
     void setMainComponent(ComponentRef compref);
 

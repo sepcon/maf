@@ -31,7 +31,7 @@ public:
         CSMessageContentHandlerCallback callback
         ) override;
 
-    RegID requestActionAsync
+    RegID sendRequestAsync
         (
             OpID opID,
             const CSMsgContentBasePtr& msgContent,
@@ -43,7 +43,7 @@ public:
         unsigned long maxWaitTimeMs
         ) override;
 
-    CSMsgContentBasePtr requestAction
+    CSMsgContentBasePtr sendRequest
         (
             OpID opID,
             const CSMsgContentBasePtr& msgContent,

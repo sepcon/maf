@@ -1,9 +1,8 @@
 #ifndef MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICESTUB_H
 #define MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICESTUB_H
 
-#include <maf/messaging/client-server/ServiceStubDefault.h>
 #include <maf/messaging/client-server/ServerFactory.h>
-#include <maf/messaging/client-server/RequestT.h>
+#include <maf/messaging/client-server/QueuedRequest.h>
 #include <maf/messaging/Component.h>
 #include <maf/messaging/BasicMessages.h>
 #include <maf/logging/Logger.h>
@@ -11,72 +10,63 @@
 namespace maf {
 namespace messaging {
 
-template<class MessageTrait>
-struct ClientRequestMessage : public CompMessageBase
-{
-    using RequestType = RequestT<MessageTrait>;
-    using RequestPtr  = std::shared_ptr<RequestType>;
-public:
-    ClientRequestMessage(RequestPtr clp): _request(std::move(clp)){}
-    RequestPtr getRequest() { return _request; }
-
-    template<class CSMessageContentSpecific>
-    std::shared_ptr<CSMessageContentSpecific> getRequestContent() const noexcept
-    {
-        return _request->template getRequestContent<CSMessageContentSpecific>();
-    }
-
-private:
-    RequestPtr _request;
-};
-
 /**
  * @brief QueueingServiceStub class provides a generic interface of a ServiceProvider that is tight coupling with
  * a messaging::Component, to help handling Service Message in a queueing maner to prevent issue of data races
  * coping with multithreading application.
  * @class MessageTrait: must provide interfaces of translating specific type messages to CSMessage and vice versa
- * @class ControllingServer: must satisfy be a ServerInterface and is a pattern::SingletonObject (see patterns.h)
  */
 template <class MessageTrait>
-class QueueingServiceStub final : public ServiceStubDefault
+class QueueingServiceStub final
 {
-    using Stub                      = QueueingServiceStub<MessageTrait>;
-    using StubPtr                   = std::shared_ptr<Stub>;
-    using MyBase                   = ServiceStubDefault;
+    using Stub                     = QueueingServiceStub<MessageTrait>;
+    using StubPtr                  = std::shared_ptr<Stub>;
 public:
-    using RequestType               = RequestT<MessageTrait>;
+    using RequestType               = QueuedRequest<MessageTrait>;
     using RequestPtr                = std::shared_ptr<RequestType>;
-    using RequestMessageType        = ClientRequestMessage<MessageTrait>;
-    using RequestMessagePtr         = std::shared_ptr<RequestMessageType>;
 
     static StubPtr createStub(const ConnectionType& contype, const Address& addr, ServiceID sid);
 
-    template<class Status>
-    ActionCallStatus setStatus(const std::shared_ptr<Status>& status);
+    template<class property_status>
+    ActionCallStatus setStatus(const std::shared_ptr<property_status>& status);
 
-    template<class Status, typename... Args>
+    template<class property_status, typename... Args>
     ActionCallStatus setStatus(Args&&...);
 
-    template<class Status>
-    std::shared_ptr<const Status> getStatus();
+    template<class property_status>
+    std::shared_ptr<const property_status> getStatus();
 
-    template <class RequestInput>
-    void setRequestHandler(
-            std::function<void(RequestPtr,const std::shared_ptr<RequestInput>&)>
+    template <class request_input,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_input, request_input>, bool> = true
+             >
+    bool registerRequestHandler(
+            std::function<void(RequestPtr,const std::shared_ptr<request_input>&)>
             handlerFunction
             );
 
-    void setRequestHandler(
-            OpID actionID,
-            std::function<void(RequestPtr)> handlerFunction
-            );
+    template <class request_class,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_request, request_class> ||
+                 std::is_base_of_v<cs_property, request_class>, bool> = true
+             >
+    bool registerRequestHandler(
+        std::function<void(RequestPtr)> handlerFunction
+        );
+
+    bool unregisterRequestHandler( OpID opID );
 
     void setMainComponent(ComponentRef copmref);
+
+    void startServing();
+    void stopServing();
+
 private:
-    QueueingServiceStub(ServiceID sid, std::weak_ptr<ServerInterface> server);
-    void onClientAbortRequest(RequestAbortedCallback callback) override;
+    QueueingServiceStub(std::shared_ptr<ServiceProviderInterface> provider);
+    bool getHandlerComponent(ComponentRef &compref) const;
     void onComponentUnavailable();
 
+    std::shared_ptr<ServiceProviderInterface> _provider;
     ComponentRef _compref;
 };
 

@@ -8,27 +8,30 @@ namespace maf {
 namespace logging {
 
 using LogLevels = uint8_t;
-using LogLevel  = uint8_t;
 
-static constexpr LogLevel LOG_LEVEL_SILENCE      = 0;
-static constexpr LogLevel LOG_LEVEL_DEBUG        = 1;
-static constexpr LogLevel LOG_LEVEL_INFO         = 2;
-static constexpr LogLevel LOG_LEVEL_WARN         = 4;
-static constexpr LogLevel LOG_LEVEL_ERROR        = 8;
-static constexpr LogLevel LOG_LEVEL_FATAL        = 16;
-static constexpr LogLevel LOG_LEVEL_VERBOSE      = 32;
-static constexpr LogLevel LOG_LEVEL_FROM_ERROR   = LOG_LEVEL_ERROR | LOG_LEVEL_FATAL;
-static constexpr LogLevel LOG_LEVEL_FROM_WARN    = LOG_LEVEL_WARN  | LOG_LEVEL_FROM_ERROR;
-static constexpr LogLevel LOG_LEVEL_FROM_INFO    = LOG_LEVEL_INFO  | LOG_LEVEL_FROM_WARN;
+enum LogLevel : uint8_t
+{
+    LOG_LEVEL_SILENCE      = 0,
+    LOG_LEVEL_DEBUG        = 1,
+    LOG_LEVEL_INFO         = 2,
+    LOG_LEVEL_WARN         = 4,
+    LOG_LEVEL_ERROR        = 8,
+    LOG_LEVEL_FATAL        = 16,
+    LOG_LEVEL_VERBOSE      = 32,
+    LOG_LEVEL_FROM_ERROR   = LOG_LEVEL_ERROR | LOG_LEVEL_FATAL,
+    LOG_LEVEL_FROM_WARN    = LOG_LEVEL_WARN  | LOG_LEVEL_FROM_ERROR,
+    LOG_LEVEL_FROM_INFO    = LOG_LEVEL_INFO  | LOG_LEVEL_FROM_WARN,
+};
 
 class Logger
 {
 public:
     using LoggingFunctionType = std::function<void(const std::string& msg)>;
 
-    static void init(LogLevels allowedLevels = LOG_LEVEL_SILENCE,
-                     LoggingFunctionType outLogFunc = {},
-                     LoggingFunctionType errLogFunc = {});
+    static void init(
+        LogLevels allowedLevels = LOG_LEVEL_SILENCE,
+        LoggingFunctionType outLogFunc = {},
+        LoggingFunctionType errLogFunc = {} );
 
     template<typename... Msg>
     static void debug(Msg&& ... msg);
@@ -49,6 +52,14 @@ private:
     static void logImpl(LogLevel filteredLevel, const std::string& msg);
     static bool allowed(LogLevel level);
 };
+
+template<typename EnumType,
+         std::enable_if_t<std::is_enum_v<EnumType>, bool> = true
+         >
+inline std::ostream& operator<<(std::ostream& ostr, EnumType code)
+{
+    return ostr << static_cast<int>(code);
+}
 
 template<typename... Msg>
 void Logger::log(LogLevel level, Msg&&... msg)

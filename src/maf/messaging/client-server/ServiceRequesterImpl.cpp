@@ -28,7 +28,7 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg)
             handled = false;
             Logger::error(
                 "Invalid RESPONSE operation code, "
-                "then cannot match to any REQUEST code[" ,
+                "then cannot match to any INPUT code[" ,
                 csMsg->operationCode() ,
                 "]"
                 );
@@ -51,10 +51,11 @@ ServiceRequesterImpl::~ServiceRequesterImpl()
     abortAllSyncRequest();
 }
 
-RegID ServiceRequesterImpl::requestActionAsync(OpID opID,
-                                                   const CSMsgContentBasePtr &msgContent,
-                                                   CSMessageContentHandlerCallback callback
-                                                   )
+RegID ServiceRequesterImpl::sendRequestAsync(
+    OpID opID,
+    const CSMsgContentBasePtr &msgContent,
+    CSMessageContentHandlerCallback callback
+    )
 {
     return sendMessageAsync(
         opID,
@@ -123,7 +124,7 @@ void ServiceRequesterImpl::removeServiceStatusObserver(
         );
 }
 
-CSMsgContentBasePtr ServiceRequesterImpl::requestAction(
+CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
     OpID opID,
     const CSMsgContentBasePtr &msgContent,
     unsigned long maxWaitTimeMs
@@ -498,9 +499,6 @@ void ServiceRequesterImpl::abortAllSyncRequest()
     }
 }
 
-///
-/// \brief ServiceRequesterImpl::clearAllRequests clears all requests, useful whenever server is unavalable
-///
 void ServiceRequesterImpl::clearAllAsyncRequests()
 {
     _requestEntriesMap.atomic()->clear();
@@ -534,9 +532,19 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
     // sometimes the one request doesnt need to care about return msg
     if(serviceStatus() == Availability::Available)
     {
-        storeRegEntry(regEntriesMap, outgoingMsg->operationID(), std::move(callback), regID);
+        if(callback)
+        {
+            storeRegEntry(
+                regEntriesMap,
+                outgoingMsg->operationID(),
+                std::move(callback),
+                regID
+                );
+        }
+
         outgoingMsg->setRequestID(regID.requestID);
-        if(sendMessageToServer(outgoingMsg) != ActionCallStatus::Success)
+        if( sendMessageToServer(outgoingMsg) != ActionCallStatus::Success
+            && callback )
         {
             removeRegEntry(regEntriesMap, regID);
             regID.clear();
@@ -561,7 +569,10 @@ size_t ServiceRequesterImpl::storeRegEntry(
     return regEntries.size(); //means that already sent register for this propertyID to service
 }
 
-size_t ServiceRequesterImpl::removeRegEntry(RegEntriesMap &regInfoEntries, const RegID &regID)
+size_t ServiceRequesterImpl::removeRegEntry(
+    RegEntriesMap &regInfoEntries,
+    const RegID &regID
+    )
 {
     std::lock_guard lock(regInfoEntries);
     auto it = regInfoEntries->find(regID.opID);
@@ -573,7 +584,9 @@ size_t ServiceRequesterImpl::removeRegEntry(RegEntriesMap &regInfoEntries, const
                 (
                     it->second.begin(),
                     it->second.end(),
-                    [&regID](const RegEntry& regEntry) { return regEntry.requestID == regID.requestID; }
+                    [&regID](const RegEntry& regEntry) {
+                        return regEntry.requestID == regID.requestID;
+                    }
                     ),
                 it->second.end()
                 );
@@ -600,7 +613,9 @@ void ServiceRequesterImpl::removeRequestPromies(
         );
 }
 
-CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(OpID propertyID) const
+CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(
+    OpID propertyID
+    ) const
 {
     std::lock_guard lock(_propertiesCache);
     if(auto itProp = _propertiesCache->find(propertyID);
@@ -611,7 +626,10 @@ CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(OpID propertyID) con
     return {};
 }
 
-void ServiceRequesterImpl::cachePropertyStatus(OpID propertyID, CSMsgContentBasePtr property)
+void ServiceRequesterImpl::cachePropertyStatus(
+    OpID propertyID,
+    CSMsgContentBasePtr property
+    )
 {
     if(property)
     {

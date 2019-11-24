@@ -31,7 +31,7 @@ std::string createBigString(size_t size, const std::string& tobeCloned)
     return s;
 }
 static std::vector<std::string> extraInfomation = createBigExtraInfomation(1);
-static std::string SStatus = createBigString(10, "Hello world"); //"{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"dlp_info\":{},\"file_info\":{\"display_name\":\"componentsplugin4.dll\",\"file_size\":100864,\"file_type\":\"application/x-dosexec\",\"file_type_description\":\"Dynamic Link Library\",\"md5\":\"c713c6f0ea073c1822933aa5be4f1794\",\"sha1\":\"70a4cdf21b39bae2721a0fa84716eca6229ff946\",\"sha256\":\"4644c6f5556414d92eecd3792358fa2ca80a0988469a82f33e928be237420881\",\"upload_timestamp\":\"2019-07-19T03:01:13.471Z\"},\"process_info\":{\"blocked_reason\":\"\",\"file_type_skipped_scan\":false,\"post_processing\":{\"actions_failed\":\"\",\"actions_ran\":\"\",\"converted_destination\":\"\",\"converted_to\":\"\",\"copy_move_destination\":\"\"},\"processing_time\":76,\"profile\":\"File process\",\"progress_percentage\":100,\"queue_time\":7,\"result\":\"Allowed\",\"user_agent\":\"MetaAccess\"},\"scan_results\":{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"progress_percentage\":100,\"scan_all_result_a\":\"No Threat Detected\",\"scan_all_result_i\":0,\"scan_details\":{\"Ahnlab\":{\"def_time\":\"2019-07-19T00:00:00.000Z\",\"eng_id\":\"ahnlab_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":21,\"threat_found\":\"\",\"wait_time\":7},\"Avira\":{\"def_time\":\"2019-07-17T00:00:00.000Z\",\"eng_id\":\"avira_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":7,\"threat_found\":\"\",\"wait_time\":7},\"ClamAV\":{\"def_time\":\"2019-07-18T08:12:00.000Z\",\"eng_id\":\"clamav_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":23,\"threat_found\":\"\",\"wait_time\":11},\"ESET\":{\"def_time\":\"2019-07-18T00:00:00.000Z\",\"eng_id\":\"eset_1_windows\",\"location\":\"local\",\"scan_result_i\":0,\"scan_time\":17,\"threat_found\":\"\",\"wait_time\":11}},\"start_time\":\"2019-07-19T03:01:13.478Z\",\"total_avs\":4,\"total_time\":69},\"vulnerability_info\":{\"verdict\":0},\"yara_info\":{}}";
+static std::string SStatus = createBigString(10, "Hello world"); //"{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"dlp_info\":{},\"file_info\":{\"display_name\":\"componentsplugin4.dll\",\"file_size\":100864,\"file_type\":\"application/x-dosexec\",\"file_type_description\":\"Dynamic Link Library\",\"md5\":\"c713c6f0ea073c1822933aa5be4f1794\",\"sha1\":\"70a4cdf21b39bae2721a0fa84716eca6229ff946\",\"sha256\":\"4644c6f5556414d92eecd3792358fa2ca80a0988469a82f33e928be237420881\",\"upload_timestamp\":\"2019-07-19T03:01:13.471Z\"},\"process_info\":{\"blocked_reason\":\"\",\"file_type_skipped_scan\":false,\"post_processing\":{\"actions_failed\":\"\",\"actions_ran\":\"\",\"converted_destination\":\"\",\"converted_to\":\"\",\"copy_move_destination\":\"\"},\"processing_time\":76,\"profile\":\"File process\",\"progress_percentage\":100,\"queue_time\":7,\"output\":\"Allowed\",\"user_agent\":\"MetaAccess\"},\"scan_results\":{\"data_id\":\"a4cb90f84d2448009ecc48f6b7ed0c7e\",\"progress_percentage\":100,\"scan_all_output_a\":\"No Threat Detected\",\"scan_all_output_i\":0,\"scan_details\":{\"Ahnlab\":{\"def_time\":\"2019-07-19T00:00:00.000Z\",\"eng_id\":\"ahnlab_1_windows\",\"location\":\"local\",\"scan_output_i\":0,\"scan_time\":21,\"threat_found\":\"\",\"wait_time\":7},\"Avira\":{\"def_time\":\"2019-07-17T00:00:00.000Z\",\"eng_id\":\"avira_1_windows\",\"location\":\"local\",\"scan_output_i\":0,\"scan_time\":7,\"threat_found\":\"\",\"wait_time\":7},\"ClamAV\":{\"def_time\":\"2019-07-18T08:12:00.000Z\",\"eng_id\":\"clamav_1_windows\",\"location\":\"local\",\"scan_output_i\":0,\"scan_time\":23,\"threat_found\":\"\",\"wait_time\":11},\"ESET\":{\"def_time\":\"2019-07-18T00:00:00.000Z\",\"eng_id\":\"eset_1_windows\",\"location\":\"local\",\"scan_output_i\":0,\"scan_time\":17,\"threat_found\":\"\",\"wait_time\":11}},\"start_time\":\"2019-07-19T03:01:13.478Z\",\"total_avs\":4,\"total_time\":69},\"vulnerability_info\":{\"verdict\":0},\"yara_info\":{}}";
 
 class ServerComp : public maf::messaging::ExtensibleComponent
 {
@@ -44,7 +44,7 @@ public:
 
     void onEntry() override
     {
-        using namespace weather_contract;
+        using namespace weather_service;
         _stub->setStatus(compliance5::make_status(false, true, "hello world"));
         _stub->setStatus<compliance1::status>(false, true, "hello world");
         _stub->setStatus<compliance::status>(false, true, 0, "hello world");
@@ -59,21 +59,21 @@ public:
             Logger::debug("The value Server set to client: ", compliance5Status->dump());
         }
 
-        _stub->setRequestHandler<today_weather::request>(
-            [this](const auto& request, const auto& requestInput) {
-                this->onTodayWeatherRequest(request, requestInput);
+        _stub->registerRequestHandler<today_weather::input>(
+            [this](const auto& input, const auto& requestInput) {
+                this->onTodayWeatherRequest(input, requestInput);
             });
 
-        _stub->setRequestHandler(boot_time::ID, [this](const auto& request) {
+        _stub->registerRequestHandler<boot_time>([this](const auto& input) {
             using namespace std::chrono;
-            request->template respond<boot_time::status>(
+            input->template respond<boot_time::status>(
                 duration_cast<seconds>(system_clock::now() - _bootTime).count()
                 );
             }
         );
 
-        _stub->setRequestHandler(shutdown::ID, [this](const auto& request) {
-            request->respond();
+        _stub->registerRequestHandler<shutdown>([this](const auto& input) {
+            input->respond();
             stop();
             }
         );
@@ -86,20 +86,20 @@ public:
     }
 
     void onTodayWeatherRequest(
-        const local::ServiceStub::RequestPtr& request,
-        const weather_contract::today_weather::request_ptr& requestInput
+        const local::ServiceStub::RequestPtr& input,
+        const weather_service::today_weather::input_ptr& requestInput
         )
     {
-        using weather_contract::today_weather;
+        using weather_service::today_weather;
         if( requestInput )
         {
-            auto result = today_weather::make_result();
-            result->set_your_command(requestInput->command());
-            request->respond<today_weather::result>(result);
+            auto output = today_weather::make_output();
+            output->set_your_command(requestInput->command());
+            input->respond<today_weather::output>(output);
         }
         else
         {
-            request->respond<today_weather::result>(1, "", today_weather::StringList{}, today_weather::StringList{}, 100);
+            input->respond<today_weather::output>(1, "", today_weather::StringList{}, today_weather::StringList{}, 100);
         }
     }
 private:

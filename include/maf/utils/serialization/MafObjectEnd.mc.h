@@ -8,11 +8,11 @@
 #        pragma pop_macro("OBJECT")
 #        undef maf_restore_macro_OBJECT
 #    endif
-#    ifdef PROPERTIES
-#        undef PROPERTIES
+#    ifdef MEMBERS
+#        undef MEMBERS
 #    endif
 #    ifdef maf_restore_macro_PROPERTIES
-#        pragma pop_macro("PROPERTIES")
+#        pragma pop_macro("MEMBERS")
 #        undef maf_restore_macro_PROPERTIES
 #    endif
 #    ifdef ENDOBJECT

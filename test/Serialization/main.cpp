@@ -10,7 +10,7 @@
 #define MAF_ENABLE_DUMP
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
 OBJECT(Header)
-PROPERTIES
+MEMBERS
     (
         (std::string, index),
         (std::string, name)
@@ -22,7 +22,7 @@ using SpecialMap =  std::map<std::string, std::map<std::string, std::vector<std:
 using IntIntMap = std::map<int, int>;
 
 OBJECT(SecurityScanRequestMsg)
-    PROPERTIES
+    MEMBERS
     (
         (int64_t, index, 100),
         (std::string, name),

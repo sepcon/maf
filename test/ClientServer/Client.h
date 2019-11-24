@@ -15,6 +15,8 @@ using namespace messaging;
 
 namespace test {
 
+using namespace weather_service;
+
 template<class MessageTrait, int ServiceID>
 struct ClientComponent : public ExtensibleComponent
 {
@@ -29,20 +31,21 @@ struct ClientComponent : public ExtensibleComponent
         onMessage<ServiceStatusMsg>([this](const std::shared_ptr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available)
             {
-                auto request = weather_contract::today_weather::make_request();
-                _proxy->template registerStatus<weather_contract::compliance::status>
-                    ([this](const std::shared_ptr<weather_contract::compliance::status>& status){
+                auto request = today_weather::make_input();
+                _proxy->template registerStatus<compliance::status>
+                    ([this](const std::shared_ptr<compliance::status>& status){
                         maf::Logger::debug("Component " ,  name() ,  " Got status update from server: \n" ,  status->dump());
                     });
 
                 request->set_command(1);
-                auto resultDump = [](const std::shared_ptr<weather_contract::today_weather::result>& result) {
+                auto resultDump = [](const std::shared_ptr<today_weather::output>& result) {
                     maf::Logger::debug(result->dump());
                 };
-                _proxy->template requestActionAsync<weather_contract::today_weather::result>( resultDump );
+
+                _proxy->template sendRequestAsync<today_weather::output>( resultDump );
 
                 _requestTimer.start(10, [this, resultDump]{
-                    _proxy->template requestActionAsync<weather_contract::today_weather::result>( resultDump );
+                    _proxy->template sendRequestAsync<today_weather::output>( resultDump );
                 });
             }
             else

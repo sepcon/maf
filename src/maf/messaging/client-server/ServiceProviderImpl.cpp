@@ -34,8 +34,10 @@ bool ServiceProviderImpl::onIncomingMessage(const CSMessagePtr &msg)
         onClientGoesOff(msg);
         break;
     case OpCode::Request:
+        onActionRequest(msg);
+        break;
     case OpCode::StatusGet:
-        onClientRequest(msg);
+        onStatusGetRequest(msg);
         break;
     case OpCode::Abort:
         onAbortActionRequest(msg);
@@ -49,12 +51,9 @@ bool ServiceProviderImpl::onIncomingMessage(const CSMessagePtr &msg)
 }
 
 ServiceProviderImpl::ServiceProviderImpl(ServiceProvider *holder,
-    std::weak_ptr<ServerInterface> server,
-    ServiceStubHandlerInterface *stubHandler) :
+    std::weak_ptr<ServerInterface> server) :
     _server(std::move(server)),
-    _holder(std::move(holder)),
-    _stubHandler(stubHandler),
-    _stopped(false)
+    _delegator(std::move(holder))
 {
     assert(_server.lock() && "Server must not be null");
 }
@@ -62,10 +61,8 @@ ServiceProviderImpl::ServiceProviderImpl(ServiceProvider *holder,
 
 ServiceProviderImpl::~ServiceProviderImpl()
 {
-    if(auto server = _server.lock()) { server->unregisterServiceProvider(_holder->serviceID()); }
     removeAllRegisterInfo();
     invalidateAndRemoveAllRequests();
-    _stopped.store(true, std::memory_order_release);
 }
 
 
@@ -84,69 +81,111 @@ ActionCallStatus ServiceProviderImpl::respondToRequest(const CSMessagePtr& csMsg
 
 ActionCallStatus ServiceProviderImpl::setStatus(OpID propertyID, const CSMsgContentBasePtr &property)
 {
-    using AddressList = std::vector<Address>;
-    bool success = false;
-    AddressList addresses;
-
-    { // locking _regEntriesMap block
-        std::lock_guard lock(_regEntriesMap);
-        for(const auto& [clientAddress, registeredPropertyIDs] : *_regEntriesMap)
-        {
-            if(registeredPropertyIDs.find(propertyID) != registeredPropertyIDs.end())
-            {
-                addresses.push_back(clientAddress);
-            }
-        }
-    } // locking _regEntriesMap block
-
-    if(addresses.empty())
+    if(property)
     {
-        Logger::warn("There's no register for property: " ,  propertyID);
+        using AddressList = std::vector<Address>;
+        bool success = false;
+        AddressList addresses;
+
+        _propertyMap.atomic()->insert_or_assign(
+            propertyID,
+            property
+            );
+
+        { // locking _regEntriesMap block
+            std::lock_guard lock(_regEntriesMap);
+            for(const auto& [clientAddress, registeredPropertyIDs] : *_regEntriesMap)
+            {
+                if(registeredPropertyIDs.find(propertyID) != registeredPropertyIDs.end())
+                {
+                    addresses.push_back(clientAddress);
+                }
+            }
+        } // locking _regEntriesMap block
+
+        if(addresses.empty())
+        {
+            Logger::warn("There's no register for property: " ,  propertyID);
+        }
+        else
+        {
+            auto csMsg = createCSMessage(
+                _delegator->serviceID(),
+                propertyID,
+                OpCode::Register,
+                RequestIDInvalid,
+                property
+                );
+
+            auto trySendToDestinations =
+                [this, &csMsg](AddressList& addresses) -> AddressList {
+                AddressList busyReceivers;
+                for(const auto& addr : addresses)
+                {
+                    auto errCode = sendMessage(csMsg, addr);
+                    if(errCode == ActionCallStatus::Success)
+                    {
+                        //Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
+                    }
+                    else if(errCode == ActionCallStatus::ReceiverBusy)
+                    {
+                        busyReceivers.emplace_back(std::move(addr));
+                    }
+                    else
+                    {
+                        this->removeRegistersOfAddress(addr);
+                        Logger::warn("Failed to send message id [" ,
+                                     csMsg->operationID() ,
+                                     "] to client " ,
+                                     addr.dump()
+                                     );
+                    }
+                }
+                return busyReceivers;
+            };
+
+            auto busyReceivers = trySendToDestinations(addresses);
+            if(!busyReceivers.empty())
+            {
+                //If someones are busy, try with them once
+                Logger::warn("Trying to send message to busy addresses once again!");
+                busyReceivers = trySendToDestinations(busyReceivers);
+            }
+
+            //success when succeeded to send msg to at least one receiver
+            success = (busyReceivers.size() != addresses.size());
+
+        }
+        return success ?
+                       ActionCallStatus::ReceiverUnavailable
+                       :
+                       ActionCallStatus::Success;
     }
     else
     {
-        auto csMsg = createCSMessage(_holder->serviceID(), propertyID, OpCode::Register, RequestIDInvalid, property);
-        auto trySendToDestinations = [this, &csMsg](AddressList& addresses) -> AddressList {
-            AddressList busyReceivers;
-            for(const auto& addr : addresses)
-            {
-                auto errCode = sendMessage(csMsg, addr);
-                if(errCode == ActionCallStatus::Success)
-                {
-//                    Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
-                }
-                else if(errCode == ActionCallStatus::ReceiverBusy)
-                {
-                    busyReceivers.emplace_back(std::move(addr));
-                }
-                else
-                {
-                    this->removeRegistersOfAddress(addr);
-                    Logger::warn("Failed to send message id [" ,  csMsg->operationID() ,  "] to client " ,  addr.dump());
-                }
-            }
-            return busyReceivers;
-        };
-
-        auto busyReceivers = trySendToDestinations(addresses);
-        if(!busyReceivers.empty())
-        {
-            //If someones are busy, try with them once
-            Logger::warn("Trying to send message to busy addresses once again!");
-            busyReceivers = trySendToDestinations(busyReceivers);
-        }
-
-        success = (busyReceivers.size() != addresses.size()); //success when success to send msg to at least one receiver
-
+        return ActionCallStatus::InvalidParam;
     }
-    return success ? ActionCallStatus::ReceiverUnavailable : ActionCallStatus::Success;
+}
+
+CSMsgContentBasePtr ServiceProviderImpl::getStatus(OpID propertyID)
+{
+    std::lock_guard lock(_propertyMap);
+    if(auto itStatus = _propertyMap->find(propertyID);
+        itStatus != _propertyMap->end())
+    {
+        return itStatus->second;
+    }
+    else
+    {
+        return {};
+    }
 }
 
 void ServiceProviderImpl::startServing()
 {
     if(auto server = _server.lock())
     {
-        server->registerServiceProvider(_holder->shared_from_this());
+        server->registerServiceProvider(_delegator->shared_from_this());
     }
 }
 
@@ -154,7 +193,7 @@ void ServiceProviderImpl::stopServing()
 {
     if(auto server = _server.lock())
     {
-        server->unregisterServiceProvider(_holder->serviceID());
+        server->unregisterServiceProvider(_delegator->serviceID());
     }
 }
 
@@ -175,8 +214,6 @@ ActionCallStatus ServiceProviderImpl::sendBackMessageToClient(const CSMessagePtr
     return sendMessage(csMsg, csMsg->sourceAddress());
 }
 
-
-
 void ServiceProviderImpl::onStatusChangeRegister(const CSMessagePtr &msg)
 {
     if(msg)
@@ -186,9 +223,7 @@ void ServiceProviderImpl::onStatusChangeRegister(const CSMessagePtr &msg)
             // Do this for notifying status when changed
             saveRegisterInfo(msg);
             // Do this for server to update latest status for new registered client
-            forwardToStubHandler(
-                saveRequestInfo(msg)
-                );
+            updateLatestStatus(msg);
         }
         else
         {
@@ -209,33 +244,9 @@ void ServiceProviderImpl::onStatusChangeUnregister(const CSMessagePtr &msg)
 }
 
 
-void ServiceProviderImpl::forwardToStubHandler(const ServiceProviderImpl::RequestPtr& request)
-{
-    if (_stubHandler)
-    {
-        _stubHandler->onClientRequest(request);
-    }
-    else
-    {
-        Logger::warn("hasn't set stub handler for this service stub yet!");
-    }
-}
-
-void ServiceProviderImpl::forwardToStubHandler(RequestAbortedCallback callback)
-{
-    if (_stubHandler)
-    {
-        _stubHandler->onClientAbortRequest(std::move(callback));
-    }
-    else
-    {
-        Logger::warn("hasn't set stub handler for this service stub yet!");
-    }
-}
-
 ServiceProviderImpl::RequestPtr ServiceProviderImpl::saveRequestInfo(const CSMessagePtr &msg)
 {
-    RequestPtr request{ new Request(msg, _holder->weak_from_this()) };
+    RequestPtr request{ new Request(msg, _delegator->weak_from_this()) };
     (*_requestsMap.atomic())[msg->operationID()].push_back(request);
     return request;
 }
@@ -243,22 +254,19 @@ ServiceProviderImpl::RequestPtr ServiceProviderImpl::saveRequestInfo(const CSMes
 ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(const CSMessagePtr &msg)
 {
     RequestPtr request;
-    if(!_stopped.load(std::memory_order_acquire))
+    std::lock_guard lock(_requestsMap);
+    auto itRequestList = _requestsMap->find(msg->operationID());
+    if(itRequestList != _requestsMap->end())
     {
-        std::lock_guard lock(_requestsMap);
-        auto itRequestList = _requestsMap->find(msg->operationID());
-        if(itRequestList != _requestsMap->end())
+        auto& requestList = itRequestList->second;
+        for(auto itRequest = requestList.begin(); itRequest != requestList.end(); ++itRequest)
         {
-            auto& requestList = itRequestList->second;
-            for(auto itRequest = requestList.begin(); itRequest != requestList.end(); ++itRequest)
+            RequestPtr&  requestTmp = *itRequest;
+            if(requestTmp->getRequestID() == msg->requestID())
             {
-                RequestPtr&  requestTmp = *itRequest;
-                if(requestTmp->getRequestID() == msg->requestID())
-                {
-                    request = std::move(requestTmp);
-                    requestList.erase(itRequest);
-                    break;
-                }
+                request = std::move(requestTmp);
+                requestList.erase(itRequest);
+                break;
             }
         }
     }
@@ -273,15 +281,9 @@ void ServiceProviderImpl::invalidateAndRemoveAllRequests()
         for(auto& request : requests)
         {
             request->invalidate();
-            auto abortCallback = request->getAbortCallback();
-            if (abortCallback && _stubHandler)
+            if (auto abortCallback = request->getAbortCallback())
             {
-                forwardToStubHandler(std::move(abortCallback));
-            }
-            else
-            {
-                request->setOperationCode(OpCode::Abort);
-                forwardToStubHandler(request);
+                abortCallback();
             }
         }
     }
@@ -315,22 +317,25 @@ void ServiceProviderImpl::onAbortActionRequest(const CSMessagePtr &msg)
         // Invalidate request then later respond from request itself will not cause any race condition.
         // Must be considered carefully for bug fixing later
         request->invalidate();
-        auto abortCallback = request->getAbortCallback();
-        if (abortCallback && _stubHandler)
+        if (auto abortCallback = request->getAbortCallback())
         {
-            forwardToStubHandler(std::move(abortCallback));
-        }
-        else
-        {
-            request->_csMsg = msg;
-            forwardToStubHandler(request);
+            abortCallback();
         }
     }
 }
 
-void ServiceProviderImpl::onClientRequest(const CSMessagePtr &msg)
+void ServiceProviderImpl::onActionRequest(const CSMessagePtr &msg)
 {
-    forwardToStubHandler(saveRequestInfo(msg));
+    auto request = saveRequestInfo(msg);
+    if(!invokeRequestHandlerCallback(request))
+    {
+        //TODO: must provide error code to client?
+        request->respond({});
+
+        Logger::error("Not found handler for ActionRequest with OpID[",
+                      msg->operationID(),
+                      "]");
+    }
 }
 
 void ServiceProviderImpl::onClientGoesOff(const CSMessagePtr &msg)
@@ -338,20 +343,74 @@ void ServiceProviderImpl::onClientGoesOff(const CSMessagePtr &msg)
     _regEntriesMap.atomic()->erase(msg->sourceAddress());
 }
 
-void ServiceProviderImpl::setStubHandler(ServiceStubHandlerInterface *stubHandler)
+bool ServiceProviderImpl::registerRequestHandler(
+    OpID opID,
+    RequestHandlerFunction handlerFunction
+    )
 {
-    if(!_stubHandler)
+    if(handlerFunction)
     {
-        _stubHandler = stubHandler;
-    }
-    else if(stubHandler)
-    {
-        Logger::warn("Current stub handler of service id ", _holder->serviceID(), " got replaced by a different one!");
+        (*_requestHandlerMap.atomic())[opID] = std::move(handlerFunction);
     }
     else
     {
-        Logger::info("Unregistered stub handler for service id ", _holder->serviceID());
+        Logger::error(
+            "Trying to set empty function as handler for OpID[",
+            opID,
+            "]"
+            );
     }
+    return false;
+}
+
+bool ServiceProviderImpl::unregisterRequestHandler(OpID opID)
+{
+    return _requestHandlerMap.atomic()->erase(opID) != 0;
+}
+
+void ServiceProviderImpl::updateLatestStatus(const CSMessagePtr &registerMsg)
+{
+    auto currentStatus = getStatus(registerMsg->operationID());
+    if(!currentStatus)
+    {
+        logging::Logger::warn(
+            "status data of OpID[",
+            registerMsg->operationID(),
+            "] hasn't been set yet!"
+            );
+    }
+    registerMsg->setContent(currentStatus);
+    respondToRequest(registerMsg);
+}
+
+void ServiceProviderImpl::onStatusGetRequest(const CSMessagePtr& getMsg)
+{
+    auto request = saveRequestInfo(getMsg);
+    if(!invokeRequestHandlerCallback(request))
+    {
+        request->respond(
+            getStatus(request->getOperationID())
+            );
+    }
+}
+
+bool ServiceProviderImpl::invokeRequestHandlerCallback(
+    const RequestPtr& request
+    )
+{
+    auto opID = request->getOperationID();
+    std::unique_lock lock(_requestHandlerMap);
+
+    if(auto itHandler = _requestHandlerMap->find(opID);
+        itHandler != _requestHandlerMap->end())
+    {
+        auto handlerFunction = itHandler->second;
+        lock.unlock();
+        handlerFunction(request);
+        return true;
+    }
+
+    return false;
 }
 
 }

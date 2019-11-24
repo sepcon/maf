@@ -10,7 +10,7 @@ namespace maf {
 using namespace messaging;
 namespace test {
 
-using weather_contract::today_weather;
+using namespace weather_service;
 
 template <class MessageTrait, int ServiceID>
 class ServerComponent : public ExtensibleComponent
@@ -42,22 +42,22 @@ public:
     {
         maf::Logger::debug("Component is starting");
         _serverTimer.setCyclic(true);
-        _stub->template setRequestHandler<today_weather::request>(
+        _stub->template registerRequestHandler<today_weather::input>(
             std::bind(&ServerComponent::handleWeatherRequest, this, std::placeholders::_1)
             );
 
-        auto simpleStatus = weather_contract::simple_status::make_status();
+        auto simpleStatus = simple_status::make_status();
         simpleStatus->headers() = {{"g", "d"},{"d", "k"}};
         _stub->setStatus(simpleStatus);
-        _stub->template setStatus<weather_contract::simple_status::status>();
+        _stub->template setStatus<simple_status::status>();
         _stub->startServing();
         maf::Logger::debug("Stub ready as well");
     }
 
-    void handleWeatherRequest(const std::shared_ptr<RequestT<MessageTrait>>& request)
+    void handleWeatherRequest(const std::shared_ptr<QueuedRequest<MessageTrait>>& request)
     {
         maf::Logger::debug("Component " ,  name() ,  " Timer expired , total request: " ,  ++_responseCount);
-        auto req = request->template getRequestContent<weather_contract::today_weather::request>();
+        auto req = request->template getInput<today_weather::input>();
         if(req)
         {
             maf::Logger::debug("Receiver request from client: " ,  req->client_name());
@@ -67,7 +67,7 @@ public:
             maf::Logger::debug("Get request with no content, operationID=  " ,  request->getOperationID());
         }
 
-        auto res = weather_contract::today_weather::make_result();
+        auto res = today_weather::make_output();
         res->set_shared_list_of_places({"hello", "world"});
 
         {

@@ -11,7 +11,7 @@ public:
     // Intended to not having destructor
     // virtual ~ServiceStubHandlerInterface() = 0;
     virtual void onClientRequest(const std::shared_ptr<RequestInterface>& request) = 0;
-    virtual void onClientAbortRequest(RequestAbortedCallback callback) = 0;
+    virtual void onClientAbortRequest(AbortRequestCallback callback) = 0;
 };
 
 }

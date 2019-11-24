@@ -7,7 +7,6 @@
 namespace maf {
 namespace messaging {
 
-using RequestAbortedCallback          = std::function<void(void)>;
 using CSMessageContentHandlerCallback = std::function<void(const CSMsgContentBasePtr&)>;
 
 

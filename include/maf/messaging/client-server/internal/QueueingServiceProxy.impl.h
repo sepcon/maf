@@ -5,6 +5,7 @@
 #   include <maf/messaging/client-server/QueueingServiceProxy.h>
 #endif
 
+#include <maf/messaging/client-server/MessageTraitBase.h>
 #include <maf/messaging/client-server/ServiceStatusMsg.h>
 #include <maf/messaging/client-server/ClientFactory.h>
 #include <maf/messaging/BasicMessages.h>
@@ -18,19 +19,19 @@
         )
 #endif
 
-#ifndef mc_maf_assert_request_type
-#define mc_maf_assert_request_type(RequestClass)        \
+#ifndef mc_maf_assert_request_input_type
+#define mc_maf_assert_request_input_type(RequestClass)        \
     static_assert (                                     \
-        std::is_base_of_v<cs_request, RequestClass>,    \
-        #RequestClass " must be a cs_request object"    \
+        std::is_base_of_v<cs_input, RequestClass>,    \
+        #RequestClass " must be a cs_input object"    \
         )
 #endif
 
-#ifndef mc_maf_assert_result_type
-#define mc_maf_assert_result_type(ResultClass)          \
+#ifndef mc_maf_assert_request_output_type
+#define mc_maf_assert_request_output_type(ResultClass)          \
     static_assert (                                     \
-        std::is_base_of_v<cs_result, ResultClass>,      \
-        #ResultClass " must be a cs_result object"      \
+        std::is_base_of_v<cs_output, ResultClass>,      \
+        #ResultClass " must be a cs_output object"      \
         )
 #endif
 
@@ -60,7 +61,12 @@ QueueingServiceProxy<MessageTrait>::createProxy(
     }
     else
     {
-        Logger::fatal("Failed to get Client with connection type ", contype, " and address ", addr.dump(-1));
+        Logger::fatal(
+            "Failed to get Client with connection type: ",
+            contype,
+            " and address: ",
+            addr.dump(-1)
+            );
     }
     return {};
 }
@@ -92,7 +98,10 @@ void QueueingServiceProxy<MessageTrait>::setMainComponent(ComponentRef compref)
 
 template<class MessageTrait>
 void
-QueueingServiceProxy<MessageTrait>::onServerStatusChanged(Availability oldStatus, Availability newStatus)
+QueueingServiceProxy<MessageTrait>::onServerStatusChanged(
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
     if(newStatus != Availability::Available)
     { // Notify observers that service is not available as well
@@ -152,9 +161,12 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(
                 ] (const CSMsgContentBasePtr& msgContent) {
             try
             {
-                auto operationID = MessageTrait::template getOperationID<IncomingMsgContent>();
-                auto consumable = MessageTrait::template decode<IncomingMsgContent>(msgContent);
-                if(consumable)
+                MessageTraitBase::EncodeDecodeStatus decodeStatus;
+                auto operationID = MessageTrait::template
+                    getOperationID<IncomingMsgContent>();
+                auto consumable = MessageTrait::template
+                    decode<IncomingMsgContent>(msgContent, &decodeStatus);
+                if(decodeStatus != MessageTraitBase::MalformInput)
                 {
                     if(auto component = compref.lock())
                     {
@@ -192,27 +204,31 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(
         };
         return ipcMessageHandlerCB;
     }
-    else
-    {
-        if(!Component::getActiveWeakPtr().lock())
-        {
-            Logger::error("Trying to create callback with no running component");
-        }
-    }
-    return nullptr;
+
+    return {}; //don't care about result
 }
 
-template<class MessageTrait> template<class Status>
+template<class MessageTrait> template<class property_status>
 RegID QueueingServiceProxy<MessageTrait>::registerStatus(
-        PayloadProcessCallback<Status> callback
+        PayloadProcessCallback<property_status> callback
         )
 {
-    mc_maf_assert_status_type(Status);
-
-    return _requester->registerStatus(
-                MessageTrait::template getOperationID<Status>(),
-                createMsgHandlerAsyncCallback(std::move(callback))
-                );
+    mc_maf_assert_status_type(property_status);
+    auto propertyID = MessageTrait::template getOperationID<property_status>();
+    if(callback)
+    {
+        return _requester->registerStatus(
+            propertyID,
+            createMsgHandlerAsyncCallback(std::move(callback))
+            );
+    }
+    else
+    {
+        Logger::error("Registering status id[, ",
+                      propertyID,
+                      "] failed, Please provide non-empty callback");
+    }
+    return {};
 }
 
 template<class MessageTrait>
@@ -227,34 +243,34 @@ void QueueingServiceProxy<MessageTrait>::unregisterStatusAll(OpID propertyID)
     _requester->unregisterStatusAll(propertyID);
 }
 
-template<class MessageTrait> template<class Status>
+template<class MessageTrait> template<class property_status>
 RegID QueueingServiceProxy<MessageTrait>::getStatusAsync(
         CSMessageContentHandlerCallback callback
         )
 {
-    mc_maf_assert_status_type(Status);
+    mc_maf_assert_status_type(property_status);
 
     return _requester->getStatusAsync(
-                MessageTrait::template getOperationID<Status>(),
+                MessageTrait::template getOperationID<property_status>(),
                 createMsgHandlerAsyncCallback(std::move(callback))
                 );
 }
 
-template<class MessageTrait> template<class Status>
-std::shared_ptr<Status> QueueingServiceProxy<MessageTrait>::getStatus(
+template<class MessageTrait> template<class property_status>
+std::shared_ptr<property_status> QueueingServiceProxy<MessageTrait>::getStatus(
         unsigned long maxWaitTimeMs
         )
 {
-    mc_maf_assert_status_type(Status);
+    mc_maf_assert_status_type(property_status);
 
-    auto propertyID = MessageTrait::template getOperationID<Status>();
+    auto propertyID = MessageTrait::template getOperationID<property_status>();
     if(auto msgContent = _requester->getStatus(
                 propertyID,
                 maxWaitTimeMs
                 )
             )
     {
-        return MessageTrait::template decode<Status>(msgContent);
+        return MessageTrait::template decode<property_status>(msgContent);
     }
     else
     {
@@ -263,67 +279,77 @@ std::shared_ptr<Status> QueueingServiceProxy<MessageTrait>::getStatus(
 }
 
 template<class MessageTrait>
-template<class action_result,
-         std::enable_if_t<std::is_base_of_v<cs_result, action_result>, bool>
+template<class request_output,
+         std::enable_if_t<std::is_base_of_v<cs_output, request_output>, bool>
          >
-RegID QueueingServiceProxy<MessageTrait>::requestActionAsync(
-    const std::shared_ptr<cs_request> &requestInput,
-    PayloadProcessCallback<action_result> callback
+RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
+    const std::shared_ptr<cs_input> &requestInput,
+    PayloadProcessCallback<request_output> callback
     )
 {
-    mc_maf_assert_result_type(action_result);
+    mc_maf_assert_request_output_type(request_output);
 
-    return _requester->requestActionAsync(
-        MessageTrait::template getOperationID<action_result>(),
-        MessageTrait::template encode<cs_request>(requestInput),
+    return _requester->sendRequestAsync(
+        MessageTrait::template getOperationID<request_output>(),
+        MessageTrait::template encode<cs_input>(requestInput),
         createMsgHandlerAsyncCallback(callback)
         );
 }
 
 template<class MessageTrait>
-template<class action_result,
-         std::enable_if_t<std::is_base_of_v<cs_result, action_result>, bool>
+template<class request_output,
+         std::enable_if_t<std::is_base_of_v<cs_output, request_output>, bool>
          >
-RegID QueueingServiceProxy<MessageTrait>::requestActionAsync(
-        PayloadProcessCallback<action_result> callback
+RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
+        PayloadProcessCallback<request_output> callback
         )
 {
-    mc_maf_assert_result_type(action_result);
-    return _requester->requestActionAsync(
-        MessageTrait::template getOperationID<action_result>(),
+    mc_maf_assert_request_output_type(request_output);
+    return _requester->sendRequestAsync(
+        MessageTrait::template getOperationID<request_output>(),
         {},
         createMsgHandlerAsyncCallback(std::move(callback))
         );
 }
 
 template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_request, request_input)
-RegID QueueingServiceProxy<MessageTrait>::requestActionAsync(
+mc_maf_tpl_enable_if_is_base_of(cs_input, request_input)
+RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
         const std::shared_ptr<request_input> &requestInput
         )
 {
-    return _requester->requestActionAsync(
+    return _requester->sendRequestAsync(
         MessageTrait::template getOperationID<request_input>(),
         MessageTrait::template encode(requestInput),
         {});
 }
 
 template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_result, action_result)
-std::shared_ptr<action_result> QueueingServiceProxy<MessageTrait>::requestAction(
-    const std::shared_ptr<cs_request> &requestInput,
+mc_maf_tpl_enable_if_is_base_of(cs_request, request_class)
+RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync()
+{
+    return _requester->sendRequestAsync(
+        MessageTrait::template getOperationID<request_class>(),
+        {},
+        {});
+}
+
+template<class MessageTrait>
+mc_maf_tpl_enable_if_is_base_of(cs_output, request_output)
+std::shared_ptr<request_output> QueueingServiceProxy<MessageTrait>::sendRequest(
+    const std::shared_ptr<cs_input> &requestInput,
     unsigned long maxWaitTimeMs
     )
 {
-    mc_maf_assert_result_type(action_result);
-    if(auto msgContent = _requester->requestAction(
-            MessageTrait::template getOperationID<action_result>(),
-            MessageTrait::template encode<cs_request>(requestInput),
+    mc_maf_assert_request_output_type(request_output);
+    if(auto msgContent = _requester->sendRequest(
+            MessageTrait::template getOperationID<request_output>(),
+            MessageTrait::template encode<cs_input>(requestInput),
             maxWaitTimeMs
             )
         )
     {
-        return MessageTrait::template decode<action_result>(msgContent);
+        return MessageTrait::template decode<request_output>(msgContent);
     }
     else
     {
@@ -332,21 +358,21 @@ std::shared_ptr<action_result> QueueingServiceProxy<MessageTrait>::requestAction
 }
 
 template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_result, action_result)
-std::shared_ptr<action_result>
-QueueingServiceProxy<MessageTrait>::requestAction(unsigned long maxWaitTimeMs)
+mc_maf_tpl_enable_if_is_base_of(cs_output, request_output)
+std::shared_ptr<request_output>
+QueueingServiceProxy<MessageTrait>::sendRequest(unsigned long maxWaitTimeMs)
 {
-    mc_maf_assert_result_type(action_result);
+    mc_maf_assert_request_output_type(request_output);
 
-    auto actionID = MessageTrait::template getOperationID<action_result>();
-    if(auto msgContent = _requester->requestAction(
+    auto actionID = MessageTrait::template getOperationID<request_output>();
+    if(auto msgContent = _requester->sendRequest(
                 actionID,
                 {},
                 maxWaitTimeMs
                 )
             )
     {
-        return MessageTrait::template decode<action_result>( msgContent );
+        return MessageTrait::template decode<request_output>( msgContent );
     }
     else
     {
@@ -355,20 +381,35 @@ QueueingServiceProxy<MessageTrait>::requestAction(unsigned long maxWaitTimeMs)
 }
 
 template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_request, request_input)
-void QueueingServiceProxy<MessageTrait>::requestAction(
+mc_maf_tpl_enable_if_is_base_of(cs_input, request_input)
+void QueueingServiceProxy<MessageTrait>::sendRequest(
         const std::shared_ptr<request_input>& input,
         unsigned long maxWaitTimeMs)
 {
+    mc_maf_assert_request_input_type(request_input);
 
     auto actionID = MessageTrait::template getOperationID<request_input>();
-    _requester->requestAction(
+    _requester->sendRequest(
                     actionID,
                     input,
                     maxWaitTimeMs
                     );
 }
 
+template<class MessageTrait>
+mc_maf_tpl_enable_if_is_base_of(cs_request, request_class)
+    void QueueingServiceProxy<MessageTrait>::sendRequest(
+        unsigned long maxWaitTimeMs
+        )
+{
+
+    auto actionID = MessageTrait::template getOperationID<request_class>();
+    _requester->sendRequest(
+        actionID,
+        {},
+        maxWaitTimeMs
+        );
+}
 
 }
 }

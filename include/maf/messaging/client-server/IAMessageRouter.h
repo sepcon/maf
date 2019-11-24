@@ -1,16 +1,16 @@
 #pragma once
 
-#include "ClientInterface.h"
-#include "ServerInterface.h"
-#include <maf/patterns/Patterns.h>
-#include "DefaultMessageTrait.h"
 #include "ClientBase.h"
 #include "ServerBase.h"
+#include <maf/patterns/Patterns.h>
 
 namespace maf {
 namespace messaging {
 
 
+// TODO: Multiple inheritance here makes enable_shared_from_this object will not
+// be available from both ClientBase and ServerBase. Just one of them has object
+// weak_ptr ref available, then might cause the problem later
 class IAMessageRouter :
     public ClientBase,
     public ServerBase,

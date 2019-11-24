@@ -38,9 +38,9 @@ RegID ServiceRequester::getStatusAsync(OpID propertyID, CSMessageContentHandlerC
 }
 
 
-RegID ServiceRequester::requestActionAsync(OpID opID, const CSMsgContentBasePtr &msgContent, CSMessageContentHandlerCallback callback)
+RegID ServiceRequester::sendRequestAsync(OpID opID, const CSMsgContentBasePtr &msgContent, CSMessageContentHandlerCallback callback)
 {
-    return _pImpl->requestActionAsync(opID, msgContent, std::move(callback));
+    return _pImpl->sendRequestAsync(opID, msgContent, std::move(callback));
 }
 
 CSMsgContentBasePtr ServiceRequester::getStatus(OpID propertyID, unsigned long maxWaitTimeMs)
@@ -49,9 +49,9 @@ CSMsgContentBasePtr ServiceRequester::getStatus(OpID propertyID, unsigned long m
 }
 
 
-CSMsgContentBasePtr ServiceRequester::requestAction(OpID opID, const CSMsgContentBasePtr &msgContent, unsigned long maxWaitTimeMs)
+CSMsgContentBasePtr ServiceRequester::sendRequest(OpID opID, const CSMsgContentBasePtr &msgContent, unsigned long maxWaitTimeMs)
 {
-    return _pImpl->requestAction(opID, msgContent, maxWaitTimeMs);
+    return _pImpl->sendRequest(opID, msgContent, maxWaitTimeMs);
 }
 
 void ServiceRequester::abortAction(const RegID &regID)

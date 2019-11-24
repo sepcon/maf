@@ -1,6 +1,8 @@
 #include <maf/messaging/client-server/ServerBase.h>
-#include <maf/messaging/client-server/ServiceProviderInterface.h>
+#include <maf/messaging/client-server/ServiceProvider.h>
+#include <maf/utils/containers/Map.h>
 #include <maf/logging/Logger.h>
+
 
 namespace maf { using logging::Logger;
 namespace messaging {
@@ -63,32 +65,15 @@ bool ServerBase::hasServiceProvider(ServiceID sid)
 
 bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
 {
-    std::lock_guard lock(_providers);
-    if(auto itProvider = _providers->find(csMsg->serviceID());
-            itProvider != _providers->end()
-            )
+    std::unique_lock lock(_providers);
+    if(auto provider = util::get(*_providers, csMsg->serviceID()))
     {
-        itProvider->second->onIncomingMessage(csMsg);
-        return true;
+        lock.unlock();
+        return provider->onIncomingMessage(csMsg);
     }
     else
     {
         return false;
-    }
-}
-
-ServiceProviderInterfacePtr ServerBase::getServiceProvider(ServiceID sid)
-{
-    std::lock_guard lock(_providers);
-    if(auto itProvider = _providers->find(sid);
-            itProvider != _providers->end()
-            )
-    {
-        return itProvider->second;
-    }
-    else
-    {
-        return {};
     }
 }
 

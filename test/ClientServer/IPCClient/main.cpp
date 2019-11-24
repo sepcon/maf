@@ -13,7 +13,7 @@ using namespace maf;
 
 static const auto serverAddress = Address{ SERVER_ADDRESS, WEATHER_SERVER_PORT };
 
-using namespace weather_contract;
+using namespace weather_service;
 
 class ClientCompTest : public ExtensibleComponent
 {
@@ -30,6 +30,7 @@ public:
         _timer.setCyclic(true);
         _proxy->setMainComponent(component());
 
+        auto output = _proxy->sendRequest<today_weather::output>(today_weather::make_input(), 1000);
         onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available) {
                 maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
@@ -39,13 +40,14 @@ public:
 
                 _timer.start(1000, [this]{
                     static int totalRequest = 0;
-                    _proxy->requestActionAsync<weather_contract::today_weather::result>(
-                        weather_contract::today_weather::make_request("this is ipc client ", ++totalRequest),
-                        [this](const weather_contract::today_weather::result_ptr& result) {
-                            Logger::debug("Server resonds: ", result->dump());
-                            if(result->your_command() >= 5) {
+
+                    _proxy->sendRequestAsync<today_weather::output>(
+                        today_weather::make_input("this is ipc client ", ++totalRequest),
+                        [this](const today_weather::output_ptr& output) {
+                            Logger::debug("Server resonds: ", output->dump());
+                            if(output->your_command() >= 5) {
                                 getStatuses();
-                                this->sendSyncRequest<weather_contract::today_weather>();
+                                this->sendSyncRequest<today_weather>();
                                 tryStopServer();
                                 this->stop();
                             }
@@ -64,19 +66,29 @@ public:
     template <typename Category>
     void sendSyncRequest()
     {
-        for(int i = 0; i < 50; ++i)
+        long long total = 0;
+        const int totalRequests = 5000;
+        for(int i = 0; i < totalRequests; ++i)
         {
-            util::TimeMeasurement tm{[](util::TimeMeasurement::MicroSeconds elapsed) {
-                Logger::debug("Totol time for request sync = ", elapsed.count(), " microseconds");
-            }};
-
-            if(auto result = _proxy->requestAction<struct Category::result>(Category::make_request(), 500))
-                Logger::debug("Receive result from server for sync request = ", result->dump());
-            else
             {
-                Logger::debug("Action result from server is failed");
+                util::TimeMeasurement tm{[&total](util::TimeMeasurement::MicroSeconds elapsed) {
+                    total += elapsed.count();
+                    Logger::debug("Totol time for request sync = ", elapsed.count(), " microseconds");
+                }};
+                _proxy->sendRequest<struct Category::output>(Category::make_input(), 500);
+
+                if(auto output = _proxy->sendRequest<struct Category::output>(Category::make_input(), 500))
+                    Logger::debug("Receive output from server for sync request = ", output->dump());
+                else
+                {
+                    Logger::debug("Action output from server is failed");
+                }
             }
         }
+        auto avarageTimePerRequest = (double)total / totalRequests;
+        Logger::debug("Avarage time to send a request is: ",
+                      avarageTimePerRequest,
+                      " microseconds");
     }
 
     void registerStatus()
@@ -84,26 +96,27 @@ public:
         auto dumpCallback = [](const auto& status) {
             Logger::debug(status->dump());
         };
-        _proxy->registerStatus<weather_contract::compliance::status>(dumpCallback);
-        _proxy->registerStatus<weather_contract::compliance5::status>(dumpCallback);
-        _proxy->registerStatus<weather_contract::compliance1::status>(dumpCallback);
+
+        _proxy->registerStatus<compliance::status>(dumpCallback);
+        _proxy->registerStatus<compliance5::status>(dumpCallback);
+        _proxy->registerStatus<compliance1::status>(dumpCallback);
     }
 
     void getStatuses()
     {
-        getStatus<weather_contract::compliance::status>();
-        getStatus<weather_contract::compliance5::status>();
-        getStatus<weather_contract::compliance1::status>();
+        getStatus<compliance::status>();
+        getStatus<compliance5::status>();
+        getStatus<compliance1::status>();
     }
 
     void tryStopServer()
     {
-        using namespace weather_contract;
+        using namespace weather_service;
         auto lastBootTime = _proxy->getStatus<boot_time::status>();
         Logger::debug("server life is ", lastBootTime->seconds());
         if (lastBootTime->seconds() > 10)
         {
-            _proxy->requestAction<shutdown::request>({});
+            _proxy->sendRequest<shutdown>();
             Logger::debug("Server already shutdown!");
         }
     }
