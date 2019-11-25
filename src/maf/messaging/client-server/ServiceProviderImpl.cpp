@@ -27,6 +27,9 @@ bool ServiceProviderImpl::onIncomingMessage(const CSMessagePtr &msg)
     case OpCode::Register:
         onStatusChangeRegister(msg);
         break;
+    case OpCode::RegisterSignal:
+        saveRegisterInfo(msg);
+        break;
     case OpCode::UnRegister:
         onStatusChangeUnregister(msg);
         break;
@@ -79,95 +82,109 @@ ActionCallStatus ServiceProviderImpl::respondToRequest(const CSMessagePtr& csMsg
     }
 }
 
-ActionCallStatus ServiceProviderImpl::setStatus(OpID propertyID, const CSMsgContentBasePtr &property)
+ActionCallStatus ServiceProviderImpl::setStatus(
+    const OpID&  propertyID,
+    const CSMsgContentBasePtr& property
+    )
 {
-    if(property)
+    _propertyMap.atomic()->insert_or_assign(
+        propertyID,
+        property
+        );
+
+    return broadcast(propertyID, OpCode::Register, property);
+}
+
+ActionCallStatus ServiceProviderImpl::broadcastSignal(
+    const OpID& signalID,
+    const CSMsgContentBasePtr& signal
+    )
+{
+    return broadcast(signalID, OpCode::RegisterSignal, signal);
+}
+
+ActionCallStatus ServiceProviderImpl::broadcast(
+    const OpID&  propertyID,
+    OpCode opCode,
+    const CSMsgContentBasePtr& content
+    )
+{
+
+    using AddressList = std::vector<Address>;
+    bool success = false;
+    AddressList addresses;
+
+    { // locking _regEntriesMap block
+        std::lock_guard lock(_regEntriesMap);
+        for(const auto& [clientAddress, registeredPropertyIDs] : *_regEntriesMap)
+        {
+            if(registeredPropertyIDs.find(propertyID) != registeredPropertyIDs.end())
+            {
+                addresses.push_back(clientAddress);
+            }
+        }
+    } // locking _regEntriesMap block
+
+    if(addresses.empty())
     {
-        using AddressList = std::vector<Address>;
-        bool success = false;
-        AddressList addresses;
-
-        _propertyMap.atomic()->insert_or_assign(
-            propertyID,
-            property
-            );
-
-        { // locking _regEntriesMap block
-            std::lock_guard lock(_regEntriesMap);
-            for(const auto& [clientAddress, registeredPropertyIDs] : *_regEntriesMap)
-            {
-                if(registeredPropertyIDs.find(propertyID) != registeredPropertyIDs.end())
-                {
-                    addresses.push_back(clientAddress);
-                }
-            }
-        } // locking _regEntriesMap block
-
-        if(addresses.empty())
-        {
-            Logger::warn("There's no register for property: " ,  propertyID);
-        }
-        else
-        {
-            auto csMsg = createCSMessage(
-                _delegator->serviceID(),
-                propertyID,
-                OpCode::Register,
-                RequestIDInvalid,
-                property
-                );
-
-            auto trySendToDestinations =
-                [this, &csMsg](AddressList& addresses) -> AddressList {
-                AddressList busyReceivers;
-                for(const auto& addr : addresses)
-                {
-                    auto errCode = sendMessage(csMsg, addr);
-                    if(errCode == ActionCallStatus::Success)
-                    {
-                        //Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
-                    }
-                    else if(errCode == ActionCallStatus::ReceiverBusy)
-                    {
-                        busyReceivers.emplace_back(std::move(addr));
-                    }
-                    else
-                    {
-                        this->removeRegistersOfAddress(addr);
-                        Logger::warn("Failed to send message id [" ,
-                                     csMsg->operationID() ,
-                                     "] to client " ,
-                                     addr.dump()
-                                     );
-                    }
-                }
-                return busyReceivers;
-            };
-
-            auto busyReceivers = trySendToDestinations(addresses);
-            if(!busyReceivers.empty())
-            {
-                //If someones are busy, try with them once
-                Logger::warn("Trying to send message to busy addresses once again!");
-                busyReceivers = trySendToDestinations(busyReceivers);
-            }
-
-            //success when succeeded to send msg to at least one receiver
-            success = (busyReceivers.size() != addresses.size());
-
-        }
-        return success ?
-                       ActionCallStatus::ReceiverUnavailable
-                       :
-                       ActionCallStatus::Success;
+        Logger::warn("There's no register for property: " ,  propertyID);
     }
     else
     {
-        return ActionCallStatus::InvalidParam;
+        auto csMsg = createCSMessage(
+            _delegator->serviceID(),
+            propertyID,
+            opCode,
+            RequestIDInvalid,
+            content
+            );
+
+        auto trySendToDestinations =
+            [this, &csMsg](AddressList& addresses) -> AddressList {
+            AddressList busyReceivers;
+            for(const auto& addr : addresses)
+            {
+                auto errCode = sendMessage(csMsg, addr);
+                if(errCode == ActionCallStatus::Success)
+                {
+                    //Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
+                }
+                else if(errCode == ActionCallStatus::ReceiverBusy)
+                {
+                    busyReceivers.emplace_back(std::move(addr));
+                }
+                else
+                {
+                    this->removeRegistersOfAddress(addr);
+                    Logger::warn("Failed to send message id [" ,
+                                 csMsg->operationID() ,
+                                 "] to client " ,
+                                 addr.dump()
+                                 );
+                }
+            }
+            return busyReceivers;
+        };
+
+        auto busyReceivers = trySendToDestinations(addresses);
+        if(!busyReceivers.empty())
+        {
+            //If someones are busy, try with them once
+            Logger::warn("Trying to send message to busy addresses once again!");
+            busyReceivers = trySendToDestinations(busyReceivers);
+        }
+
+        //success when succeeded to send msg to at least one receiver
+        success = (busyReceivers.size() != addresses.size());
+
     }
+    return success ?
+                   ActionCallStatus::ReceiverUnavailable
+                   :
+                ActionCallStatus::Success;
 }
 
-CSMsgContentBasePtr ServiceProviderImpl::getStatus(OpID propertyID)
+CSMsgContentBasePtr ServiceProviderImpl::getStatus(const OpID&  propertyID)
 {
     std::lock_guard lock(_propertyMap);
     if(auto itStatus = _propertyMap->find(propertyID);
@@ -216,20 +233,10 @@ ActionCallStatus ServiceProviderImpl::sendBackMessageToClient(const CSMessagePtr
 
 void ServiceProviderImpl::onStatusChangeRegister(const CSMessagePtr &msg)
 {
-    if(msg)
-    {
-        if(msg->sourceAddress() != Address::INVALID_ADDRESS) //TBD: Use MessageValidator???
-        {
-            // Do this for notifying status when changed
-            saveRegisterInfo(msg);
-            // Do this for server to update latest status for new registered client
-            updateLatestStatus(msg);
-        }
-        else
-        {
-            Logger::error("The client side did not provide address " ,  msg->sourceAddress().dump());
-        }
-    }
+    // Do this for notifying status when changed
+    saveRegisterInfo(msg);
+    // Do this for server to update latest status for new registered client
+    updateLatestStatus(msg);
 }
 
 void ServiceProviderImpl::onStatusChangeUnregister(const CSMessagePtr &msg)
@@ -344,7 +351,7 @@ void ServiceProviderImpl::onClientGoesOff(const CSMessagePtr &msg)
 }
 
 bool ServiceProviderImpl::registerRequestHandler(
-    OpID opID,
+    const OpID&  opID,
     RequestHandlerFunction handlerFunction
     )
 {
@@ -363,7 +370,7 @@ bool ServiceProviderImpl::registerRequestHandler(
     return false;
 }
 
-bool ServiceProviderImpl::unregisterRequestHandler(OpID opID)
+bool ServiceProviderImpl::unregisterRequestHandler(const OpID&  opID)
 {
     return _requestHandlerMap.atomic()->erase(opID) != 0;
 }

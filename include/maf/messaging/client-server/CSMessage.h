@@ -17,8 +17,7 @@ class CSMessage
 {
 public:
     CSMessage() = default;
-    CSMessage(
-        ServiceID tid,
+    CSMessage(ServiceID sid,
         OpID opID,
         OpCode opCode,
         RequestID reqID = RequestIDInvalid,
@@ -32,10 +31,10 @@ public:
 
     virtual ~CSMessage();
 
-    ServiceID serviceID() const;
+    const ServiceID& serviceID() const;
     void setServiceID(ServiceID serviceID);
 
-    OpID operationID() const;
+    const OpID& operationID() const;
     void setOperationID(OpID operationID);
 
     OpCode operationCode() const;

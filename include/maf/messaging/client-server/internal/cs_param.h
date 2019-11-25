@@ -13,7 +13,8 @@ struct cs_property          : public cs_param {};
 struct cs_input             : public cs_param {};
 struct cs_output            : public cs_param {};
 struct cs_status            : public cs_param {};
-
+struct cs_signal            : public cs_param {};
+struct cs_attributes        : public cs_param {};
 
 template<class cs_param_type>
 struct serializable_cs_param_base : public cs_param_type

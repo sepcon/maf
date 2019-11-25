@@ -59,36 +59,41 @@ struct ServiceRequesterImpl
     std::atomic_bool                 _stopFlag;
 
 
-    ServiceRequesterImpl(ServiceID sid, std::weak_ptr<ClientInterface> client);
+    ServiceRequesterImpl(const ServiceID& sid, std::weak_ptr<ClientInterface> client);
     ~ServiceRequesterImpl();
 
     Availability serviceStatus() const;
 
     RegID registerStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         CSMessageContentHandlerCallback callback
         );
+
+    RegID registerSignal(const OpID& eventID,
+        CSMessageContentHandlerCallback callback
+        );
+
     void unregisterStatus(const RegID& regID);
-    void unregisterStatusAll(OpID propertyID);
+    void unregisterStatusAll(const OpID& propertyID);
 
     RegID getStatusAsync(
-        OpID propertyID,
+        const OpID& propertyID,
         CSMessageContentHandlerCallback callback
         );
 
     RegID sendRequestAsync(
-        OpID opID,
+        const OpID& opID,
         const CSMsgContentBasePtr& msgContent,
         CSMessageContentHandlerCallback callback
         );
 
     CSMsgContentBasePtr getStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         unsigned long maxWaitTimeMs
         );
 
     CSMsgContentBasePtr sendRequest(
-        OpID opID,
+        const OpID& opID,
         const CSMsgContentBasePtr& msgContent = {},
         unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
         );
@@ -110,7 +115,7 @@ struct ServiceRequesterImpl
         Availability newStatus
         );
     void onServiceStatusChanged(
-        ServiceID sid,
+        const ServiceID& sid,
         Availability oldStatus,
         Availability newStatus
         );
@@ -119,29 +124,34 @@ struct ServiceRequesterImpl
         Availability newStatus
         );
     void forwardServiceStatusToObservers(
-        ServiceID sid,
+        const ServiceID& sid,
         Availability oldStatus,
         Availability newStatus
         );
 
+    RegID registerNotification(
+        const OpID& opID,
+        OpCode opCode,
+        CSMessageContentHandlerCallback callback
+        );
 
     //Helper functions
     RegID sendMessageAsync(
-        OpID operationID,
+        const OpID& operationID,
         OpCode operationCode,
         const CSMsgContentBasePtr& msgContent = {},
         CSMessageContentHandlerCallback callback = {}
         );
 
     CSMsgContentBasePtr sendMessageSync(
-        OpID operationID,
+        const OpID& operationID,
         OpCode opCode,
         const CSMsgContentBasePtr& msgContent = {},
         unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
         );
 
     CSMessagePtr createCSMessage(
-        OpID opID,
+        const OpID& opID,
         OpCode opCode,
         const CSMsgContentBasePtr& msgContent = nullptr
         );
@@ -160,7 +170,7 @@ struct ServiceRequesterImpl
 
     size_t storeRegEntry(
         RegEntriesMap& regInfoEntries,
-        OpID propertyID,
+        const OpID& propertyID,
         CSMessageContentHandlerCallback callback,
         RegID &regID
         );
@@ -174,9 +184,9 @@ struct ServiceRequesterImpl
         const std::shared_ptr<std::promise<CSMsgContentBasePtr>>& promise
         );
 
-    CSMsgContentBasePtr getCachedProperty(OpID propertyID) const;
-    void cachePropertyStatus(OpID propertyID, CSMsgContentBasePtr property);
-    void removeCachedProperty(OpID propertyID);
+    CSMsgContentBasePtr getCachedProperty(const OpID& propertyID) const;
+    void cachePropertyStatus(const OpID& propertyID, CSMsgContentBasePtr property);
+    void removeCachedProperty(const OpID& propertyID);
 };
 
 }// messaging

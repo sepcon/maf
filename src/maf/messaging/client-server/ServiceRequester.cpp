@@ -4,7 +4,7 @@
 namespace maf {
 namespace messaging {
 
-ServiceRequester::ServiceRequester(ServiceID sid, std::weak_ptr<ClientInterface> client):
+ServiceRequester::ServiceRequester(const ServiceID& sid, std::weak_ptr<ClientInterface> client):
       _pImpl {std::make_unique<ServiceRequesterImpl>(sid, std::move(client)) }
 {
     setServiceID(sid);
@@ -17,9 +17,14 @@ Availability ServiceRequester::serviceStatus() const
     return _pImpl->serviceStatus();
 }
 
-RegID ServiceRequester::registerStatus(OpID propertyID, CSMessageContentHandlerCallback callback)
+RegID ServiceRequester::registerStatus(const OpID& propertyID, CSMessageContentHandlerCallback callback)
 {
     return _pImpl->registerStatus(propertyID, std::move(callback));
+}
+
+RegID ServiceRequester::registerSignal(const OpID& propertyID, CSMessageContentHandlerCallback callback)
+{
+    return _pImpl->registerSignal(propertyID, std::move(callback));
 }
 
 void ServiceRequester::unregisterStatus(const RegID& regID)
@@ -27,29 +32,29 @@ void ServiceRequester::unregisterStatus(const RegID& regID)
     _pImpl->unregisterStatus(regID);
 }
 
-void ServiceRequester::unregisterStatusAll(OpID propertyID)
+void ServiceRequester::unregisterStatusAll(const OpID& propertyID)
 {
     _pImpl->unregisterStatusAll(propertyID);
 }
 
-RegID ServiceRequester::getStatusAsync(OpID propertyID, CSMessageContentHandlerCallback callback)
+RegID ServiceRequester::getStatusAsync(const OpID& propertyID, CSMessageContentHandlerCallback callback)
 {
     return _pImpl->getStatusAsync(propertyID, std::move(callback));
 }
 
 
-RegID ServiceRequester::sendRequestAsync(OpID opID, const CSMsgContentBasePtr &msgContent, CSMessageContentHandlerCallback callback)
+RegID ServiceRequester::sendRequestAsync(const OpID& opID, const CSMsgContentBasePtr &msgContent, CSMessageContentHandlerCallback callback)
 {
     return _pImpl->sendRequestAsync(opID, msgContent, std::move(callback));
 }
 
-CSMsgContentBasePtr ServiceRequester::getStatus(OpID propertyID, unsigned long maxWaitTimeMs)
+CSMsgContentBasePtr ServiceRequester::getStatus(const OpID& propertyID, unsigned long maxWaitTimeMs)
 {
     return _pImpl->getStatus(propertyID, maxWaitTimeMs);
 }
 
 
-CSMsgContentBasePtr ServiceRequester::sendRequest(OpID opID, const CSMsgContentBasePtr &msgContent, unsigned long maxWaitTimeMs)
+CSMsgContentBasePtr ServiceRequester::sendRequest(const OpID& opID, const CSMsgContentBasePtr &msgContent, unsigned long maxWaitTimeMs)
 {
     return _pImpl->sendRequest(opID, msgContent, maxWaitTimeMs);
 }
@@ -79,7 +84,7 @@ void ServiceRequester::onServerStatusChanged(Availability oldStatus, Availabilit
     _pImpl->onServerStatusChanged(oldStatus, newStatus);
 }
 
-void ServiceRequester::onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus)
+void ServiceRequester::onServiceStatusChanged(const ServiceID& sid, Availability oldStatus, Availability newStatus)
 {
     _pImpl->onServiceStatusChanged(sid, oldStatus, newStatus);
 }

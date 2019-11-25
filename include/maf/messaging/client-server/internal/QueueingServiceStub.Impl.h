@@ -26,7 +26,7 @@ typename QueueingServiceStub<MessageTrait>::StubPtr
 QueueingServiceStub<MessageTrait>::createStub(
     const ConnectionType &contype,
     const Address &addr,
-    ServiceID sid
+    const ServiceID& sid
     )
 {
     if(auto server = ServerFactory::instance().getServer(contype, addr))
@@ -85,6 +85,77 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::setStatus(Args&&... args)
 
     return setStatus(
         std::make_shared<property_status>(std::forward<Args>(args)...)
+        );
+}
+
+
+template <class MessageTrait>
+template<class property_status>
+std::shared_ptr<const property_status> QueueingServiceStub<MessageTrait>::getStatus()
+{
+    static_assert(
+        std::is_base_of_v<cs_status, property_status>,
+        "status must be type of cs_status"
+        );
+
+    if(auto baseStatus = _provider->getStatus(
+            MessageTrait::template getOperationID<property_status>()
+            )
+        )
+    {
+        return MessageTrait::template decode<const property_status>(baseStatus);
+    }
+    else
+    {
+        return {};
+    }
+}
+
+template <class MessageTrait>
+template<class signal_attributes>
+ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
+    const std::shared_ptr<signal_attributes>& attr
+    )
+{
+    static_assert(
+        std::is_base_of_v<cs_attributes, signal_attributes>,
+        "signal_attributes class must be type of cs_attributes"
+        );
+
+    return _provider->broadcastSignal(
+        MessageTrait::template getOperationID<signal_attributes>(),
+        MessageTrait::template encode<cs_attributes>(attr)
+        );
+}
+
+template <class MessageTrait>
+template<class signal_attributes, typename... Args>
+ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
+    Args&&... args
+    )
+{
+    static_assert(
+        std::is_base_of_v<cs_attributes, signal_attributes>,
+        "signal_attributes class must be type of cs_attributes"
+        );
+
+    return broadcastSignal(
+        std::make_shared<signal_attributes>(std::forward<Args>(args)...)
+        );
+}
+
+template <class MessageTrait>
+template<class signal_class>
+ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal()
+{
+    static_assert(
+        std::is_base_of_v<cs_signal, signal_class>,
+        "signal_class class must be type of cs_signal"
+        );
+
+    return _provider->broadcastSignal(
+        MessageTrait::template getOperationID<signal_class>(),
+        {}
         );
 }
 
@@ -178,7 +249,7 @@ bool QueueingServiceStub<MessageTrait>::registerRequestHandler(
 }
 
 template<class MessageTrait>
-bool QueueingServiceStub<MessageTrait>::unregisterRequestHandler(OpID opID)
+bool QueueingServiceStub<MessageTrait>::unregisterRequestHandler(const OpID& opID)
 {
     return _provider->unregisterRequestHandler(opID);
 }
@@ -209,29 +280,6 @@ template<class MessageTrait>
 void QueueingServiceStub<MessageTrait>::stopServing()
 {
     _provider->stopServing();
-}
-
-
-template <class MessageTrait>
-template<class property_status>
-std::shared_ptr<const property_status> QueueingServiceStub<MessageTrait>::getStatus()
-{
-    static_assert(
-        std::is_base_of_v<cs_status, property_status>,
-        "status must be type of cs_status"
-        );
-
-    if(auto baseStatus = _provider->getStatus(
-            MessageTrait::template getOperationID<property_status>()
-            )
-        )
-    {
-        return MessageTrait::template decode<const property_status>(baseStatus);
-    }
-    else
-    {
-        return {};
-    }
 }
 
 template<class MessageTrait>

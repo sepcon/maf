@@ -13,20 +13,19 @@ using namespace maf::messaging;
 template<class MessageTrait, int NClient = 4>
 void test(const ConnectionType& connectionType, const Address& addr)
 {
-    static constexpr ServiceID sid = 0;
-    using ClientComp = maf::test::ClientComponent<MessageTrait, sid>;
+    using ClientComp = maf::test::ClientComponent<MessageTrait>;
     using Proxy      = QueueingServiceProxy<MessageTrait>;
     std::shared_ptr<ClientComp> cls[NClient];
     int i = 0;
     for(auto& c : cls)
     {
-        auto proxy = Proxy::createProxy(connectionType, addr, sid);
+        auto proxy = Proxy::createProxy(connectionType, addr, "weather_service");
         c = std::make_shared<ClientComp>(proxy);
         c->setName("Client component " + std::to_string(i++));
         c->startTest();
     }
 
-    maf::test::ServerComponent<MessageTrait, 0> server;
+    maf::test::ServerComponent<MessageTrait> server;
     server.setName("Server Component ");
     server.startTest(connectionType, addr, false);
 

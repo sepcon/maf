@@ -10,7 +10,7 @@ namespace inapp {
 using ServiceStub               = QueueingServiceStub<DefaultMessageTrait>;
 using Request                   = QueuedRequest<DefaultMessageTrait>;
 
-static std::shared_ptr<ServiceStub> createStub(ServiceID sid)
+static std::shared_ptr<ServiceStub> createStub(const ServiceID& sid)
 {
     return ServiceStub::createStub("app_internal", {}, sid);
 }

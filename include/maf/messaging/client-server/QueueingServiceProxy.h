@@ -28,10 +28,10 @@ public:
     static std::shared_ptr<QueueingServiceProxy> createProxy(
             const ConnectionType& contype,
             const Address& addr,
-            ServiceID sid
+            const ServiceID& sid
             );
 
-    ServiceID serviceID() const;
+    const ServiceID& serviceID() const;
 
     template <class SpecificMsgContent> using PayloadProcessCallback
     = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
@@ -41,8 +41,14 @@ public:
             PayloadProcessCallback<property_status> callback
             );
 
+    template<class signal_attributes>
+    RegID registerSignal(PayloadProcessCallback<signal_attributes> callback);
+
+    template<class signal_class>
+    RegID registerSignal(std::function<void(void)> callback);
+
     void unregisterStatus(const RegID &regID);
-    void unregisterStatusAll(OpID propertyID);
+    void unregisterStatusAll(const OpID& propertyID);
 
     template<class property_status>
     RegID getStatusAsync(
@@ -112,7 +118,7 @@ protected:
             Availability newStatus
             ) override;
     void onServiceStatusChanged(
-            ServiceID sid,
+            const ServiceID& sid,
             Availability oldStatus,
             Availability newStatus
             ) override;

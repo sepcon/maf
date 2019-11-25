@@ -18,6 +18,7 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg)
     {
         switch (csMsg->operationCode()) {
         case OpCode::Register:
+        case OpCode::RegisterSignal:
             onPropChangeUpdate(csMsg);
             break;
         case OpCode::Request:
@@ -40,7 +41,7 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg)
 
 
 ServiceRequesterImpl::ServiceRequesterImpl(
-    ServiceID sid,
+    const ServiceID& sid,
     std::weak_ptr<ClientInterface> client
     ) : _client(std::move(client)), _sid(sid)
 {
@@ -52,7 +53,7 @@ ServiceRequesterImpl::~ServiceRequesterImpl()
 }
 
 RegID ServiceRequesterImpl::sendRequestAsync(
-    OpID opID,
+    const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
     CSMessageContentHandlerCallback callback
     )
@@ -125,7 +126,7 @@ void ServiceRequesterImpl::removeServiceStatusObserver(
 }
 
 CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
-    OpID opID,
+    const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
     unsigned long maxWaitTimeMs
     )
@@ -144,7 +145,7 @@ Availability ServiceRequesterImpl::serviceStatus() const
 }
 
 RegID ServiceRequesterImpl::sendMessageAsync(
-    OpID operationID,
+    const OpID& operationID,
     OpCode operationCode,
     const CSMsgContentBasePtr &msgContent,
     CSMessageContentHandlerCallback callback
@@ -163,7 +164,7 @@ RegID ServiceRequesterImpl::sendMessageAsync(
 }
 
 CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
-    OpID operationID,
+    const OpID& operationID,
     OpCode opCode,
     const CSMsgContentBasePtr &msgContent,
     unsigned long maxWaitTimeMs
@@ -247,7 +248,7 @@ void ServiceRequesterImpl::onServerStatusChanged(
 }
 
 void ServiceRequesterImpl::onServiceStatusChanged(
-    ServiceID sid,
+    const ServiceID& sid,
     Availability oldStatus,
     Availability newStatus
     )
@@ -282,7 +283,7 @@ void ServiceRequesterImpl::forwardServerStatusToObservers(
 }
 
 void ServiceRequesterImpl::forwardServiceStatusToObservers(
-    ServiceID sid,
+    const ServiceID& sid,
     Availability oldStatus,
     Availability newStatus
     )
@@ -304,8 +305,51 @@ void ServiceRequesterImpl::forwardServiceStatusToObservers(
     }
 }
 
+RegID ServiceRequesterImpl::registerNotification(
+    const OpID& opID,
+    OpCode opCode,
+    CSMessageContentHandlerCallback callback
+    )
+{
+    RegID regID;
+    if(callback && serviceStatus() == Availability::Available)
+    {
+        auto sameRegisterCount = storeRegEntry(
+            _registerEntriesMap,
+            opID,
+            callback,
+            regID
+            );
+        if(sameRegisterCount == 1)
+        {
+            auto registerMessage = createCSMessage(
+                opID,
+                opCode
+                );
+
+            registerMessage->setRequestID(regID.requestID);
+
+            if(
+                sendMessageToServer(registerMessage) != ActionCallStatus::Success
+                )
+            {
+                removeRegEntry(_registerEntriesMap, regID);
+                regID.clear();
+            }
+        }
+        else if( opCode == OpCode::Register )
+        {
+            if( auto cachedProperty = getCachedProperty(opID) )
+            {
+                callback(cachedProperty);
+            }
+        }
+    }
+    return regID;
+}
+
 CSMessagePtr ServiceRequesterImpl::createCSMessage(
-    OpID opID,
+    const OpID& opID,
     OpCode opCode,
     const CSMsgContentBasePtr &msgContent
     )
@@ -320,42 +364,16 @@ CSMessagePtr ServiceRequesterImpl::createCSMessage(
 }
 
 RegID ServiceRequesterImpl::registerStatus(
-    OpID propertyID,
+    const OpID& propertyID,
     CSMessageContentHandlerCallback callback
     )
 {
-    RegID regID;
-    if(callback && serviceStatus() == Availability::Available)
-    {
-        auto sameRegisterCount = storeRegEntry(
-            _registerEntriesMap,
-            propertyID,
-            callback,
-            regID
-            );
-        if(sameRegisterCount == 1)
-        {
-            auto registerMessage = createCSMessage(
-                propertyID,
-                OpCode::Register
-                );
+    return registerNotification(propertyID, OpCode::Register, std::move(callback));
+}
 
-            registerMessage->setRequestID(regID.requestID);
-
-            if(
-                sendMessageToServer(registerMessage) != ActionCallStatus::Success
-                )
-            {
-                removeRegEntry(_registerEntriesMap, regID);
-                regID.clear();
-            }
-        }
-        else if(auto cachedProperty = getCachedProperty(propertyID))
-        {
-            callback(cachedProperty);
-        }
-    }
-    return regID;
+RegID ServiceRequesterImpl::registerSignal(const OpID& eventID, CSMessageContentHandlerCallback callback)
+{
+    return registerNotification(eventID, OpCode::RegisterSignal, std::move(callback));
 }
 
 void ServiceRequesterImpl::unregisterStatus(const RegID &regID)
@@ -378,7 +396,7 @@ void ServiceRequesterImpl::unregisterStatus(const RegID &regID)
     }
 }
 
-void ServiceRequesterImpl::unregisterStatusAll(OpID propertyID)
+void ServiceRequesterImpl::unregisterStatusAll(const OpID& propertyID)
 {
     _registerEntriesMap.atomic()->erase(propertyID);
     sendMessageToServer(createCSMessage(propertyID, OpCode::UnRegister));
@@ -386,7 +404,7 @@ void ServiceRequesterImpl::unregisterStatusAll(OpID propertyID)
 }
 
 RegID ServiceRequesterImpl::getStatusAsync(
-    OpID propertyID,
+    const OpID& propertyID,
     CSMessageContentHandlerCallback callback
     )
 {
@@ -408,7 +426,7 @@ RegID ServiceRequesterImpl::getStatusAsync(
 
 
 CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
-    OpID propertyID,
+    const OpID& propertyID,
     unsigned long maxWaitTimeMs
     )
 {
@@ -555,7 +573,7 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
 
 size_t ServiceRequesterImpl::storeRegEntry(
     RegEntriesMap& regInfoEntries,
-    OpID propertyID,
+    const OpID& propertyID,
     CSMessageContentHandlerCallback callback,
     RegID &regID
     )
@@ -614,7 +632,7 @@ void ServiceRequesterImpl::removeRequestPromies(
 }
 
 CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(
-    OpID propertyID
+    const OpID& propertyID
     ) const
 {
     std::lock_guard lock(_propertiesCache);
@@ -627,7 +645,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(
 }
 
 void ServiceRequesterImpl::cachePropertyStatus(
-    OpID propertyID,
+    const OpID& propertyID,
     CSMsgContentBasePtr property
     )
 {
@@ -640,7 +658,7 @@ void ServiceRequesterImpl::cachePropertyStatus(
     }
 }
 
-void ServiceRequesterImpl::removeCachedProperty(OpID propertyID)
+void ServiceRequesterImpl::removeCachedProperty(const OpID& propertyID)
 {
     _propertiesCache.atomic()->erase(propertyID);
 }

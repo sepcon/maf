@@ -44,7 +44,7 @@ std::shared_ptr<QueueingServiceProxy<MessageTrait>>
 QueueingServiceProxy<MessageTrait>::createProxy(
     const ConnectionType &contype,
     const Address &addr,
-    ServiceID sid
+    const ServiceID& sid
     )
 {
     if(auto client = ClientFactory::instance().getClient(contype, addr))
@@ -77,7 +77,7 @@ QueueingServiceProxy<MessageTrait>::QueueingServiceProxy(
         ) : _requester{std::move(requester)} {}
 
 template<class MessageTrait>
-ServiceID QueueingServiceProxy<MessageTrait>::serviceID() const
+const ServiceID& QueueingServiceProxy<MessageTrait>::serviceID() const
 {
     return _requester->serviceID();
 }
@@ -133,7 +133,7 @@ QueueingServiceProxy<MessageTrait>::updateServiceStatusToComponent(
 template<class MessageTrait>
 void
 QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(
-    ServiceID /*sid*/,
+    const ServiceID& /*sid*/,
     Availability oldStatus,
     Availability newStatus
     )
@@ -182,11 +182,11 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(
                     }
                     else
                     {
-                        Logger::warn(
-                                    "The component that sending the request of operationID: [",
-                                    operationID,
-                                    "] has no longer existed"
-                                    );
+                        Logger::warn (
+                            "The component that sending the request of "
+                            "operationID: [", operationID, "] has no longer"
+                            " existed"
+                            );
                     }
                 }
                 else
@@ -210,8 +210,8 @@ QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(
 
 template<class MessageTrait> template<class property_status>
 RegID QueueingServiceProxy<MessageTrait>::registerStatus(
-        PayloadProcessCallback<property_status> callback
-        )
+    PayloadProcessCallback<property_status> callback
+    )
 {
     mc_maf_assert_status_type(property_status);
     auto propertyID = MessageTrait::template getOperationID<property_status>();
@@ -231,6 +231,77 @@ RegID QueueingServiceProxy<MessageTrait>::registerStatus(
     return {};
 }
 
+template<class MessageTrait> template<class signal_attributes>
+RegID QueueingServiceProxy<MessageTrait>::registerSignal(
+    PayloadProcessCallback<signal_attributes> callback
+    )
+{
+    static_assert (
+        std::is_base_of_v<cs_attributes, signal_attributes>,
+        "signal_attributes must be a cs_attributes "
+        );
+    auto signalID = MessageTrait::template getOperationID<signal_attributes>();
+    if(callback)
+    {
+        return _requester->registerSignal(
+            signalID,
+            createMsgHandlerAsyncCallback(std::move(callback))
+            );
+    }
+    else
+    {
+        Logger::error("Registering signal id[, ",
+                      signalID,
+                      "] failed, Please provide non-empty callback");
+    }
+    return {};
+}
+
+template<class MessageTrait> template<class signal_class>
+RegID QueueingServiceProxy<MessageTrait>::registerSignal(
+    std::function<void(void)> callback
+    )
+{
+    static_assert (
+        std::is_base_of_v<cs_signal, signal_class>,
+        "signal_class must be a cs_signal "
+        );
+
+    auto signalID = MessageTrait::template getOperationID<signal_class>();
+    if(callback)
+    {
+        return _requester->registerSignal(
+            signalID,
+            [
+                signalID,
+                callback = std::move(callback),
+                compref = Component::getActiveWeakPtr()
+        ] (const auto&) mutable {
+                if(auto component = compref.lock())
+                {
+                    // Request the requesting Component to execute the callback but
+                    component->postMessage<CallbackExcMsg>(std::move(callback));
+                }
+                else
+                {
+                    Logger::warn(
+                        "The component that sending the request of operationID: "
+                        "[", signalID, "] has no longer existed"
+                        );
+                }
+            }
+            );
+    }
+    else
+    {
+        Logger::error("Registering signal id[, ",
+                      signalID,
+                      "] failed, Please provide non-empty callback");
+    }
+    return {};
+}
+
+
 template<class MessageTrait>
 void QueueingServiceProxy<MessageTrait>::unregisterStatus(const RegID& regID)
 {
@@ -238,7 +309,7 @@ void QueueingServiceProxy<MessageTrait>::unregisterStatus(const RegID& regID)
 }
 
 template<class MessageTrait>
-void QueueingServiceProxy<MessageTrait>::unregisterStatusAll(OpID propertyID)
+void QueueingServiceProxy<MessageTrait>::unregisterStatusAll(const OpID& propertyID)
 {
     _requester->unregisterStatusAll(propertyID);
 }

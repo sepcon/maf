@@ -9,7 +9,7 @@ namespace ipc {
 namespace local {
 
 using ServiceProxy = QueueingServiceProxy<SerializableMessageTrait>;
-std::shared_ptr<ServiceProxy> createProxy(const Address& addr, ServiceID sid)
+std::shared_ptr<ServiceProxy> createProxy(const Address& addr, const ServiceID& sid)
 {
     return ServiceProxy::createProxy("local_ipc", addr, sid);
 }

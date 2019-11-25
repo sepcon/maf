@@ -11,7 +11,7 @@ namespace local {
 using ServiceStub               = QueueingServiceStub<SerializableMessageTrait>;
 using Request                   = QueuedRequest<SerializableMessageTrait>;
 
-static std::shared_ptr<ServiceStub> createStub(const Address& addr, ServiceID sid)
+static std::shared_ptr<ServiceStub> createStub(const Address& addr, const ServiceID& sid)
 {
     return ServiceStub::createStub("local_ipc", addr, sid);
 }

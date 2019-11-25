@@ -13,12 +13,12 @@ class ServerBase : public ServerInterface
 public:
     // Drived class must provide implementation for this method
     ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override = 0;
-    virtual void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) = 0;
+    virtual void notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus) = 0;
 
     bool registerServiceProvider(const ServiceProviderInterfacePtr& provider)  override;
     bool unregisterServiceProvider(const ServiceProviderInterfacePtr& Provider)  override;
-    bool unregisterServiceProvider(ServiceID sid) override;
-    bool hasServiceProvider(ServiceID sid) override;
+    bool unregisterServiceProvider(const ServiceID& sid) override;
+    bool hasServiceProvider(const ServiceID& sid) override;
 
     virtual bool init(const Address& serverAddr) override;
     bool deinit() override;

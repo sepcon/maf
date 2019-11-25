@@ -41,7 +41,7 @@ bool ServerBase::unregisterServiceProvider(
     return unregisterServiceProvider(provider->serviceID());
 }
 
-bool ServerBase::unregisterServiceProvider(ServiceID sid)
+bool ServerBase::unregisterServiceProvider(const ServiceID& sid)
 { 
     if(_providers.atomic()->erase(sid) != 0)
     {
@@ -58,7 +58,7 @@ bool ServerBase::unregisterServiceProvider(ServiceID sid)
     }
 }
 
-bool ServerBase::hasServiceProvider(ServiceID sid)
+bool ServerBase::hasServiceProvider(const ServiceID& sid)
 {
     return _providers.atomic()->count(sid) != 0;
 }

@@ -46,7 +46,7 @@ ActionCallStatus IAMessageRouter::sendMessageToServer(const CSMessagePtr &msg)
 }
 
 void IAMessageRouter::notifyServiceStatusToClient(
-    ServiceID sid,
+    const ServiceID& sid,
     Availability oldStatus,
     Availability newStatus
     )

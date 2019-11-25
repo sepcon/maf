@@ -23,22 +23,27 @@ public:
     ~ServiceProvider() override;
 
     bool registerRequestHandler(
-        OpID opID,
+        const OpID& opID,
         RequestHandlerFunction handlerFunction
         ) override;
 
-    bool unregisterRequestHandler( OpID opID ) override;
+    bool unregisterRequestHandler( const OpID& opID ) override;
 
     ActionCallStatus respondToRequest(
         const CSMessagePtr &csMsg
         ) override;
 
     ActionCallStatus setStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         const CSMsgContentBasePtr& property
         ) override;
 
-    CSMsgContentBasePtr getStatus(OpID propertyID) override;
+    ActionCallStatus broadcastSignal(
+        const OpID& signalID,
+        const CSMsgContentBasePtr& signal
+        ) override;
+
+    CSMsgContentBasePtr getStatus(const OpID& propertyID) override;
 
     void startServing() override;
     void stopServing() override;
