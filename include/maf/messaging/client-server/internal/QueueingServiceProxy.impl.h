@@ -7,7 +7,7 @@
 
 #include <maf/messaging/client-server/MessageTraitBase.h>
 #include <maf/messaging/client-server/ServiceStatusMsg.h>
-#include <maf/messaging/client-server/ClientFactory.h>
+#include <maf/messaging/client-server/CSManager.h>
 #include <maf/messaging/BasicMessages.h>
 #include <maf/logging/Logger.h>
 
@@ -47,17 +47,17 @@ QueueingServiceProxy<MessageTrait>::createProxy(
     const ServiceID& sid
     )
 {
-    if(auto client = ClientFactory::instance().getClient(contype, addr))
+    if(auto requester = CSManager::instance().getServiceRequester(
+            contype,
+            addr,
+            sid))
     {
-        if(auto requester = client->getServiceRequester(sid))
-        {
-            auto proxy = std::shared_ptr<QueueingServiceProxy<MessageTrait>>
-                {
-                    new QueueingServiceProxy<MessageTrait>(requester)
-                };
-            requester->addServiceStatusObserver(proxy);
-            return proxy;
-        }
+        auto proxy = std::shared_ptr<QueueingServiceProxy<MessageTrait>>
+            {
+                new QueueingServiceProxy<MessageTrait>(requester)
+            };
+        requester->addServiceStatusObserver(proxy);
+        return proxy;
     }
     else
     {

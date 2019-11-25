@@ -4,12 +4,18 @@
 namespace maf {
 namespace messaging {
 
-
 CompThread &CompThread::start()
 {
-    _callable = [callableWrap = std::move(_callable), compref = Component::getActiveWeakPtr()] () mutable {
+    auto compref = Component::getActiveWeakPtr();
+    _callable =
+        [
+            callable = std::move(_callable),
+            compref
+
+    ] () mutable
+    {
         Component::setTLRef(std::move(compref));
-        callableWrap();
+        callable();
     };
     Thread::start();
     return *this;

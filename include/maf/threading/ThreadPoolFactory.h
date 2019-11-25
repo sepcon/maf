@@ -2,6 +2,7 @@
 #define THREADPOOLFACTORY_H
 
 #include "IThreadPool.h"
+#include <maf/export/MafExport_global.h>
 #include <memory>
 
 namespace maf {
@@ -17,7 +18,10 @@ enum PoolType
 class ThreadPoolFactory
 {
 public:    
-    static std::shared_ptr<IThreadPool> createPool(PoolType type, unsigned int poolSize = 0);
+    MAF_EXPORT static std::shared_ptr<IThreadPool> createPool(
+        PoolType type,
+        unsigned int poolSize = 0
+        );
 };
 }
 }

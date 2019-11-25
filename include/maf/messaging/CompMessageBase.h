@@ -1,6 +1,7 @@
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
+#include <maf/export/MafExport_global.h>
 #include <typeindex>
 #include <memory>
 
@@ -24,10 +25,10 @@ class CompMessageBase
 {
 public:
     using Type = std::type_index;
-    virtual ~CompMessageBase();
-    virtual Type id() const;
-    int priority() const;
-    void setPriority(int p);
+    MAF_EXPORT virtual ~CompMessageBase();
+    MAF_EXPORT virtual Type id() const;
+    MAF_EXPORT int priority() const;
+    MAF_EXPORT void setPriority(int p);
 
     struct PriorityComp
     {

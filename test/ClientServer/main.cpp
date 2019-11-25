@@ -1,46 +1,89 @@
-#include "maf/messaging/client-server/IAServiceStub.h"
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
-#include "maf/messaging/Timer.h"
 #include <maf/logging/Logger.h>
 #include "maf/utils/TimeMeasurement.h"
-#include "Client.h"
-#include "Server.h"
-
-
-using namespace maf::messaging::ipc;
-using namespace maf::messaging;
-
-template<class MessageTrait, int NClient = 4>
-void test(const ConnectionType& connectionType, const Address& addr)
-{
-    using ClientComp = maf::test::ClientComponent<MessageTrait>;
-    using Proxy      = QueueingServiceProxy<MessageTrait>;
-    std::shared_ptr<ClientComp> cls[NClient];
-    int i = 0;
-    for(auto& c : cls)
-    {
-        auto proxy = Proxy::createProxy(connectionType, addr, "weather_service");
-        c = std::make_shared<ClientComp>(proxy);
-        c->setName("Client component " + std::to_string(i++));
-        c->startTest();
-    }
-
-    maf::test::ServerComponent<MessageTrait> server;
-    server.setName("Server Component ");
-    server.startTest(connectionType, addr, false);
-
-    for(auto& c : cls)
-    {
-        c->stopTest();
-    }
-    maf::Logger::debug("End test");
-}
-
+#include "ControllableInterface.h"
 #include <iostream>
+#include <Windows.h>
+
+#include <maf/messaging/ExtensibleComponent.h>
+
+class MainComponent
+    : public maf::messaging::ExtensibleComponent
+{
+    std::vector<HMODULE> libHandles;
+    std::vector<std::string> modules = {"Client", "Server"};
+    std::vector<maf::test::ControllableInterface*> testables;
+
+    void onExit() override
+    {
+        maf::logging::Logger::debug("Component exits!");
+    }
+
+    void onEntry() override
+    {
+        using maf::logging::Logger;
+
+        for(auto& m : modules)
+        {
+            auto lib = "plugin/Test" + m + ".dll";
+
+            if(auto h = LoadLibraryA(lib.c_str()))
+            {
+                libHandles.push_back(h);
+                maf::test::ControllableDetails* details =
+                    reinterpret_cast<maf::test::ControllableDetails*>(
+                        GetProcAddress(h, "exports")
+                        );
+
+                if(details)
+                {
+                    Logger::debug(
+                        "Loaded a plugin, details:",
+                        "\n \tfile name        = ", details->fileName,
+                        "\n \tclass name       = ", details->className,
+                        "\n \tapi version      = ", details->apiVersion,
+                        "\n \tobject name      = ", details->objectName,
+                        "\n \tobject version   = ", details->objectVersion
+                        );
+                    if(auto plg = details->initializeFunc())
+                    {
+                        testables.push_back(plg);
+                    }
+                }
+            }
+            else
+            {
+                Logger::debug("Failed to load ", lib);
+            }
+        }
+
+        if(testables.size() == modules.size())
+        {
+            for(auto& testable : testables)
+            {
+                testable->init();
+            }
+
+            for(auto& testable : testables)
+            {
+                testable->start();
+            }
+
+            for(auto& testable : testables)
+            {
+                testable->deinit();
+            }
+        }
+        stop();
+    }
+public:
+    using maf::messaging::ExtensibleComponent::ExtensibleComponent;
+};
 
 int main()
 {
-    maf::Logger::init(maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_FROM_INFO,
+    using maf::logging::Logger;
+    Logger::init(maf::logging::LOG_LEVEL_DEBUG
+            /*| maf::logging::LOG_LEVEL_FROM_INFO*/,
         [](const std::string& msg) {
             std::cout << msg << std::endl;
         },
@@ -48,11 +91,14 @@ int main()
             std::cerr << msg << std::endl;
         });
     maf::util::TimeMeasurement tm([](auto t){
-        maf::Logger::info("Total time is: ", static_cast<double>(t.count()) / 1000, "ms");
+        Logger::debug("Total time is: ",
+                          static_cast<double>(t.count()) / 1000,
+                          "ms");
     });
 
-    test<DefaultMessageTrait, 2>("app_internal", {});
-    test<SerializableMessageTrait, 2>("local_ipc", Address{"com.opswat.client", 0});
+
+    MainComponent maincomp{"This is main component"};
+    maincomp.run(maf::messaging::LaunchMode::AttachToCurrentThread);
 
     return 0;
 }

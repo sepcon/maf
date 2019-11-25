@@ -36,24 +36,25 @@ ENDOBJECT(SecurityScanRequestMsg)
 
 #include <maf/utils/serialization/BASerializer.h>
 
-int main()
+
+static void serializeTest(maf::srz::Serializer& srz)
 {
     SecurityScanRequestMsg s;
-    s.special_map()["hello"]["bello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
-    s.special_map()["hello"]["cello"].push_back({1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4});
+    s.special_map()["hello"]["bello"].push_back(
+        {1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4} );
+    s.special_map()["hello"]["cello"].push_back(
+        {1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4} );
 
     std::cout << "s before cleared is: " << std::endl;
     std::cout << (s.dump()) << std::endl;
-    maf::srz::BASerializer srz;
     srz << s;
-    std::cout << srz.bytes() << std::endl;
-
-    //clear s
-    s = {};
-
     std::cout << "After cleared: " << s.dump() << std::endl;
-    maf::srz::BADeserializer dsrz(srz.mutableBytes());
+}
 
+static void deserializeTest(maf::srz::Deserializer& dsrz)
+{
+
+    SecurityScanRequestMsg s;
     dsrz >> s;
 
     std::cout << "After deserialization: " << std::endl;
@@ -76,6 +77,37 @@ int main()
         std::cout << dumped << std::endl;
 
     }
+}
 
+static void testBASerializer()
+{
+    maf::srz::BASerializer srz;
+    serializeTest(srz);
+    maf::srz::BADeserializer dszr{srz.mutableBytes()};
+    deserializeTest(dszr);
+}
+
+#include <fstream>
+#include <maf/utils/serialization/StreamSerializer.h>
+
+static void testStreamSerializer()
+{
+    std::string path = "helloworld.dat";
+    std::ofstream ofs(path);
+    maf::srz::StreamSerializer srz(ofs);
+    serializeTest(srz);
+    srz.flush();
+
+    std::ifstream ifs(path);
+    maf::srz::StreamDeserializer dszr{ifs};
+    deserializeTest(dszr);
+}
+
+
+
+int main()
+{
+    testBASerializer();
+    testStreamSerializer();
     return 0;
 }

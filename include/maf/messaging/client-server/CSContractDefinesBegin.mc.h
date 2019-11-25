@@ -109,7 +109,7 @@
 // Implementations
 #  define mc_maf_csc_declare_feature(type, name) \
   struct name : public cs_##type{ \
-  static constexpr OpIDConstant ID =  "OpID_"#name "_" #type ; \
+  static constexpr OpIDConstant ID =  #name ":" #type ":[OpID]" ; \
   static constexpr OpIDConstant operationID() { return ID; }
 
 #  define mc_maf_csc_function_params(type, ...) \

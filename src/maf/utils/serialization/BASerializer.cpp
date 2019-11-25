@@ -10,7 +10,8 @@ char *BASerializer::getNextWriteArea(SizeType length)
     return _ba.firstpos() + currentSize;
 }
 
-BADeserializer::BADeserializer(const ByteArray &stream) : _cpByteArray(&stream)
+BADeserializer::BADeserializer(const ByteArray &stream) :
+    _cpByteArray(&stream)
 {
     _curpos = _cpByteArray->firstpos();
     _lastpos = _cpByteArray->lastpos();

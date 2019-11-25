@@ -67,8 +67,8 @@ public:
 };
 
 ClientFactory::ClientFactory(Invisible)
+    : _pImpl{ std::make_unique<ClientFactoryImpl>() }
 {
-    _pImpl = std::make_unique<ClientFactoryImpl>();
 }
 
 ClientFactory::~ClientFactory() = default;

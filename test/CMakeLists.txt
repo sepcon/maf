@@ -5,6 +5,9 @@ set(MAF_TEST_ROOT_DIR .)
 
 project(${MAF_TEST_PJNAME})
 
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
 add_subdirectory(ClientServer)
 add_subdirectory(Serialization)
 

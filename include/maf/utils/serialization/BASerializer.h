@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Serializer.h"
+#include <maf/export/MafExport_global.h>
 
 namespace maf {
 namespace srz {
@@ -8,10 +9,13 @@ namespace srz {
 class BASerializer : public Serializer
 {
 public:
-    char* getNextWriteArea(SizeType length) override;
+    MAF_EXPORT char* getNextWriteArea(SizeType length) override;
     const ByteArray& bytes() const { return _ba; }
     ByteArray&& mutableBytes() { return std::move(_ba); }
-    operator ByteArray() { return _ba; }
+    operator ByteArray&() { return _ba; }
+    operator ByteArray&&() { return std::move(_ba); }
+    operator const ByteArray&() { return _ba; }
+
 private:
     ByteArray _ba;
 };
@@ -20,9 +24,9 @@ private:
 class BADeserializer : public Deserializer
 {
 public:
-    BADeserializer(const ByteArray& stream);
-    bool exhausted() const override;
-    void reset();
+    MAF_EXPORT BADeserializer(const ByteArray& stream);
+    MAF_EXPORT bool exhausted() const override;
+    MAF_EXPORT void reset();
 private:
     const ByteArray* _cpByteArray;
 };

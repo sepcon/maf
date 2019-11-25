@@ -13,7 +13,10 @@ IPCClientBase::IPCClientBase(IPCType type) :
 {
 }
 
-bool IPCClientBase::init(const Address &serverAddress, long long sersverMonitoringCycleMS)
+bool IPCClientBase::init(
+    const Address &serverAddress,
+    long long sersverMonitoringCycleMS
+    )
 {
     if(BytesCommunicator::init(serverAddress))
     {
@@ -49,12 +52,19 @@ ActionCallStatus IPCClientBase::sendMessageToServer(const CSMessagePtr &msg)
     return BytesCommunicator::send(std::static_pointer_cast<IPCMessage>(msg));
 }
 
-void IPCClientBase::onServerStatusChanged(Availability oldStatus, Availability newStatus)
+void IPCClientBase::onServerStatusChanged(
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
     ClientBase::onServerStatusChanged(oldStatus, newStatus);
     if(newStatus == Availability::Available)
     {
-        auto registeredMsg = messaging::createCSMessage<IPCMessage>(ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
+        auto registeredMsg = messaging::createCSMessage<IPCMessage>(
+            ServiceIDInvalid,
+            OpIDInvalid,
+            OpCode::RegisterServiceStatus
+            );
         if (sendMessageToServer(registeredMsg) == ActionCallStatus::Success)
         {
             Logger::info("Send service status change register to server successfully!");
@@ -70,7 +80,7 @@ void IPCClientBase::monitorServerStatus(long long sersverMonitoringCycleMS)
 {
     _stop.store(false, std::memory_order_release);
     _serverMonitorThread = std::thread {
-        [this, sersverMonitoringCycleMS]{
+        [this, sersverMonitoringCycleMS] {
             Availability oldStatus = Availability::Unavailable;
             while(!_stop.load(std::memory_order_acquire))
             {
@@ -80,7 +90,9 @@ void IPCClientBase::monitorServerStatus(long long sersverMonitoringCycleMS)
                     onServerStatusChanged(oldStatus, newStatus);
                     oldStatus = newStatus;
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(sersverMonitoringCycleMS));
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(sersverMonitoringCycleMS)
+                    );
             }
         }
     };

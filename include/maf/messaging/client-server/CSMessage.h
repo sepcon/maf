@@ -2,6 +2,7 @@
 
 #include "CSTypes.h"
 #include "Address.h"
+#include <maf/export/MafExport_global.h>
 
 namespace maf {
 namespace messaging {
@@ -17,7 +18,7 @@ class CSMessage
 {
 public:
     CSMessage() = default;
-    CSMessage(ServiceID sid,
+    MAF_EXPORT  CSMessage(ServiceID sid,
         OpID opID,
         OpCode opCode,
         RequestID reqID = RequestIDInvalid,
@@ -29,26 +30,26 @@ public:
     CSMessage(const CSMessage& other) = default;
     CSMessage& operator=(const CSMessage& other) = default;
 
-    virtual ~CSMessage();
+    MAF_EXPORT virtual ~CSMessage();
 
-    const ServiceID& serviceID() const;
-    void setServiceID(ServiceID serviceID);
+    MAF_EXPORT const ServiceID& serviceID() const;
+    MAF_EXPORT void setServiceID(ServiceID serviceID);
 
-    const OpID& operationID() const;
-    void setOperationID(OpID operationID);
+    MAF_EXPORT const OpID& operationID() const;
+    MAF_EXPORT void setOperationID(OpID operationID);
 
-    OpCode operationCode() const;
-    void setOperationCode(OpCode operationCode);
+    MAF_EXPORT OpCode operationCode() const;
+    MAF_EXPORT void setOperationCode(OpCode operationCode);
 
 
-    RequestID requestID() const;
-    void setRequestID(RequestID requestID);
+    MAF_EXPORT RequestID requestID() const;
+    MAF_EXPORT void setRequestID(RequestID requestID);
 
-    const Address& sourceAddress() const;
-    void setSourceAddress(Address sourceAddress);
+    MAF_EXPORT const Address& sourceAddress() const;
+    MAF_EXPORT void setSourceAddress(Address sourceAddress);
 
-    CSMsgContentBasePtr content() const;
-    void setContent(CSMsgContentBasePtr content);
+    MAF_EXPORT CSMsgContentBasePtr content() const;
+    MAF_EXPORT void setContent(CSMsgContentBasePtr content);
 
 protected:
     ServiceID _serviceID = ServiceIDInvalid;
@@ -62,7 +63,7 @@ protected:
 class CSMessageContentBase
 {
 public:
-    virtual ~CSMessageContentBase();
+    MAF_EXPORT virtual ~CSMessageContentBase();
     virtual bool equal(const CSMessageContentBase* other) = 0;
 };
 

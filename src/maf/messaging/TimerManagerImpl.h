@@ -3,12 +3,10 @@
 #include <maf/threading/Lockable.h>
 #include "TimerManager.h"
 #include <chrono>
-#include <set>
 #include <vector>
 #include <memory>
 #include <atomic>
-#include <mutex>
-#include <future>
+#include <condition_variable>
 
 
 namespace maf {
@@ -41,23 +39,46 @@ private:
 
     size_t jobsCount();
     void run() noexcept;
-    void startImmediately(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic) noexcept;
-    void storePendingJob(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic) noexcept;
+    void startImmediately(
+        JobID jid,
+        Duration ms,
+        TimeOutCallback callback,
+        bool cyclic
+        ) noexcept;
+
+    void storePendingJob(
+        JobID jid,
+        Duration ms,
+        TimeOutCallback callback,
+        bool cyclic
+        ) noexcept;
+
     void storePendingJob(JobDescRef job) noexcept;
     void doJob__(JobDescRef job);
     void adoptPendingJobs__() noexcept;
-    static JobDescRef getShorttestDurationJob__(const JobsContainer &jobs) noexcept;
+    static JobDescRef getShorttestDurationJob__
+        (const JobsContainer &jobs) noexcept;
     void reorderRunningJobs__() noexcept;
     JobDescRef scheduleShorttestJob__() noexcept;
     bool runJobIfExpired__(JobDescRef job);
     void cleanup();
 
-    static std::lock_guard<JobsContainer> autolock(JobsContainer& jobs, bool sync = true);
-    static void addOrReplace(JobsContainer& jobs, JobDescRef newJob, bool sync = true);
-    static JobDescRef removeAndInvalidateJob(JobsContainer &jobs, JobID jid);
+    static std::lock_guard<JobsContainer> autolock(
+        JobsContainer& jobs,
+        bool sync = true
+        );
+    static void addOrReplace(
+        JobsContainer& jobs,
+        JobDescRef newJob,
+        bool sync = true
+        );
+    static JobDescRef removeAndInvalidateJob(
+        JobsContainer &jobs,
+        JobID jid
+        );
     static JobsIterator findJob__(JobsContainer &jobs, JobID jid);
 
-    std::future<void> _future;
+    std::thread _thread;
     JobsContainer _runningJobs;
     JobsContainer _pendingJobs;
     std::mutex _jmt;

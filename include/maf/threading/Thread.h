@@ -3,6 +3,7 @@
 
 #include <maf/patterns/Patterns.h>
 #include <maf/utils/cppextension/Invoker.h>
+#include <maf/export/MafExport_global.h>
 #include <thread>
 
 namespace maf {
@@ -12,34 +13,37 @@ class Thread : public pattern::UnCopyable
 {
 public:
     using OnSignalCallback = std::function<void(int)>;
-    Thread() = default;
-    Thread(Thread&& th);
-    Thread& operator=(Thread&& th);
+
     template<typename Callable, typename... Args>
-    Thread(Callable&& f, Args&&... args)
+    Thread(
+        Callable&& f,
+        Args&&... args,
+        OnSignalCallback sigHandlerCallback = {})
+        :
+        _sigHandlerCallback{std::move(sigHandlerCallback)},
+        _callable{ std::bind(std::forward<Callable>(f),
+                            std::forward<Args>(args)...)
+        }
     {
-        auto invoker = util::makeInvoker(std::forward<Callable>(f), std::forward<Args>(args)...);
-        _callable = [invoker = std::move(invoker), sigHandler = std::move(_sigHandlerCallback)] () mutable {
-            _tlSigHandlerCallback = std::move(sigHandler);
-            regSignals();
-            invoker.invoke();
-        };
     }
 
-    Thread &start();
-    void join();
-    void detach();
-    bool joinable();
-    void setSignalHandler(OnSignalCallback sigHandlerCallback);
+    MAF_EXPORT Thread() = default;
+    MAF_EXPORT Thread(Thread&& th);
+    MAF_EXPORT Thread& operator=(Thread&& th);
+    MAF_EXPORT void join();
+    MAF_EXPORT void detach();
+    MAF_EXPORT bool joinable();
+    MAF_EXPORT virtual ~Thread();
+    MAF_EXPORT Thread& start();
+
 protected:
     static void regSignals();
     static void onSystemSignal(int sig);
     void takeFrom(Thread&& th);
 
-    static thread_local OnSignalCallback _tlSigHandlerCallback;
-    std::thread _thread;
-    std::function<void()> _callable;
-    OnSignalCallback _sigHandlerCallback;
+    OnSignalCallback        _sigHandlerCallback;
+    std::function<void()>   _callable;
+    std::thread             _thread;
 };
 }
 }

@@ -22,6 +22,8 @@ public:
 
     ~ServiceProvider() override;
 
+    Availability availability() const override;
+
     bool registerRequestHandler(
         const OpID& opID,
         RequestHandlerFunction handlerFunction

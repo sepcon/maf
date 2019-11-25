@@ -32,6 +32,7 @@ struct ServiceProviderImpl
     ServiceProvider*                _delegator;
     PropertyMap                     _propertyMap;
     RequestHandlerMap               _requestHandlerMap;
+    std::atomic<Availability>       _availability = Availability::Unavailable;
 
     ServiceProviderImpl(
         ServiceProvider* holder,
@@ -60,6 +61,7 @@ struct ServiceProviderImpl
 
     CSMsgContentBasePtr getStatus(const OpID&  propertyID);
 
+    Availability availability() const;
     void startServing();
     void stopServing();
 
@@ -93,7 +95,10 @@ struct ServiceProviderImpl
     void onStatusGetRequest(const CSMessagePtr &getMsg);
     bool invokeRequestHandlerCallback(const RequestPtr& request);
 
-    bool registerRequestHandler(const OpID&  opID, RequestHandlerFunction handlerFunction);
+    bool registerRequestHandler(
+        const OpID&  opID,
+        RequestHandlerFunction handlerFunction
+        );
     bool unregisterRequestHandler( const OpID&  opID );
 
 };

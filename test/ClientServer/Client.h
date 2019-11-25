@@ -34,7 +34,9 @@ struct ClientComponent : public ExtensibleComponent
                 auto request = today_weather::make_input();
                 _proxy->template registerStatus<compliance::status>
                     ([this](const std::shared_ptr<compliance::status>& status){
-                        maf::Logger::debug("Component " ,  name() ,  " Got status update from server: \n" ,  status->dump());
+                        maf::Logger::debug("Component " ,  name() ,
+                                           " Got status update from server: \n" ,
+                                           status->dump());
                     });
 
                 request->set_command(1);

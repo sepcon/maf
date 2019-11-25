@@ -198,8 +198,14 @@ CSMsgContentBasePtr ServiceProviderImpl::getStatus(const OpID&  propertyID)
     }
 }
 
+Availability ServiceProviderImpl::availability() const
+{
+    return _availability;
+}
+
 void ServiceProviderImpl::startServing()
 {
+    _availability = Availability::Available;
     if(auto server = _server.lock())
     {
         server->registerServiceProvider(_delegator->shared_from_this());
@@ -208,13 +214,17 @@ void ServiceProviderImpl::startServing()
 
 void ServiceProviderImpl::stopServing()
 {
+    _availability = Availability::Unavailable;
     if(auto server = _server.lock())
     {
         server->unregisterServiceProvider(_delegator->serviceID());
     }
 }
 
-ActionCallStatus ServiceProviderImpl::sendMessage(const CSMessagePtr &csMsg, const Address& toAddr)
+ActionCallStatus ServiceProviderImpl::sendMessage(
+    const CSMessagePtr &csMsg,
+    const Address& toAddr
+    )
 {
     if(auto server = _server.lock())
     {
@@ -226,7 +236,9 @@ ActionCallStatus ServiceProviderImpl::sendMessage(const CSMessagePtr &csMsg, con
     }
 }
 
-ActionCallStatus ServiceProviderImpl::sendBackMessageToClient(const CSMessagePtr &csMsg)
+ActionCallStatus ServiceProviderImpl::sendBackMessageToClient(
+    const CSMessagePtr &csMsg
+    )
 {
     return sendMessage(csMsg, csMsg->sourceAddress());
 }
@@ -251,14 +263,18 @@ void ServiceProviderImpl::onStatusChangeUnregister(const CSMessagePtr &msg)
 }
 
 
-ServiceProviderImpl::RequestPtr ServiceProviderImpl::saveRequestInfo(const CSMessagePtr &msg)
+ServiceProviderImpl::RequestPtr ServiceProviderImpl::saveRequestInfo(
+    const CSMessagePtr &msg
+    )
 {
     RequestPtr request{ new Request(msg, _delegator->weak_from_this()) };
     (*_requestsMap.atomic())[msg->operationID()].push_back(request);
     return request;
 }
 
-ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(const CSMessagePtr &msg)
+ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(
+    const CSMessagePtr &msg
+    )
 {
     RequestPtr request;
     std::lock_guard lock(_requestsMap);
@@ -266,7 +282,9 @@ ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(const CS
     if(itRequestList != _requestsMap->end())
     {
         auto& requestList = itRequestList->second;
-        for(auto itRequest = requestList.begin(); itRequest != requestList.end(); ++itRequest)
+        for(auto itRequest = requestList.begin();
+             itRequest != requestList.end(); ++itRequest
+             )
         {
             RequestPtr&  requestTmp = *itRequest;
             if(requestTmp->getRequestID() == msg->requestID())
@@ -321,7 +339,8 @@ void ServiceProviderImpl::onAbortActionRequest(const CSMessagePtr &msg)
 {
     if(auto request = pickOutRequestInfo(msg))
     {
-        // Invalidate request then later respond from request itself will not cause any race condition.
+        // Invalidate request then later respond from request itself
+        // will not cause any race condition.
         // Must be considered carefully for bug fixing later
         request->invalidate();
         if (auto abortCallback = request->getAbortCallback())
@@ -357,7 +376,12 @@ bool ServiceProviderImpl::registerRequestHandler(
 {
     if(handlerFunction)
     {
-        (*_requestHandlerMap.atomic())[opID] = std::move(handlerFunction);
+        auto [itInsertedPos, success] =
+            _requestHandlerMap.atomic()->try_emplace(
+                opID,
+                std::move(handlerFunction)
+                );
+        return success;
     }
     else
     {

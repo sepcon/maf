@@ -1,9 +1,5 @@
 #pragma once
 
-#include <utility>
-#include <memory>
-#include <ostream>
-#include <istream>
 #include "SerializationTrait.h"
 #include "ByteArray.h"
 
@@ -66,9 +62,14 @@ template <typename T>
 Deserializer& Deserializer::operator>>(T& obj)
 {
     static_assert (std::is_class_v<SerializationTrait<T>>, "");
-    obj = maf::srz::deserialize<T>(&_curpos, &_lastpos, [this](const char** startp, const char** lastp, SizeType neededBytes){
-        this->fetchMoreBytes(startp, lastp, neededBytes);
-    });
+    obj = maf::srz::deserialize<T>(
+        &_curpos, &_lastpos,
+        [this](const char** startp,
+               const char** lastp,
+               SizeType neededBytes){
+            this->fetchMoreBytes(startp, lastp, neededBytes);
+        }
+        );
     return *this;
 }
 
