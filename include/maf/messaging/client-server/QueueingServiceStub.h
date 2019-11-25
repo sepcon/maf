@@ -25,7 +25,7 @@ public:
     using RequestType               = QueuedRequest<MessageTrait>;
     using RequestPtr                = std::shared_ptr<RequestType>;
 
-    static StubPtr createStub(const ConnectionType& contype, const Address& addr, ServiceID sid);
+    static StubPtr createStub(const ConnectionType& contype, const Address& addr, const ServiceID& sid);
 
     template<class property_status>
     ActionCallStatus setStatus(const std::shared_ptr<property_status>& status);
@@ -35,6 +35,15 @@ public:
 
     template<class property_status>
     std::shared_ptr<const property_status> getStatus();
+
+    template<class signal_attributes>
+    ActionCallStatus broadcastSignal(const std::shared_ptr<signal_attributes>& attr);
+
+    template<class signal_attributes, typename... Args>
+    ActionCallStatus broadcastSignal(Args&&... args);
+
+    template<class signal_class>
+    ActionCallStatus broadcastSignal();
 
     template <class request_input,
              std::enable_if_t<
@@ -54,7 +63,7 @@ public:
         std::function<void(RequestPtr)> handlerFunction
         );
 
-    bool unregisterRequestHandler( OpID opID );
+    bool unregisterRequestHandler( const OpID& opID );
 
     void setMainComponent(ComponentRef copmref);
 

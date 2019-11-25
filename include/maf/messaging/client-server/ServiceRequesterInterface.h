@@ -14,26 +14,31 @@ class ServiceRequesterInterface:
 {
 public:
     virtual RegID registerStatus(
-            OpID propertyID,
+            const OpID& propertyID,
             CSMessageContentHandlerCallback callback) = 0;
+
+    virtual RegID registerSignal(
+        const OpID& propertyID,
+        CSMessageContentHandlerCallback callback)     = 0;
+
     virtual void unregisterStatus(const RegID& regID) = 0;
-    virtual void unregisterStatusAll(OpID propertyID) = 0;
+    virtual void unregisterStatusAll(const OpID& propertyID) = 0;
 
     virtual RegID getStatusAsync(
-            OpID propertyID,
+            const OpID& propertyID,
             CSMessageContentHandlerCallback callback) = 0;
     virtual RegID sendRequestAsync(
-            OpID opID,
+            const OpID& opID,
             const CSMsgContentBasePtr& msgContent,
             CSMessageContentHandlerCallback callback
             ) = 0;
 
     virtual CSMsgContentBasePtr getStatus(
-            OpID propertyID,
+            const OpID& propertyID,
             unsigned long maxWaitTimeMs
             ) = 0;
     virtual CSMsgContentBasePtr sendRequest(
-            OpID opID,
+            const OpID& opID,
             const CSMsgContentBasePtr& msgContent,
             unsigned long maxWaitTimeMs
             ) = 0;

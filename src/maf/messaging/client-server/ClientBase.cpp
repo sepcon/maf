@@ -25,7 +25,7 @@ void ClientBase::onServerStatusChanged(
 }
 
 void ClientBase::onServiceStatusChanged(
-    ServiceID sid,
+    const ServiceID& sid,
     Availability oldStatus,
     Availability newStatus
     )
@@ -50,7 +50,7 @@ void ClientBase::onServiceStatusChanged(
     }
 }
 
-bool ClientBase::hasServiceRequester(ServiceID sid)
+bool ClientBase::hasServiceRequester(const ServiceID& sid)
 {
     return _requestersMap.atomic()->count(sid) != 0;
 }
@@ -98,12 +98,12 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
     }
 }
 
-void ClientBase::storeServiceStatus(ServiceID sid, Availability status)
+void ClientBase::storeServiceStatus(const ServiceID& sid, Availability status)
 {
     (*_serviceStatusMap.atomic())[sid] = status;
 }
 
-ServiceRequesterInterfacePtr ClientBase::getServiceRequester(ServiceID sid)
+ServiceRequesterInterfacePtr ClientBase::getServiceRequester(const ServiceID& sid)
 {
     std::lock_guard lock(_requestersMap);
 
@@ -132,7 +132,7 @@ ServiceRequesterInterfacePtr ClientBase::getServiceRequester(ServiceID sid)
     }
 }
 
-Availability ClientBase::getServiceStatus(ServiceID sid)
+Availability ClientBase::getServiceStatus(const ServiceID& sid)
 {
     std::lock_guard lock(_serviceStatusMap);
     auto itStatus = _serviceStatusMap->find(sid);

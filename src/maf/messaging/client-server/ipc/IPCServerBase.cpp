@@ -32,7 +32,7 @@ ActionCallStatus IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, con
     return _communicator->send(std::static_pointer_cast<IPCMessage>(msg), addr);
 }
 
-void IPCServerBase::notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus)
+void IPCServerBase::notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus)
 {
     if(oldStatus != newStatus)
     {
@@ -89,7 +89,7 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     return ServerBase::onIncomingMessage(csMsg);
 }
 
-void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, ServiceID sid, Availability oldStatus, Availability newStatus)
+void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, const ServiceID& sid, Availability oldStatus, Availability newStatus)
 {
     if(oldStatus != newStatus)
     {

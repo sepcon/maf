@@ -24,7 +24,7 @@ OpCode Request::getOperationCode() const
     return _csMsg->operationCode();
 }
 
-OpID Request::getOperationID() const
+const OpID& Request::getOperationID() const
 {
     std::lock_guard lock(_mutex);
     return _csMsg->operationID();

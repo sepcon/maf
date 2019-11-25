@@ -30,7 +30,7 @@ public:
     {
         return _delegate->getOperationCode();
     }
-    OpID getOperationID() const
+    const OpID& getOperationID() const
     {
         return _delegate->getOperationID();
     }

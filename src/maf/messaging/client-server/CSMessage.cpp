@@ -3,8 +3,8 @@
 namespace maf {
 namespace messaging {
 
-CSMessage::CSMessage(ServiceID tid, OpID opID, OpCode opCode, RequestID reqID, CSMsgContentBasePtr msgContent, Address sourceAddr) :
-    _serviceID(std::move(tid)),
+CSMessage::CSMessage(ServiceID sid, OpID opID, OpCode opCode, RequestID reqID, CSMsgContentBasePtr msgContent, Address sourceAddr) :
+    _serviceID(std::move(sid)),
     _operationID(std::move(opID)),
     _requestID(std::move(reqID)),
     _operationCode(std::move(opCode)),
@@ -17,7 +17,7 @@ CSMessage::~CSMessage()
 {
 }
 
-ServiceID CSMessage::serviceID() const
+const ServiceID& CSMessage::serviceID() const
 {
     return _serviceID;
 }
@@ -27,7 +27,7 @@ void CSMessage::setServiceID(ServiceID serviceID)
     _serviceID = std::move(serviceID);
 }
 
-OpID CSMessage::operationID() const
+const OpID& CSMessage::operationID() const
 {
     return _operationID;
 }

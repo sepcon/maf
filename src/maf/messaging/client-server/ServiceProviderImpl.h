@@ -41,19 +41,34 @@ struct ServiceProviderImpl
     ~ServiceProviderImpl();
 
     ActionCallStatus respondToRequest(const CSMessagePtr &csMsg);
+
     ActionCallStatus setStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         const CSMsgContentBasePtr& property
         );
 
-    CSMsgContentBasePtr getStatus(OpID propertyID);
+    ActionCallStatus broadcastSignal(
+        const OpID&  signalID,
+        const CSMsgContentBasePtr& signal
+        );
+
+    ActionCallStatus broadcast(
+        const OpID&  propertyID,
+        OpCode opCode,
+        const CSMsgContentBasePtr& content
+        );
+
+    CSMsgContentBasePtr getStatus(const OpID&  propertyID);
 
     void startServing();
     void stopServing();
 
     bool onIncomingMessage(const CSMessagePtr& msg);
 
-    ActionCallStatus sendMessage(const CSMessagePtr &csMsg, const Address &toAddr);
+    ActionCallStatus sendMessage(
+        const CSMessagePtr &csMsg,
+        const Address &toAddr
+        );
     ActionCallStatus sendBackMessageToClient(const CSMessagePtr &csMsg);
     void onStatusChangeRegister(const CSMessagePtr& msg);
     void onStatusChangeUnregister(const CSMessagePtr& msg);
@@ -78,8 +93,8 @@ struct ServiceProviderImpl
     void onStatusGetRequest(const CSMessagePtr &getMsg);
     bool invokeRequestHandlerCallback(const RequestPtr& request);
 
-    bool registerRequestHandler(OpID opID, RequestHandlerFunction handlerFunction);
-    bool unregisterRequestHandler( OpID opID );
+    bool registerRequestHandler(const OpID&  opID, RequestHandlerFunction handlerFunction);
+    bool unregisterRequestHandler( const OpID&  opID );
 
 };
 

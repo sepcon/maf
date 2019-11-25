@@ -13,39 +13,43 @@ class ServiceRequester : public ServiceRequesterInterface
 {
     std::unique_ptr<ServiceRequesterImpl> _pImpl;
 public:
-    ServiceRequester(ServiceID sid, std::weak_ptr<ClientInterface> client);
+    ServiceRequester(const ServiceID& sid, std::weak_ptr<ClientInterface> client);
     ~ServiceRequester() override;
 
     Availability serviceStatus() const override;
 
     RegID registerStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         CSMessageContentHandlerCallback callback
         ) override;
 
+    RegID registerSignal(
+        const OpID& propertyID,
+        CSMessageContentHandlerCallback callback) override;
+
     void unregisterStatus(const RegID &regID) override;
-    void unregisterStatusAll(OpID propertyID) override;
+    void unregisterStatusAll(const OpID& propertyID) override;
 
     RegID getStatusAsync(
-        OpID propertyID,
+        const OpID& propertyID,
         CSMessageContentHandlerCallback callback
         ) override;
 
     RegID sendRequestAsync
         (
-            OpID opID,
+            const OpID& opID,
             const CSMsgContentBasePtr& msgContent,
             CSMessageContentHandlerCallback callback
             ) override;
 
     CSMsgContentBasePtr getStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         unsigned long maxWaitTimeMs
         ) override;
 
     CSMsgContentBasePtr sendRequest
         (
-            OpID opID,
+            const OpID& opID,
             const CSMsgContentBasePtr& msgContent,
             unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
             ) override;
@@ -63,7 +67,7 @@ public:
 private:
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
     void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
-    void onServiceStatusChanged(ServiceID sid, Availability oldStatus, Availability newStatus) override;
+    void onServiceStatusChanged(const ServiceID& sid, Availability oldStatus, Availability newStatus) override;
 };
 
 }// messaging

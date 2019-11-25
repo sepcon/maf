@@ -110,6 +110,7 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Addres
             else
             {
                 Logger::error("Connect pipe with error: " ,  GetLastError());
+                break;
             }
         }
 

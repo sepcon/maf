@@ -12,7 +12,7 @@ namespace test {
 
 using namespace weather_service;
 
-template <class MessageTrait, int ServiceID>
+template <class MessageTrait>
 class ServerComponent : public ExtensibleComponent
 {
     using Stub = QueueingServiceStub<MessageTrait>;
@@ -29,7 +29,7 @@ public:
             bool detached = true
             )
     {
-        _stub = Stub::createStub(contype, addr, ServiceID);
+        _stub = Stub::createStub(contype, addr, "weather_service");
         _stub->setMainComponent(component());
         run(detached ? LaunchMode::Async : LaunchMode::AttachToCurrentThread);
     }

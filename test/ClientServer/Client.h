@@ -17,7 +17,7 @@ namespace test {
 
 using namespace weather_service;
 
-template<class MessageTrait, int ServiceID>
+template<class MessageTrait>
 struct ClientComponent : public ExtensibleComponent
 {
     using Proxy = QueueingServiceProxy<MessageTrait>;

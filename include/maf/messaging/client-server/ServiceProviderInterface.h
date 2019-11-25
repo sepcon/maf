@@ -13,21 +13,26 @@ public:
     virtual void startServing() = 0;
     virtual void stopServing() = 0;
     virtual bool registerRequestHandler(
-        OpID opID,
+        const OpID& opID,
         RequestHandlerFunction handlerFunction
         ) = 0;
 
-    virtual bool unregisterRequestHandler( OpID opID ) = 0;
+    virtual bool unregisterRequestHandler( const OpID& opID ) = 0;
 
     virtual ActionCallStatus respondToRequest(
         const CSMessagePtr &csMsg
         ) = 0;
     virtual ActionCallStatus setStatus(
-        OpID propertyID,
+        const OpID& propertyID,
         const CSMsgContentBasePtr& property
         ) = 0;
 
-    virtual CSMsgContentBasePtr getStatus(OpID propertyID) = 0;
+    virtual ActionCallStatus broadcastSignal(
+        const OpID& eventID,
+        const CSMsgContentBasePtr& event
+        ) = 0;
+
+    virtual CSMsgContentBasePtr getStatus(const OpID& propertyID) = 0;
 };
 
 }

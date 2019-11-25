@@ -7,7 +7,7 @@ namespace messaging {
 ServiceProvider::ServiceProvider(ServiceID sid,
     std::weak_ptr<ServerInterface> server)
 {
-    setServiceID(sid);
+    setServiceID(std::move(sid));
     _pImpl = std::make_unique<ServiceProviderImpl>(
         this,
         std::move(server)
@@ -19,12 +19,12 @@ ServiceProvider::~ServiceProvider()
     _pImpl->stopServing();
 }
 
-bool ServiceProvider::registerRequestHandler(OpID opID, RequestHandlerFunction handlerFunction)
+bool ServiceProvider::registerRequestHandler(const OpID& opID, RequestHandlerFunction handlerFunction)
 {
     return _pImpl->registerRequestHandler(opID, std::move(handlerFunction));
 }
 
-bool ServiceProvider::unregisterRequestHandler(OpID opID)
+bool ServiceProvider::unregisterRequestHandler(const OpID& opID)
 {
     return _pImpl->unregisterRequestHandler(opID);
 }
@@ -36,14 +36,22 @@ ActionCallStatus ServiceProvider::respondToRequest(const CSMessagePtr &csMsg)
 }
 
 ActionCallStatus ServiceProvider::setStatus(
-    OpID propertyID,
+    const OpID& propertyID,
     const CSMsgContentBasePtr &property
     )
 {
     return _pImpl->setStatus(propertyID, property);
 }
 
-CSMsgContentBasePtr ServiceProvider::getStatus(OpID propertyID)
+ActionCallStatus ServiceProvider::broadcastSignal(
+    const OpID& signalID,
+    const CSMsgContentBasePtr& signal
+    )
+{
+    return _pImpl->broadcastSignal(signalID, signal);
+}
+
+CSMsgContentBasePtr ServiceProvider::getStatus(const OpID& propertyID)
 {
     return _pImpl->getStatus(propertyID);
 }

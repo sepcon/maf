@@ -11,7 +11,7 @@ namespace messaging {
 struct ServiceStatusMsg : public CompMessageBase
 {
     ServiceStatusMsg(ServiceID sid_, Availability old_, Availability new_):
-        serviceID(sid_), oldStatus(old_), newStatus(new_){}
+        serviceID(std::move(sid_)), oldStatus(old_), newStatus(new_){}
 
     ServiceID serviceID;
     Availability oldStatus;

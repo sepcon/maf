@@ -21,7 +21,7 @@ public:
     bool deinit() override;
     ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
     ActionCallStatus sendMessageToServer(const CSMessagePtr& msg) override;
-    void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
+    void notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus) override;
 };
 
 }

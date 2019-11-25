@@ -12,7 +12,7 @@ constexpr maf::messaging::Address::Port REQUESTS_PER_CLIENT = 100;
 constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;
 
 constexpr const char* const SERVER_ADDRESS = "nocpes.github.com";
-constexpr const maf::messaging::ServiceID SID_WeatherService = 0;
+constexpr const maf::messaging::ServiceIDConstant SID_WeatherService = "weather_service";
 constexpr const int SERVER_UPDATE_CYCLE = 10;
 constexpr const int SERVER_TOTAL_UPDATES_PER_REQUEST = 10000000;
 
@@ -40,6 +40,15 @@ SERVICE(weather)
         )
 
     ENDREQUEST(today_weather)
+
+    VOID_REQUEST(clear_all_status_request)
+
+    VOID_REQUEST(update_status_request)
+
+    VOID_REQUEST(broad_cast_signal_request)
+
+    VOID_REQUEST(shutdown)
+
 
     REQUEST(today_weather1)
         ALIAS(using StringList = std::vector<std::string>);
@@ -86,6 +95,7 @@ SERVICE(weather)
         (
             (bool, compliant, true),
             (bool, critical, false),
+            (int, updated_count, 0),
             (std::string, cloud_message, "This device is compliant1!")
             )
     ENDPROPERTY(compliance1)
@@ -95,6 +105,7 @@ SERVICE(weather)
         (
             (bool, compliant, true),
             (bool, critical, false),
+            (int, updated_count, 0),
             (std::string, cloud_message, "This device is compliant2!")
             )
     ENDPROPERTY(compliance2)
@@ -103,8 +114,9 @@ SERVICE(weather)
         (
             (bool, compliant, true),
             (bool, critical, false),
+            (int, updated_count, 0),
             (std::string, cloud_message, "This device is compliant3!")
-            )
+        )
     ENDPROPERTY(compliance3)
 
     PROPERTY(compliance4)
@@ -112,17 +124,19 @@ SERVICE(weather)
         (
             (bool, compliant, true),
             (bool, critical, false),
+            (int, updated_count, 0),
             (std::string, cloud_message, "This device is compliant4!")
-            )
+        )
     ENDPROPERTY(compliance4)
 
 
     PROPERTY(compliance5)
-    STATUS
-        (
-            (bool, compliant, true),
-            (bool, critical, false),
-            (std::string, cloud_message, "This device is compliant5sdfds!")
+        STATUS
+            (
+                (bool, compliant, true),
+                (bool, critical, false),
+                (int, updated_count, 0),
+                (std::string, cloud_message, "This device is compliant5sdfds!")
             )
     ENDPROPERTY(compliance5)
 
@@ -130,9 +144,15 @@ SERVICE(weather)
         STATUS((uint64_t, seconds, 0))
     ENDPROPERTY(boot_time)
 
-    REQUEST(shutdown)
-        VOID_INPUT()
-    ENDREQUEST(shutdown)
+    VOID_SIGNAL(server_arbittrary_request)
+
+    SIGNAL(client_info_request)
+        ATTRIBUTES
+        (
+            (std::string, user_name)
+        )
+    ENDSIGNAL(client_info_request)
+
 ENDSERVICE(weather);
 
 

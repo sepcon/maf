@@ -31,7 +31,7 @@ class Request : public pattern::Unasignable, public RequestInterface
 
 public:
     OpCode getOperationCode() const override;
-    OpID getOperationID() const override;
+    const OpID& getOperationID() const override;
     RequestID getRequestID() const override;
     bool valid() const override;
     ActionCallStatus respond(const CSMsgContentBasePtr& answer) override;

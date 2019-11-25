@@ -10,7 +10,8 @@ namespace messaging {
 
 using OpID              = std::string;
 using OpIDConstant      = const char*;
-using ServiceID         = uint32_t;
+using ServiceID         = std::string;
+using ServiceIDConstant = const char*;
 using RequestID         = util::IDManager::IDType;
 using ConnectionType    = std::string;
 
@@ -20,7 +21,8 @@ enum class OpCode : unsigned char
 //  Client Request
     Register,                           // \__
     UnRegister,                         // \__
-    StatusGet,                          // \__ OpCodes for property status GET/BROADCAST
+    StatusGet,                          // \__ OpCodes for property STATUS GET/BROADCAST, property will be stored
+    RegisterSignal,                    // Signal will be broadcasted to clients but won't be stored
     Request,                            // Send INPUT to server (Doing actions/get properties' status...)
     Abort,                              // Ask server to ABORT pending/ongoing INPUT that has not been done yet
 //  Server Response
@@ -33,9 +35,9 @@ enum class OpCode : unsigned char
     Invalid                             //
 };
 
-static constexpr OpIDConstant   OpIDInvalid         = "";
-static constexpr ServiceID      ServiceIDInvalid    = static_cast<ServiceID>(-1);
-static constexpr RequestID      RequestIDInvalid    = util::IDManager::INVALID_ID;
+static constexpr OpIDConstant       OpIDInvalid         = "";
+static constexpr ServiceIDConstant  ServiceIDInvalid    = "";
+static constexpr RequestID          RequestIDInvalid    = util::IDManager::INVALID_ID;
 
 
 } // messaging

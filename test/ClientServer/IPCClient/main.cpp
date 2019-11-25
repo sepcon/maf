@@ -20,7 +20,7 @@ class ClientCompTest : public ExtensibleComponent
     using Proxy = local::ServiceProxy;
     using ProxyPtr = std::shared_ptr<Proxy>;
 public:
-    ClientCompTest(ServiceID sid) : _sid(sid)
+    ClientCompTest(const ServiceID& sid) : _sid(sid)
     {
     }
 
@@ -30,30 +30,16 @@ public:
         _timer.setCyclic(true);
         _proxy->setMainComponent(component());
 
-        auto output = _proxy->sendRequest<today_weather::output>(today_weather::make_input(), 1000);
         onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
             if (msg->newStatus == Availability::Available) {
                 maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
                 maf::Logger::debug("Sending requests to server");
 
+                _proxy->sendRequest<clear_all_status_request>();
+                Logger::debug("Server already clear all status, then start jobs...");
+
                 registerStatus();
-
-                _timer.start(1000, [this]{
-                    static int totalRequest = 0;
-
-                    _proxy->sendRequestAsync<today_weather::output>(
-                        today_weather::make_input("this is ipc client ", ++totalRequest),
-                        [this](const today_weather::output_ptr& output) {
-                            Logger::debug("Server resonds: ", output->dump());
-                            if(output->your_command() >= 5) {
-                                getStatuses();
-                                this->sendSyncRequest<today_weather>();
-                                tryStopServer();
-                                this->stop();
-                            }
-                        } );
-                });
-
+                _proxy->sendRequestAsync<update_status_request>();
             }
             else
             {
@@ -68,24 +54,16 @@ public:
     {
         long long total = 0;
         const int totalRequests = 5000;
-        for(int i = 0; i < totalRequests; ++i)
         {
+            util::TimeMeasurement tm{[&total](util::TimeMeasurement::MicroSeconds elapsed) {
+                total += elapsed.count();
+            }};
+            for(int i = 0; i < totalRequests; ++i)
             {
-                util::TimeMeasurement tm{[&total](util::TimeMeasurement::MicroSeconds elapsed) {
-                    total += elapsed.count();
-                    Logger::debug("Totol time for request sync = ", elapsed.count(), " microseconds");
-                }};
                 _proxy->sendRequest<struct Category::output>(Category::make_input(), 500);
-
-                if(auto output = _proxy->sendRequest<struct Category::output>(Category::make_input(), 500))
-                    Logger::debug("Receive output from server for sync request = ", output->dump());
-                else
-                {
-                    Logger::debug("Action output from server is failed");
-                }
             }
         }
-        auto avarageTimePerRequest = (double)total / totalRequests;
+        auto avarageTimePerRequest = static_cast<double>(total) / totalRequests;
         Logger::debug("Avarage time to send a request is: ",
                       avarageTimePerRequest,
                       " microseconds");
@@ -93,12 +71,19 @@ public:
 
     void registerStatus()
     {
-        auto dumpCallback = [](const auto& status) {
-            Logger::debug(status->dump());
+        auto dumpCallback = [this](const auto& status) {
+            Logger::debug("Got status update from server[",
+                          status->operationID(), "]: ", status->dump());
+            if(status->operationID() == compliance1::ID)
+            {
+                this->getStatuses();
+            }
         };
 
-        _proxy->registerStatus<compliance::status>(dumpCallback);
         _proxy->registerStatus<compliance5::status>(dumpCallback);
+        _proxy->registerStatus<compliance4::status>(dumpCallback);
+        _proxy->registerStatus<compliance3::status>(dumpCallback);
+        _proxy->registerStatus<compliance2::status>(dumpCallback);
         _proxy->registerStatus<compliance1::status>(dumpCallback);
     }
 
@@ -107,8 +92,29 @@ public:
         getStatus<compliance::status>();
         getStatus<compliance5::status>();
         getStatus<compliance1::status>();
+        registerSignal();
     }
 
+    void registerSignal()
+    {
+        _proxy->registerSignal<server_arbittrary_request>([]{
+            Logger::debug("Received ", server_arbittrary_request::ID,
+                          " from server");
+        });
+
+        _proxy->registerSignal<client_info_request::attributes>(
+            [this](const auto& signal){
+                Logger::debug("Received signal ", client_info_request::ID,
+                              "from server: ",
+                              signal->dump()
+                              );
+
+                tryStopServer();
+            });
+
+        _proxy->sendRequestAsync<broad_cast_signal_request>();
+
+    }
     void tryStopServer()
     {
         using namespace weather_service;
@@ -119,6 +125,7 @@ public:
             _proxy->sendRequest<shutdown>();
             Logger::debug("Server already shutdown!");
         }
+        stop();
     }
     template <class status>
     void getStatus()
@@ -128,11 +135,15 @@ public:
             auto compliance5 = _proxy->getStatus<status>();
             if(compliance5)
             {
-                maf::Logger::debug("Got update from server: ", compliance5->dump(-1));
+                maf::Logger::debug("Got update from server, status id = ",
+                                   status::operationID(),
+                                   compliance5->dump(-1)
+                                   );
             }
             else
             {
-                maf::Logger::error("Got empty status from server for status id ", status::operationID());
+                maf::Logger::error("Got empty status from server for status id ",
+                                   status::operationID());
             }
         }
     }
@@ -140,6 +151,7 @@ public:
 private:
     Timer _timer;
     std::shared_ptr<Proxy> _proxy;
+    std::function<void()> _nextStep;
     ServiceID _sid;
 };
 
@@ -147,12 +159,18 @@ private:
 
 int main()
 {
-    maf::Logger::init(maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_ERROR, [](const std::string& msg) {
-        std::cout << msg << std::endl;
-    });
+    maf::Logger::init(
+        maf::logging::LOG_LEVEL_DEBUG |
+        maf::logging::LOG_LEVEL_ERROR,
+        [](const std::string& msg) {
+            std::cout << msg << std::endl;
+        }
+        );
 
     maf::util::TimeMeasurement tmeasure([](auto time) {
-        maf::Logger::debug("Total execution time = " ,  static_cast<double>(time.count()) / 1000, "ms");
+        maf::Logger::debug("Total execution time = " ,
+                           static_cast<double>(time.count()) / 1000, "ms"
+                           );
         });
 
     maf::Logger::debug("Client is starting up!");

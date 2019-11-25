@@ -12,7 +12,10 @@ struct CallbackExcMsg : public CompMessageBase
 {
     template<class Callback, class... Args>
     CallbackExcMsg(Callback&& callback_, Args&&... args) {
-        auto invoker = util::makeInvoker(std::forward<Callback>(callback_), std::forward<Args>(args)...);
+        auto invoker = util::makeInvoker(
+            std::forward<Callback>(callback_),
+            std::forward<Args>(args)...
+            );
         callback = [invoker = std::move(invoker)]() mutable {
             invoker.invoke();
         };

@@ -17,10 +17,10 @@ public:
     bool init(const Address& serverAddress) override;
     bool deinit() override  ;
     ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr)  override;
-    void notifyServiceStatusToClient(ServiceID sid, Availability oldStatus, Availability newStatus) override;
+    void notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus) override;
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
 protected:
-    void notifyServiceStatusToClient(const Address& clAddr, ServiceID sid, Availability oldStatus, Availability newStatus);
+    void notifyServiceStatusToClient(const Address& clAddr, const ServiceID& sid, Availability oldStatus, Availability newStatus);
     using RegistedClientAddresses = threading::Lockable<std::set<Address>>;
     class BytesCommunicator* _communicator;
     RegistedClientAddresses _registedClAddrs;
