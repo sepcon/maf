@@ -26,12 +26,12 @@ public:
     void startTest(
             const ConnectionType& contype,
             const Address& addr,
-            bool detached = true
+            const ServiceID& sid = "weather_service"
             )
     {
-        _stub = Stub::createStub(contype, addr, "weather_service");
+        _stub = Stub::createStub(contype, addr, sid);
         _stub->setMainComponent(component());
-        run(detached ? LaunchMode::Async : LaunchMode::AttachToCurrentThread);
+        run(LaunchMode::AttachToCurrentThread);
     }
     void stopTest()
     {

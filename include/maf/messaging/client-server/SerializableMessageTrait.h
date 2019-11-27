@@ -7,7 +7,6 @@
 
 namespace maf { using logging::Logger;
 namespace messaging {
-namespace ipc {
 
 
 class SerializableMessageTrait : public MessageTraitBase
@@ -25,7 +24,12 @@ public:
         EncodeDecodeStatus* status = nullptr
         )
     {
-        assert(csMsgContent);
+        if(!csMsgContent)
+        {
+            setStatus(status, EmptyInput);
+            return {};
+        }
+
         try
         {
             using cs_param_pure_type = std::decay_t<cs_param_type>;
@@ -68,6 +72,5 @@ public:
     }
 };
 
-}
 }
 }

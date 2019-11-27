@@ -7,7 +7,7 @@
 
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/internal/cs_param.h>
-#include <maf/messaging/client-server/ServiceProvider.h>
+#include <maf/messaging/client-server/CSManager.h>
 
 namespace maf {
 namespace messaging {
@@ -29,15 +29,22 @@ QueueingServiceStub<MessageTrait>::createStub(
     const ServiceID& sid
     )
 {
-    if(auto server = ServerFactory::instance().getServer(contype, addr))
+    if(auto provider = CSManager::instance().getServiceProvider(
+             contype,
+             addr,
+             sid
+             ))
     {
-        return std::shared_ptr<Stub>{
-            new Stub(
-                std::make_shared<ServiceProvider>(sid, std::move(server))
-                )
-        };
+        return std::shared_ptr<Stub>{ new Stub(std::move(provider)) };
     }
+
     return {};
+}
+
+template<class MessageTrait>
+const ServiceID &QueueingServiceStub<MessageTrait>::serviceID() const
+{
+    return _provider->serviceID();
 }
 
 template <class MessageTrait> template<class property_status>

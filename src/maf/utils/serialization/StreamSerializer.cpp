@@ -3,7 +3,8 @@
 namespace maf {
 namespace srz {
 
-StreamSerializer::StreamSerializer(std::ostream &stream) : _ostream(stream), _totalWrite(0)
+StreamSerializer::StreamSerializer(std::ostream &stream)
+    : _ostream(stream), _totalWrite(0)
 {
     writeSum(); //preserve first "sizeof(_totalWrite)" bytes for SUM
 }
@@ -29,7 +30,10 @@ char *StreamSerializer::getNextWriteArea(SizeType length)
 
 void StreamSerializer::sync()
 {
-    write(_serializeBuffer.firstpos(), static_cast<std::streamsize>(_serializeBuffer.size()));
+    write(
+        _serializeBuffer.firstpos(),
+        static_cast<std::streamsize>(_serializeBuffer.size())
+        );
 }
 
 void StreamSerializer::flush()
@@ -41,7 +45,9 @@ void StreamSerializer::flush()
     }
 }
 
-void StreamSerializer::write(char *pstart, std::streamsize length)
+void StreamSerializer::write(
+    char *pstart, std::streamsize length
+    )
 {
     _ostream.write(pstart, length);
     _totalWrite += length;
@@ -57,10 +63,17 @@ StreamDeserializer::StreamDeserializer(std::istream &stream, SizeType buffSize)
     : _istream(stream), _totalAvailableBytes(0), _totalRead(0)
 {
     resizeBuffer(buffSize);
-    _istream.read(reinterpret_cast<char*>(&_totalAvailableBytes), sizeof (_totalAvailableBytes));
+    _istream.read(
+        reinterpret_cast<char*>(&_totalAvailableBytes),
+        sizeof (_totalAvailableBytes)
+        );
     if (_totalRead <= 0 && _totalAvailableBytes > 0)
     {
-        auto willbeRead = _totalAvailableBytes > streamsize(_buffer.size()) ? streamsize(_buffer.size()) : _totalAvailableBytes;
+        auto willbeRead = _totalAvailableBytes > streamsize(_buffer.size())
+                              ?
+                              streamsize(_buffer.size())
+                              : _totalAvailableBytes;
+
         _istream.read(_buffer.firstpos(), willbeRead);
         _totalRead = willbeRead;
         _curpos = _buffer.firstpos();
@@ -73,7 +86,10 @@ void StreamDeserializer::resizeBuffer(SizeType size)
     _buffer.resize(size);
 }
 
-std::streamsize StreamDeserializer::fillbuffer(ByteArray::WBytePos pos, std::streamsize length)
+std::streamsize StreamDeserializer::fillbuffer(
+    ByteArray::WBytePos pos,
+    std::streamsize length
+    )
 {
     std::streamsize read = 0;
     if(_totalRead < _totalAvailableBytes)
@@ -98,7 +114,11 @@ bool StreamDeserializer::exhausted() const
     return _totalRead >= _totalAvailableBytes && _lastpos < _curpos;
 }
 
-void StreamDeserializer::fetchMoreBytes(const char **startp, const char **lastp, SizeType neededBytes)
+void StreamDeserializer::fetchMoreBytes(
+    const char **startp,
+    const char **lastp,
+    SizeType neededBytes
+    )
 {
     if(neededBytes > _buffer.size())
     {
@@ -119,7 +139,10 @@ void StreamDeserializer::fetchMoreBytes(const char **startp, const char **lastp,
 
     _totalRead -= static_cast<SizeType>(remainerBytes);
     _istream.seekg(_istream.tellg() + seekOffset);
-    auto read = fillbuffer(_buffer.firstpos(), static_cast<std::streamsize>(_buffer.size()));
+    auto read = fillbuffer(
+        _buffer.firstpos(),
+        static_cast<std::streamsize>(_buffer.size())
+        );
     *startp = _buffer.firstpos();
     *lastp = (*startp) + read - 1;
 }

@@ -5,6 +5,7 @@
  * To wish that the timer will work only in thread of its Component, then don't allow any assignment
 */
 
+#include <maf/export/MafExport_global.h>
 #include <maf/patterns/Patterns.h>
 #include <functional>
 #include <memory>
@@ -18,13 +19,13 @@ class Timer : public pattern::Unasignable
 public:
     typedef std::function<void()> TimeOutCallback;
     typedef long long Duration;
-    Timer(bool cyclic = false);
-    ~Timer();
-    void start(Duration milliseconds, TimeOutCallback callback);
-    void restart();
-    void stop();
-    bool running();
-    void setCyclic(bool cyclic = true);
+    MAF_EXPORT Timer(bool cyclic = false);
+    MAF_EXPORT ~Timer();
+    MAF_EXPORT void start(Duration milliseconds, TimeOutCallback callback);
+    MAF_EXPORT void restart();
+    MAF_EXPORT void stop();
+    MAF_EXPORT bool running();
+    MAF_EXPORT void setCyclic(bool cyclic = true);
 
 private:
     std::shared_ptr<messaging::TimerManager> _myMgr;

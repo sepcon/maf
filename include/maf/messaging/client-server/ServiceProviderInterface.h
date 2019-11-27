@@ -10,8 +10,13 @@ class ServiceProviderInterface : public ServiceMessageReceiver
 {
 public:
     virtual ~ServiceProviderInterface() = default;
+
+    virtual Availability availability() const = 0;
+
     virtual void startServing() = 0;
+
     virtual void stopServing() = 0;
+
     virtual bool registerRequestHandler(
         const OpID& opID,
         RequestHandlerFunction handlerFunction

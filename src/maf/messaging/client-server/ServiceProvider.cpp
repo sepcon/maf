@@ -19,6 +19,11 @@ ServiceProvider::~ServiceProvider()
     _pImpl->stopServing();
 }
 
+Availability ServiceProvider::availability() const
+{
+    return _pImpl->availability();
+}
+
 bool ServiceProvider::registerRequestHandler(const OpID& opID, RequestHandlerFunction handlerFunction)
 {
     return _pImpl->registerRequestHandler(opID, std::move(handlerFunction));

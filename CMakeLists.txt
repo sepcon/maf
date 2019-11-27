@@ -43,10 +43,16 @@ if(MAF_PLATFORM_NAME)
 
 endif(MAF_PLATFORM_NAME)
 
+if(MAF_ENABLE_SHARE)
+    add_definitions(-DMAF_SHARED_LIBRARY)
+else()
+    add_definitions(-DMAF_STATIC_LIBRARY)
+endif()
+
 # <-- platforms specific sources/headers
 
 # Add maf.lib
-add_library(maf
+add_library(maf_objlib OBJECT
     ${MAF_LIBRARY_SOURCES}
     ${MAF_PLATFORM_SOURCES}
     ${MAF_LIBRARY_HEADERS}
@@ -54,7 +60,17 @@ add_library(maf
     ${MAF_PLATFORM_HEADERS}
     )
 
-message("${MAF_PLARFORM_SOURCES}")
+set(MAF_BINARY_DIR ${CMAKE_BINARY_DIR})
+
+set(MAFLIB maf)
+
+if(MAF_ENABLE_SHARE)
+    set_property(TARGET maf_objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
+    add_library(maf SHARED $<TARGET_OBJECTS:maf_objlib>)
+else()
+    add_library(maf STATIC $<TARGET_OBJECTS:maf_objlib>)
+endif(MAF_ENABLE_SHARE)
+
 
 # specify variable MAF_ENABLE_TEST to disable building test programs
 if(MAF_ENABLE_TEST)

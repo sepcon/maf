@@ -45,7 +45,12 @@ struct JobDesc
     using Duration = TimerManagerImpl::Duration;
     using TimeOutCallback = TimerManagerImpl::TimeOutCallback;
 
-    JobDesc(JobID id_, Duration duration_, TimeOutCallback callback_, bool isCyclic_ = false)
+    JobDesc(
+        JobID id_,
+        Duration duration_,
+        TimeOutCallback callback_,
+        bool isCyclic_ = false
+        )
     {
         *_d = D{id_, duration_, std::move(callback_), isCyclic_};
     }
@@ -95,13 +100,24 @@ struct JobDesc
 private:
     Duration elapseTime()
     {
-        return duration_cast<milliseconds>(system_clock::now()- _d->startTime).count();
+        return duration_cast<milliseconds>(
+                   system_clock::now()- _d->startTime
+                   ).count();
     }
     struct D
     {
         D() = default;
-        D(JobID id_, Duration duration_, TimeOutCallback callback_, bool isCyclic_ = false)
-            : id(id_), startTime(system_clock::now()), duration(duration_), callback(callback_), isCyclic(isCyclic_){}
+        D(JobID id_,
+          Duration duration_,
+          TimeOutCallback callback_,
+          bool isCyclic_ = false
+          ) : id(id_),
+            startTime(system_clock::now()),
+            duration(duration_),
+            callback(callback_),
+            isCyclic(isCyclic_)
+        {}
+
         JobID id;
         system_clock::time_point startTime;
         Duration duration;
@@ -122,13 +138,18 @@ struct JobComp
 
 TimerManagerImpl::~TimerManagerImpl()
 {
-    if(_future.valid())
+    if(_thread.joinable())
     {
-        _future.wait();
+        _thread.join();
     } 
 }
 
-bool TimerManagerImpl::start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCallback callback, bool cyclic)
+bool TimerManagerImpl::start(
+    JobID jid,
+    Duration ms,
+    TimeOutCallback callback,
+    bool cyclic
+    )
 {
     bool success = true;
 
@@ -145,7 +166,13 @@ bool TimerManagerImpl::start(TimerManagerImpl::JobID jid, Duration ms, TimeOutCa
         }
         else
         {
-            Logger::warn("Cannot start timer for job " ,  jid ,  " Due to number of jobs exceeds the permited amount(" ,  MAX_JOBS_COUNT ,  "), please try with other BusyTimer");
+            Logger::warn(
+                "Cannot start timer for job " ,
+                jid ,
+                " Due to number of jobs exceeds the permited amount(" ,
+                MAX_JOBS_COUNT ,
+                "), please try with other BusyTimer"
+                );
             success = false;
         }
     }
@@ -166,7 +193,12 @@ void TimerManagerImpl::restart(TimerManagerImpl::JobID jid)
         auto itJob = findJob__(_runningJobs, jid);
         if (itJob != _runningJobs->end())
         {
-            Logger::info("Timer " ,  jid ,  " is restarted with duration = " ,  (*itJob)->duration());
+            Logger::info(
+                "Timer " ,
+                jid ,
+                " is restarted with duration = " ,
+                (*itJob)->duration()
+                );
 
             (*itJob)->reset();
             jobslock.unlock();
@@ -190,7 +222,11 @@ void TimerManagerImpl::stop(TimerManagerImpl::JobID jid)
         }
         else
         {
-            Logger::warn("Job " ,  jid ,  " does not exist or is already canceled");
+            Logger::warn(
+                "Job " ,
+                jid ,
+                " does not exist or is already canceled"
+                );
         }
     }
 }
@@ -222,7 +258,8 @@ void TimerManagerImpl::setCyclic(TimerManagerImpl::JobID jid, bool cyclic)
 {
     if (!test(_shutdowned))
     {
-        auto setCyclic = [](JobsContainer& jobs, JobID jid, bool value) -> bool {
+        auto setCyclic =
+            [](JobsContainer& jobs, JobID jid, bool value) -> bool {
             std::lock_guard lock(jobs);
             auto itJob = findJob__(jobs, jid);
             if (itJob != jobs->end())
@@ -251,14 +288,31 @@ size_t TimerManagerImpl::jobsCount()
     return _pendingJobs->size() + _runningJobs->size();
 }
 
-void TimerManagerImpl::startImmediately(TimerManagerImpl::JobID jid, TimerManagerImpl::Duration ms, TimerManagerImpl::TimeOutCallback callback, bool cyclic) noexcept
+void TimerManagerImpl::startImmediately(
+    JobID jid,
+    Duration ms,
+    TimeOutCallback callback,
+    bool cyclic
+    ) noexcept
 {
-    addOrReplace(_runningJobs, std::make_shared<JobDesc>(jid, ms, callback, cyclic));
+    addOrReplace(
+        _runningJobs,
+        std::make_shared<JobDesc>(
+            jid,
+            ms,
+            callback,
+            cyclic
+            )
+        );
 }
 
 void TimerManagerImpl::reorderRunningJobs__() noexcept
 {
-    std::make_heap(_runningJobs->begin(), _runningJobs->end(), JobComp());
+    std::make_heap(
+        _runningJobs->begin(),
+        _runningJobs->end(),
+        JobComp()
+        );
 }
 
 
@@ -274,17 +328,25 @@ void TimerManagerImpl::adoptPendingJobs__() noexcept
     }
 }
 
-void TimerManagerImpl::storePendingJob(JobID jid, Duration ms, TimeOutCallback callback, bool cyclic) noexcept
+void TimerManagerImpl::storePendingJob(
+    JobID jid,
+    Duration ms,
+    TimeOutCallback callback,
+    bool cyclic
+    ) noexcept
 {
     storePendingJob(std::make_shared<JobDesc>(jid, ms, callback, cyclic));
 }
 
-void TimerManagerImpl::storePendingJob(TimerManagerImpl::JobDescRef job) noexcept
+void TimerManagerImpl::storePendingJob(JobDescRef job) noexcept
 {
     addOrReplace(_pendingJobs, std::move(job));
 }
 
-TimerManagerImpl::JobDescRef TimerManagerImpl::removeAndInvalidateJob(TimerManagerImpl::JobsContainer& jobs, TimerManagerImpl::JobID jid)
+TimerManagerImpl::JobDescRef TimerManagerImpl::removeAndInvalidateJob(
+    JobsContainer& jobs,
+    JobID jid
+    )
 {
     JobDescRef job;
     std::lock_guard lock(jobs);
@@ -304,7 +366,10 @@ TimerManagerImpl::JobDescRef TimerManagerImpl::removeAndInvalidateJob(TimerManag
     return job;
 }
 
-TimerManagerImpl::JobsIterator TimerManagerImpl::findJob__(TimerManagerImpl::JobsContainer &jobs, TimerManagerImpl::JobID jid)
+TimerManagerImpl::JobsIterator TimerManagerImpl::findJob__(
+    JobsContainer &jobs,
+    JobID jid
+    )
 {
     for(auto itJob = jobs->begin(); itJob != jobs->end(); ++itJob)
     {
@@ -323,18 +388,24 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
     {
         try
         {
-            if(job->valid()) // for case of job has been stopped when waiting to be expired
+            // for case of job has been stopped when waiting to be expired
+            if(job->valid())
             {
                 this->doJob__(job);
             }
         }
         catch(const std::exception& e)
         {
-            Logger::info("Catch exception when executing job's callback: " ,  e.what());
+            Logger::info(
+                "Catch exception when executing job's callback: ",
+                e.what()
+                );
         }
         catch(...)
         {
-            Logger::info("Uncaught exception occurred when executing job's callback");
+            Logger::info(
+                "Uncaught exception occurred when executing job's callback"
+                );
         }
         executed = true;
     }
@@ -345,7 +416,7 @@ bool TimerManagerImpl::runJobIfExpired__(TimerManagerImpl::JobDescRef job)
 
 void TimerManagerImpl::run() noexcept
 {
-    _future = std::async(std::launch::async, [this] {
+    _thread = std::thread([this] {
 
         set(_workerThreadIsRunning, true);
         Logger::info("TimerManager thread is running!");
@@ -367,7 +438,10 @@ void TimerManagerImpl::run() noexcept
                 {
                     if (test(_shutdowned)) { break; }
                     //TBD: _shutdowned might be set here
-                    _condvar.wait_for(jobsLock, milliseconds(job->remainTime()));
+                    _condvar.wait_for(
+                        jobsLock,
+                        milliseconds(job->remainTime())
+                        );
 
                     if (test(_shutdowned)) { break; }
 
@@ -379,11 +453,13 @@ void TimerManagerImpl::run() noexcept
             }
             else // there's no job to do
             {
-//                LOG("Exit due to no more job to do");
-//                break;
-                _condvar.wait(ccMutex, [this]{
-                    return (this->_pendingJobs->size() > 0) || (test(_shutdowned) == true);
-                });
+                _condvar.wait(
+                    ccMutex,
+                    [this]{
+                        return (this->_pendingJobs->size() > 0)
+                               || (test(_shutdowned) == true);
+                    }
+                    );
             }
 
             this->adoptPendingJobs__();
@@ -394,7 +470,9 @@ void TimerManagerImpl::run() noexcept
 }
 
 
-TimerManagerImpl::JobDescRef TimerManagerImpl::getShorttestDurationJob__(const JobsContainer& jobs) noexcept
+TimerManagerImpl::JobDescRef TimerManagerImpl::getShorttestDurationJob__(
+    const JobsContainer& jobs
+    ) noexcept
 {
     if(jobs->empty())
     {

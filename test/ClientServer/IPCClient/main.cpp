@@ -35,7 +35,7 @@ public:
                 maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
                 maf::Logger::debug("Sending requests to server");
 
-                _proxy->sendRequest<clear_all_status_request>();
+                _proxy->sendRequest<clear_all_status_request>(static_cast<uint8_t>(-1));
                 Logger::debug("Server already clear all status, then start jobs...");
 
                 registerStatus();
@@ -73,7 +73,7 @@ public:
     {
         auto dumpCallback = [this](const auto& status) {
             Logger::debug("Got status update from server[",
-                          status->operationID(), "]: ", status->dump());
+                          status->operationID(), "]: ", status->updated_count());
             if(status->operationID() == compliance1::ID)
             {
                 this->getStatuses();
@@ -137,7 +137,7 @@ public:
             {
                 maf::Logger::debug("Got update from server, status id = ",
                                    status::operationID(),
-                                   compliance5->dump(-1)
+                                   compliance5->updated_count()
                                    );
             }
             else

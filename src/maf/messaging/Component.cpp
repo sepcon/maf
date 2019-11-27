@@ -102,19 +102,31 @@ void ComponentImpl::postMessage(MessageBasePtr msg)
     }
 }
 
-void ComponentImpl::registerMessageHandler(CompMessageBase::Type msgType, MessageHandler *handler)
+void ComponentImpl::registerMessageHandler(
+    CompMessageBase::Type msgType,
+    MessageHandler *handler
+    )
 {
     if(handler)
     {
-        registerMessageHandler(msgType, [handler](const std::shared_ptr<CompMessageBase>& msg) { handler->onMessage(msg);});
+        registerMessageHandler(
+            msgType,
+            [handler](const std::shared_ptr<CompMessageBase>& msg) {
+                handler->onMessage(msg);
+            });
     }
 }
 
-void ComponentImpl::registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc)
+void ComponentImpl::registerMessageHandler(
+    CompMessageBase::Type msgType,
+    BaseMessageHandlerFunc onMessageFunc
+    )
 {
     if(onMessageFunc)
     {
-        _msgHandlers.atomic()->insert(std::make_pair(msgType, onMessageFunc));
+        _msgHandlers.atomic()->emplace(
+            msgType, std::move(onMessageFunc)
+            );
     }
 }
 
@@ -124,10 +136,17 @@ TimerMgrPtr ComponentImpl::getTimerManager()
     {
         _timerMgr = std::make_shared<TimerManager>();
     }
-    return _timerMgr; // at this point, the timer object will never be destroyed if still have someone holding its reference(shared_ptr)
+
+    // at this point, the timer object will never be destroyed
+    // if still have someone holding its reference(shared_ptr)
+    return _timerMgr;
 }
 
-void ComponentImpl::startMessageLoop(ComponentRef compref, std::function<void()> onEntry, std::function<void()> onExit)
+void ComponentImpl::startMessageLoop(
+    ComponentRef compref,
+    std::function<void()> onEntry,
+    std::function<void()> onExit
+    )
 {
     _tlwpInstance = std::move(compref);
     if(onEntry)
@@ -163,16 +182,25 @@ void ComponentImpl::startMessageLoop(ComponentRef compref, std::function<void()>
                 }
                 catch(const std::exception& e)
                 {
-                    Logger::error("Exception occurred while executing messageHandler function: " ,  e.what());
+                    Logger::error(
+                        "Exception occurred while executing "
+                        "messageHandler function: " ,  e.what()
+                        );
                 }
                 catch(...)
                 {
-                    Logger::error("Unknown exception occurred while executing messageHandler function: ");
+                    Logger::error(
+                        "Unknown exception occurred while executing"
+                                  " messageHandler function: "
+                                  );
                 }
             }
             else
             {
-                Logger::warn("There's no handler for message " ,  msgID(*msg).name());
+                Logger::warn(
+                    "There's no handler for message " ,
+                    msgID(*msg).name()
+                    );
             }
         }
     }
@@ -185,17 +213,58 @@ void ComponentImpl::startMessageLoop(ComponentRef compref, std::function<void()>
 
 Component::Component() : _pImpl{ new ComponentImpl } {}
 Component::~Component() = default;
-std::shared_ptr<Component> Component::create() { return std::shared_ptr<Component>{ new Component};}
+std::shared_ptr<Component> Component::create()
+{
+    return std::shared_ptr<Component>{ new Component};
+}
 const std::string &Component::name() const { return _name; }
 void Component::setName(std::string name) { _name = std::move(name); }
-void Component::run(LaunchMode LaunchMode, std::function<void()> onEntry, std::function<void()> onExit) { _pImpl->run(weak_from_this(), LaunchMode, onEntry, onExit); }
+void Component::run(
+    LaunchMode LaunchMode,
+    std::function<void()> onEntry,
+    std::function<void()> onExit
+    )
+{
+    _pImpl->run(
+        weak_from_this(),
+        LaunchMode,
+        onEntry,
+        onExit
+        );
+}
 void Component::stop(){ _pImpl->stop();}
-void Component::postMessage(MessageBasePtr msg) { _pImpl->postMessage(msg); }
-void Component::registerMessageHandler(CompMessageBase::Type msgType, MessageHandler *handler) { _pImpl->registerMessageHandler(msgType, handler); }
-void Component::registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc){ _pImpl->registerMessageHandler(msgType, std::move(onMessageFunc)); }
-ComponentRef Component::getActiveWeakPtr() { return _tlwpInstance; }
-std::shared_ptr<Component> Component::getActiveSharedPtr(){ return _tlwpInstance.lock(); }
-void Component::setTLRef(ComponentRef ref) { if(!getActiveSharedPtr()) _tlwpInstance = std::move(ref);}
+
+void Component::postMessage(MessageBasePtr msg)
+{ _pImpl->postMessage(msg); }
+
+void Component::registerMessageHandler(
+    CompMessageBase::Type msgType,
+    MessageHandler *handler
+    )
+{
+    _pImpl->registerMessageHandler(msgType, handler);
+}
+
+void Component::registerMessageHandler(
+    CompMessageBase::Type msgType,
+    BaseMessageHandlerFunc onMessageFunc
+    )
+{
+    _pImpl->registerMessageHandler(msgType, std::move(onMessageFunc));
+}
+ComponentRef Component::getActiveWeakPtr()
+{
+    return _tlwpInstance;
+}
+std::shared_ptr<Component> Component::getActiveSharedPtr()
+{
+    return _tlwpInstance.lock();
+}
+void Component::setTLRef(ComponentRef ref)
+{
+    if(!getActiveSharedPtr())
+        _tlwpInstance = std::move(ref);
+}
 TimerMgrPtr Component::getTimerManager()
 {
     auto spInstance = _tlwpInstance.lock();

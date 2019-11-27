@@ -1,6 +1,8 @@
 #ifndef HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 #define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
 
+
+#include <maf/export/MafExport_global.h>
 #include <sstream>
 #include <functional>
 
@@ -28,7 +30,7 @@ class Logger
 public:
     using LoggingFunctionType = std::function<void(const std::string& msg)>;
 
-    static void init(
+    MAF_EXPORT static void init(
         LogLevels allowedLevels = LOG_LEVEL_SILENCE,
         LoggingFunctionType outLogFunc = {},
         LoggingFunctionType errLogFunc = {} );
@@ -49,8 +51,8 @@ public:
 private:
     template<typename... Msg>
     static void log(LogLevel level, Msg&&... msg);
-    static void logImpl(LogLevel filteredLevel, const std::string& msg);
-    static bool allowed(LogLevel level);
+    MAF_EXPORT static void logImpl(LogLevel filteredLevel, const std::string& msg);
+    MAF_EXPORT static bool allowed(LogLevel level);
 };
 
 template<typename EnumType,

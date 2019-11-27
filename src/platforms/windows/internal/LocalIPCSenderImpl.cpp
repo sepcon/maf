@@ -29,11 +29,11 @@ static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const c
 
         // Send a message to the pipe server.
         success = WriteFile(
-            pipeHandle,                                     // pipe handle
-            buffer,                                         // message
-            static_cast<DWORD>(buffSize),                   // message length
-            nullptr,                                        // bytes written
-            &overlapStructure);                                    // overlapped
+            pipeHandle,                        // pipe handle
+            buffer,                            // message
+            static_cast<DWORD>(buffSize),      // message length
+            nullptr,                           // bytes written
+            &overlapStructure);                // overlapped
 
         if (!success)
         {
@@ -44,25 +44,48 @@ static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED& overlapStructure, const c
                 if(waitIdx != WAIT_OBJECT_0)
                 {
                     CancelIo(pipeHandle);
-                    GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
+                    GetOverlappedResult(
+                        pipeHandle,
+                        &overlapStructure,
+                        &writtenByteCount,
+                        TRUE
+                        );
                     Logger::error("Error while waiting for bytes to be transffered to receiver");
                 }
                 else
                 {
-                    success = GetOverlappedResult(pipeHandle, &overlapStructure, &writtenByteCount, TRUE);
+                    success = GetOverlappedResult(
+                        pipeHandle,
+                        &overlapStructure,
+                        &writtenByteCount,
+                        TRUE
+                        );
                     if(success && (writtenByteCount == buffSize))
                     {
-                        Logger::info("Sent " ,  buffSize ,  " bytes to receiver successful!");
+                        Logger::info(
+                            "Sent ",
+                            buffSize,
+                            " bytes to receiver successful!"
+                            );
                     }
                     else
                     {
-                        Logger::error("Could not transfer completely " ,  buffSize ,  " bytes to receiver!");
+                        //if error then it must be unsuccess
+                        success = false;
+                        Logger::error(
+                            "Could not transfer completely ",
+                            buffSize,
+                            " bytes to receiver!"
+                            );
                     }
                 }
             }
             else
             {
-                Logger::error("sending bytes failed with error: " ,  GetLastError());
+                Logger::error(
+                    "sending bytes failed with error: ",
+                    GetLastError()
+                    );
             }
         }
     }
@@ -79,7 +102,10 @@ LocalIPCSenderImpl::~LocalIPCSenderImpl()
 
 }
 
-ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Address &destination)
+ActionCallStatus LocalIPCSenderImpl::send(
+    const srz::ByteArray &ba,
+    const Address &destination
+    )
 {
     auto errCode = ActionCallStatus::ReceiverUnavailable;
     bool success = false;
@@ -89,13 +115,27 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Addres
         while(retryTimes < MAX_ATEMPTS)
         {
             memset(&_oOverlap, 0, sizeof(_oOverlap));
-            AutoCloseHandle pipeHandle = openPipe(destination.valid() ? constructPipeName(destination) : _pipeName);
+            AutoCloseHandle pipeHandle = openPipe(
+                destination.valid() ?
+                                    constructPipeName(destination)
+                                    :
+                                    _pipeName
+                );
             if(pipeHandle != INVALID_HANDLE_VALUE)
             {
                 uint32_t baSize = static_cast<uint32_t>(ba.size());
-                if((success = writeToPipe(pipeHandle, _oOverlap, reinterpret_cast<const char*>(&baSize), sizeof(baSize))))
+                if((success = writeToPipe(
+                         pipeHandle,
+                         _oOverlap,
+                         reinterpret_cast<const char*>(&baSize),
+                         sizeof(baSize)
+                         )))
                 {
-                    if ((success = writeToPipe(pipeHandle, _oOverlap, ba.firstpos(), ba.size())))
+                    if ((success = writeToPipe(
+                             pipeHandle,
+                             _oOverlap,
+                             ba.firstpos(),
+                             ba.size())))
                     {
                         FlushFileBuffers(pipeHandle);
                         break;
@@ -104,8 +144,17 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Addres
             }
             else if(GetLastError() == ERROR_PIPE_BUSY)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
-                Logger::warn("Retry to send " ,  ba.size() ,  " bytes " ,  ++retryTimes ,  " times to address " ,  _pipeName);
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(std::rand() % 100)
+                    );
+                Logger::warn(
+                    "Retry to send ",
+                    ba.size(),
+                    " bytes ",
+                    ++retryTimes,
+                    " times to address ",
+                    _pipeName
+                    );
             }
             else
             {
@@ -133,8 +182,13 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba, const Addres
     }
     else
     {
-        //        errCode = ActionCallStatus::ReceiverUnavailable; //dont need to set here, it must be default failed
-        Logger::warn("Receiver is not available for receiving message, receiver's address = " ,  _pipeName);
+        //errCode = ActionCallStatus::ReceiverUnavailable;
+        //dont need to set here, it must be default failed
+        Logger::warn(
+            "Receiver is not available for receiving message, "
+            "receiver's address = " ,
+            _pipeName
+            );
     }
 
     return errCode;
@@ -145,14 +199,14 @@ namespace
     HANDLE openPipe(const std::string &pipeName)
     {
         return CreateFileA(
-            pipeName.c_str(),                                                                   // pipe name
-            GENERIC_WRITE |                                                                     // write only
+            pipeName.c_str(),            // pipe name
+            GENERIC_WRITE |              // write only
             FILE_FLAG_OVERLAPPED,
-            0,                                                                                  // no sharing
-            nullptr,                                                                            // default security attributes
-            OPEN_EXISTING,                                                                      // opens existing pipe
-            0,                                                                                  // write overlapped
-            nullptr);                                                                           // no template file
+            0,                           // no sharing
+            nullptr,                     // default security attributes
+            OPEN_EXISTING,               // opens existing pipe
+            0,                           // write overlapped
+            nullptr);                    // no template file
     }
 }
 

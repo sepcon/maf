@@ -24,7 +24,7 @@ void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
     {
         Logger::error("[Timer]: Please specify not null callback");
     }
-    else if((_myMgr = Component::getTimerManager()))
+    else if( _myMgr || ( !_myMgr && (_myMgr = Component::getTimerManager())))
     {
         if(running())
         {

@@ -27,6 +27,8 @@ public:
 
     static StubPtr createStub(const ConnectionType& contype, const Address& addr, const ServiceID& sid);
 
+    const ServiceID& serviceID() const;
+
     template<class property_status>
     ActionCallStatus setStatus(const std::shared_ptr<property_status>& status);
 
@@ -37,7 +39,9 @@ public:
     std::shared_ptr<const property_status> getStatus();
 
     template<class signal_attributes>
-    ActionCallStatus broadcastSignal(const std::shared_ptr<signal_attributes>& attr);
+    ActionCallStatus broadcastSignal(
+        const std::shared_ptr<signal_attributes>& attr
+        );
 
     template<class signal_attributes, typename... Args>
     ActionCallStatus broadcastSignal(Args&&... args);
@@ -50,9 +54,10 @@ public:
                  std::is_base_of_v<cs_input, request_input>, bool> = true
              >
     bool registerRequestHandler(
-            std::function<void(RequestPtr,const std::shared_ptr<request_input>&)>
-            handlerFunction
-            );
+        std::function<
+            void(RequestPtr,const std::shared_ptr<request_input>&)
+            > handlerFunction
+        );
 
     template <class request_class,
              std::enable_if_t<

@@ -67,13 +67,16 @@ public:
 };
 
 ServerFactory::ServerFactory(Invisible)
+    : _pImpl { std::make_unique<ServerFactoryImpl>() }
 {
-    _pImpl = std::make_unique<ServerFactoryImpl>();
 }
 
 ServerFactory::~ServerFactory() = default;
 
-std::shared_ptr<ServerInterface> ServerFactory::getServer(const ConnectionType &connectionType, const Address &addr)
+std::shared_ptr<ServerInterface> ServerFactory::getServer(
+    const ConnectionType &connectionType,
+    const Address &addr
+    )
 {
     return _pImpl->getServer(connectionType, addr);
 }

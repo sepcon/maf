@@ -6,7 +6,10 @@
 namespace maf {
 namespace threading {
 
-std::shared_ptr<IThreadPool> ThreadPoolFactory::createPool(PoolType type, unsigned int poolSize)
+std::shared_ptr<IThreadPool> ThreadPoolFactory::createPool(
+    PoolType type,
+    unsigned int poolSize
+    )
 {
     std::shared_ptr<IThreadPool> pPool;
     switch (type)

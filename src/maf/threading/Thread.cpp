@@ -3,10 +3,11 @@
 #include <signal.h>
 #include <cassert>
 
+
 namespace maf { using logging::Logger;
 namespace threading {
 
-thread_local Thread::OnSignalCallback Thread::_tlSigHandlerCallback = nullptr;
+static thread_local Thread::OnSignalCallback _tlSigHandlerCallback = nullptr;
 
 Thread::Thread(Thread &&th)
 {
@@ -20,11 +21,18 @@ Thread &Thread::operator=(Thread &&th)
     return *this;
 }
 
-Thread& Thread::start()
+Thread &Thread::start()
 {
     if(_callable)
     {
-        _thread = std::thread(_callable);
+        auto threadFunc = [ callable = std::move(_callable),
+                         sigHandler = std::move(_sigHandlerCallback)] () mutable
+        {
+            _tlSigHandlerCallback = std::move(sigHandler);
+            regSignals();
+            callable();
+        };
+        _thread = std::thread(threadFunc);
     }
     else
     {
@@ -48,9 +56,9 @@ bool Thread::joinable()
     return _thread.joinable();
 }
 
-void Thread::setSignalHandler(Thread::OnSignalCallback sigHandlerCallback)
+
+Thread::~Thread()
 {
-    _sigHandlerCallback = std::move(sigHandlerCallback);
 }
 
 void Thread::regSignals()
@@ -69,7 +77,13 @@ void Thread::onSystemSignal(int sig)
     }
     else
     {
-        Logger::error("There's no signal handler for thread " ,  std::this_thread::get_id() ,  " when signal " ,  sig ,  " comes");
+        Logger::error(
+            "There's no signal handler for thread ",
+            std::this_thread::get_id() ,
+            " when signal " ,
+            sig ,
+            " comes"
+            );
     }
 }
 

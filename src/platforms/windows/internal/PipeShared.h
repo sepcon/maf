@@ -12,7 +12,9 @@ static constexpr int BUFFER_SIZE = 500;       // bytes
 
 inline std::string constructPipeName(const Address& pAddr)
 {
-    return "\\\\.\\pipe\\ipc.messaging.maf\\" + pAddr.name() + ":" + std::to_string(pAddr.port());
+    return "\\\\.\\pipe\\ipc.messaging.maf\\"
+           + pAddr.name() + ":"
+           + std::to_string(pAddr.port());
 }
 struct AutoCloseHandle
 {

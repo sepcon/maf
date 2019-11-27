@@ -66,8 +66,15 @@ public:
 
 private:
     bool onIncomingMessage(const CSMessagePtr& csMsg) override;
-    void onServerStatusChanged(Availability oldStatus, Availability newStatus) override;
-    void onServiceStatusChanged(const ServiceID& sid, Availability oldStatus, Availability newStatus) override;
+    void onServerStatusChanged(
+        Availability oldStatus,
+        Availability newStatus
+        ) override;
+    void onServiceStatusChanged(
+        const ServiceID& sid,
+        Availability oldStatus,
+        Availability newStatus
+        ) override;
 };
 
 }// messaging

@@ -4,8 +4,9 @@
 #   pragma push_macro("MAF_ENABLE_DUMP")
 #   define maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
 #endif
-
 #define MAF_ENABLE_DUMP
+
+#include <maf/export/MafExport_global.h>
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
 
 namespace maf {
@@ -15,10 +16,15 @@ OBJECT(Address)
     public:
         using Port = uint16_t;
         using Name = std::string;
+        using NameConstant = const char*;
+
         static constexpr Port INVALID_PORT = static_cast<Port>(-1);
-        static const Name INVALID_NAME;
+        static constexpr NameConstant INVALID_NAME = "";
         static const Address INVALID_ADDRESS;
-        bool valid() const { return (port() != INVALID_PORT) || (name() != INVALID_NAME);}
+        bool valid() const
+        {
+            return (port() != INVALID_PORT) || (name() != INVALID_NAME);
+        }
 
     MEMBERS
         (

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <maf/threading/Thread.h>
 #include "Component.h"
+#include <maf/threading/Thread.h>
+#include <maf/export/MafExport_global.h>
 
 namespace maf {
 namespace messaging {
@@ -9,13 +10,12 @@ namespace messaging {
 class CompThread : protected maf::threading::Thread
 {
 public:
-    using Thread::operator=;
     using Thread::Thread;
+    using Thread::operator=;
     using Thread::join;
     using Thread::detach;
     using Thread::joinable;
-    using Thread::setSignalHandler;
-    CompThread& start();
+    MAF_EXPORT CompThread& start();
 };
 } //messaging
 } //maf

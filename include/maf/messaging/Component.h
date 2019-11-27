@@ -2,6 +2,7 @@
 
 #include "MessageHandler.h"
 #include <maf/patterns/Patterns.h>
+#include <maf/export/MafExport_global.h>
 
 
 #define mc_maf_tpl_with_a_message(Message) template<class Message, std::enable_if_t<std::is_base_of_v<CompMessageBase, Message>, bool> = true>
@@ -29,21 +30,21 @@ class Component final : pattern::Unasignable, public std::enable_shared_from_thi
 {
     std::string _name;
     std::unique_ptr<ComponentImpl> _pImpl;
-    Component();
+    MAF_EXPORT Component();
 public:
     using BaseMessageHandlerFunc = MessageHandlerFunc<CompMessageBase>;
 
-    static std::shared_ptr<Component> create();
-    static ComponentRef getActiveWeakPtr();
-    static std::shared_ptr<Component> getActiveSharedPtr();
+    MAF_EXPORT static std::shared_ptr<Component> create();
+    MAF_EXPORT static ComponentRef getActiveWeakPtr();
+    MAF_EXPORT static std::shared_ptr<Component> getActiveSharedPtr();
 
-    const std::string& name() const;
-    void setName(std::string name);
-    void run(LaunchMode LaunchMode = LaunchMode::Async, std::function<void()> onEntry = {}, std::function<void()> onExit = {});
-    void stop();
-    void postMessage(messaging::MessageBasePtr msg);
-    void registerMessageHandler(CompMessageBase::Type msgType, MessageHandler* handler);
-    void registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc);
+    MAF_EXPORT const std::string& name() const;
+    MAF_EXPORT void setName(std::string name);
+    MAF_EXPORT void run(LaunchMode LaunchMode = LaunchMode::Async, std::function<void()> onEntry = {}, std::function<void()> onExit = {});
+    MAF_EXPORT void stop();
+    MAF_EXPORT void postMessage(messaging::MessageBasePtr msg);
+    MAF_EXPORT void registerMessageHandler(CompMessageBase::Type msgType, MessageHandler* handler);
+    MAF_EXPORT void registerMessageHandler(CompMessageBase::Type msgType, BaseMessageHandlerFunc onMessageFunc);
 
     template<class Msg, typename... Args, std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
     void postMessage(Args&&... args);
@@ -57,7 +58,7 @@ public:
     mc_maf_tpl_with_a_message(SpecificMsg)
     Component& onSignal(SignalMsgHandlerFunc handler);
 
-    ~Component();
+    MAF_EXPORT ~Component();
 
 private:
     static void setTLRef(ComponentRef ref);
