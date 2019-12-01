@@ -13,7 +13,7 @@ class SerializableMessageTrait : public MessageTraitBase
 {
 public:
     template<class ContractParam>
-    static OpIDConstant getOperationID()
+    static constexpr OpIDConst getOperationID()
     {
         return ContractParam::operationID();
     }
@@ -21,39 +21,45 @@ public:
     template<class cs_param_type>
     static std::shared_ptr<cs_param_type> decode(
         const CSMsgContentBasePtr& csMsgContent,
-        EncodeDecodeStatus* status = nullptr
+        CodecStatus* status = nullptr
         )
     {
         if(!csMsgContent)
         {
-            setStatus(status, EmptyInput);
+            assignCodecStatus(status, EmptyInput);
             return {};
         }
 
         try
         {
             using cs_param_pure_type = std::decay_t<cs_param_type>;
-            //Warning: to reduce the size of program, then avoid using dynamic_cast
-            //We asume that the implementer will send/receive the CSMsgContentBasePtr as std::shared_ptr of BytesCarrier
-            auto byteCarrier = std::static_pointer_cast<BytesCarrier>(csMsgContent);
+            // Warning: avoid using dynamic_cast RTTI
+            // We asume that the implementer will send/receive the
+            // CSMsgContentBasePtr as std::shared_ptr of BytesCarrier
+            auto byteCarrier = std::static_pointer_cast<BytesCarrier>(
+                csMsgContent
+                );
             std::shared_ptr<cs_param_pure_type> dataCarrier;
             if(!byteCarrier->payload().empty())
             {
                 dataCarrier = std::make_shared<cs_param_pure_type>();
                 dataCarrier->fromBytes(byteCarrier->payload());
-                setStatus(status, EncodeDecodeStatus::Success);
+                assignCodecStatus(status, CodecStatus::Success);
             }
             else
             {
-                setStatus(status, EncodeDecodeStatus::EmptyInput);
+                assignCodecStatus(status, CodecStatus::EmptyInput);
             }
             return dataCarrier;
 
         }
         catch(const std::exception& e)
         {
-            setStatus(status, EncodeDecodeStatus::MalformInput);
-            Logger::error("Could not decode message, exception details: " ,  e.what());
+            assignCodecStatus(status, CodecStatus::MalformInput);
+            Logger::error(
+                "Could not decode message, exception details: ",
+                e.what()
+                );
         }
 
         return nullptr;
@@ -62,14 +68,41 @@ public:
     template<class cs_param_type_base>
     static CSMsgContentBasePtr encode(const std::shared_ptr<cs_param>& param)
     {
-        using serializable_param_type = serializable_cs_param_base<cs_param_type_base>;
-        auto bytesCarrier = std::make_shared<BytesCarrier>();
+        using serializable_param_type
+            = serializable_cs_param_base<cs_param_type_base>;
+        auto sbParam = std::static_pointer_cast<serializable_param_type>(param);
+        auto bytesCarrier = std::make_shared<BytesCarrier>(sbParam->type());
         bytesCarrier->setPayload(
-            std::static_pointer_cast<serializable_param_type>(param)->toBytes()
+            sbParam->toBytes()
             );
         return std::move(bytesCarrier);
 
     }
+
+//    static ContentErrorPtr decode(const CSMsgContentBasePtr& csMsgContent)
+//    {
+//        if(!csMsgContent)
+//        {
+//            return {};
+//        }
+
+//        auto byteCarrier = std::static_pointer_cast<BytesCarrier>(
+//            csMsgContent
+//            );
+//        srz::BADeserializer ds(byteCarrier->payload());
+
+//    }
+//    static CSMsgContentBasePtr encode(const ContentErrorPtr& error)
+//    {
+//        auto bytesCarrier = std::make_shared<BytesCarrier>();
+//        srz::BASerializer sr;
+//        sr << error->description() << error->code();
+//        bytesCarrier->setPayload(
+//            std::move(sr.mutableBytes())
+//            );
+//        return std::move(bytesCarrier);
+
+//    }
 };
 
 }

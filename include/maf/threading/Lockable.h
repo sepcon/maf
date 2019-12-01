@@ -1,16 +1,16 @@
 #pragma once
 
 #include <mutex>
-#include <memory>
+#include <maf/patterns/Patterns.h>
 
 namespace maf {
 namespace threading {
 
 template<class Protected, class Mutex = std::mutex>
-class Lockable
+class Lockable : public pattern::Unasignable
 {
     template<class Lockable_, class Protected_>
-    struct AtomicRef
+    struct AtomicRef : public pattern::Unasignable
     {
     public:
         AtomicRef(Lockable_* p) : _lockable{p}

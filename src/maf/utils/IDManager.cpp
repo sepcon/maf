@@ -34,15 +34,7 @@ void IDManager::reclaimUsedID(IDManager::IDType id)
 }
 #else
 
-IDManager::IDType IDManager::allocateNewID()
-{
-    auto id = _idCounter.fetch_add(1, std::memory_order_relaxed);
-    if(id == INVALID_ID)
-    {
-        id = _idCounter.fetch_add(1, std::memory_order_relaxed);
-    }
-    return id;
-}
+
 
 #endif
 }

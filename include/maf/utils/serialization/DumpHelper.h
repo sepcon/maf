@@ -48,6 +48,7 @@ struct hlp
     template<typename T, std::enable_if_t<nstl::is_number_type_v<T>, bool> = true>
     inline static std::string quote(T value) { return quote(std::to_string(value)); }
     inline static std::string quote(const std::string& str) { return '"' + str + '"'; }
+    inline static std::string quoteAllEscapes(const std::string& s);
 };
 
 template<typename NonDeterminedType, typename = void>
@@ -158,39 +159,64 @@ struct DumpHelper<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>>
 template<>
 struct DumpHelper<std::string, void>
 {
-    inline static void dump(const std::string& value, int /*indentLevel*/, std::string& strOut) noexcept {
+    inline static void dump(
+        const std::string& value,
+        int /*indentLevel*/,
+        std::string& strOut
+        ) noexcept
+    {
         //must be taken care for case of wstring
-        strOut += hlp::quote(value);
+        strOut += hlp::quoteAllEscapes(value);
     }
 };
 
-template<typename StringDerived>
-struct DumpHelper<StringDerived,
-                  std::enable_if_t<std::is_base_of_v<std::string, StringDerived>, void>>
+template<class StringType>
+struct DumpHelper<StringType,
+                  std::enable_if_t<
+                      std::is_constructible_v<std::string, StringType>
+                      || std::is_base_of_v<std::string, StringType>,
+                      void
+                      >>
 {
-
-    inline static void dump(const StringDerived& value, int /*indentLevel*/, std::string& strOut) noexcept {
+    inline static void dump(
+        const std::string& value,
+        int /*indentLevel*/,
+        std::string& strOut
+        ) noexcept
+    {
         //must be taken care for case of wstring
-        strOut += hlp::quote(static_cast<const std::string&>(value));
+        strOut += hlp::quoteAllEscapes(value);
     }
 };
 
-template<>
-struct DumpHelper<const char*, void>
-{
-    inline static void dump(const char* value, int /*indentLevel*/, std::string& strOut) noexcept {
-        //must be taken care for case of wstring
-        strOut += hlp::quote(value);
-    }
-};
+//template<typename StringDerived>
+//struct DumpHelper<StringDerived,
+//                  std::enable_if_t<std::is_base_of_v<std::string, StringDerived>, void>>
+//{
+
+//    inline static void dump(const StringDerived& value, int /*indentLevel*/, std::string& strOut) noexcept {
+//        //must be taken care for case of wstring
+//        strOut += hlp::quoteAllEscapes(static_cast<const std::string&>(value));
+//    }
+//};
+
+//template<>
+//struct DumpHelper<const char*, void>
+//{
+//    inline static void dump(const char* value, int /*indentLevel*/, std::string& strOut) noexcept {
+//        //must be taken care for case of wstring
+//        strOut += hlp::quoteAllEscapes(std::string{value});
+//    }
+//};
 
 template<>
 struct DumpHelper<std::wstring, void>
 {
-    inline static void dump(const std::wstring& wvalue, int /*indentLevel*/, std::string& strOut) noexcept {
-        std::string value(wvalue.size() * sizeof(wchar_t), '\0');
-        memcpy(value.data(), wvalue.data(), value.size());
-        strOut += hlp::quote(value);
+    inline static void dump(const std::wstring& /*wvalue*/, int /*indentLevel*/, std::string& strOut) noexcept {
+//        std::string value(wvalue.size() * sizeof(wchar_t), '\0');
+//        memcpy(value.data(), wvalue.data(), value.size());
+//        strOut += hlp::quote(value);
+        strOut += "wstring hasn't been supported now";
     }
 };
 
@@ -245,6 +271,58 @@ struct DumpHelper<Iterable, std::enable_if_t<nstl::is_iterable_v<Iterable>, void
 
 template <typename T>
 void dump(const T& val, int indentLevel, std::string& strOut) { DumpHelper<std::decay_t<decltype (val)>>::dump(val, indentLevel, strOut); }
+
+
+std::string hlp::quoteAllEscapes(const std::string &value)
+{
+    std::string out = "\"";
+    for (
+        auto it = std::begin(value);
+        it != std::end(value);
+        ++it
+        )
+    {
+        auto ch = *it;
+        if (ch == '\\') {
+            out += "\\\\";
+        } else if (ch == '"') {
+            out += "\\\"";
+        } else if (ch == '\b') {
+            out += "\\b";
+        } else if (ch == '\f') {
+            out += "\\f";
+        } else if (ch == '\n') {
+            out += "\\n";
+        } else if (ch == '\r') {
+            out += "\\r";
+        } else if (ch == '\t') {
+            out += "\\t";
+        } else if (static_cast<uint8_t>(ch) <= 0x1f) {
+            char buf[8];
+            snprintf(buf, sizeof buf, "\\u%04x", ch);
+            out += buf;
+        } else if (
+            static_cast<uint8_t>(ch) == 0xe2
+            && static_cast<uint8_t>(*(it + 1)) == 0x80
+            && static_cast<uint8_t>(*(it + 2)) == 0xa8)
+        {
+            out += "\\u2028";
+            it += 2;
+        }
+        else if (
+            static_cast<uint8_t>(ch) == 0xe2
+            && static_cast<uint8_t>(*(it + 1)) == 0x80
+            && static_cast<uint8_t>(*(it + 2)) == 0xa9) {
+            out += "\\u2029";
+            it += 2;
+        } else
+        {
+            out += ch;
+        }
+    }
+    out += '"';
+    return out;
+}
 
 }// srz
 }// maf

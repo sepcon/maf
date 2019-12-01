@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef MAF_ENABLE_DUMP
-#   pragma push_macro("MAF_ENABLE_DUMP")
-#   define maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
-#endif
-#define MAF_ENABLE_DUMP
-
 #include <maf/export/MafExport_global.h>
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
 
@@ -20,10 +14,9 @@ OBJECT(Address)
 
         static constexpr Port INVALID_PORT = static_cast<Port>(-1);
         static constexpr NameConstant INVALID_NAME = "";
-        static const Address INVALID_ADDRESS;
         bool valid() const
         {
-            return (port() != INVALID_PORT) || (name() != INVALID_NAME);
+            return (get_port() != INVALID_PORT) || (get_name() != INVALID_NAME);
         }
 
     MEMBERS
@@ -38,9 +31,3 @@ ENDOBJECT(Address)
 }// maf
 
 #include <maf/utils/serialization/MafObjectEnd.mc.h>
-#undef MAF_ENABLE_DUMP
-
-#ifdef maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
-#   undef maf_restore_macro_ADDRESS_H_MAF_ENABLE_DUMP
-#   pragma pop_macro("MAF_ENABLE_DUMP")
-#endif

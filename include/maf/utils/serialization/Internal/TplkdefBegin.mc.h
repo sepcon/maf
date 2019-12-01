@@ -19,13 +19,29 @@
 #        pragma push_macro("mc_maf_define_constructors_")
 #        define maf_restore_macro_mc_maf_define_constructors_
 #    endif
-#    ifdef mc_maf_define_dump_helper_func
-#        pragma push_macro("mc_maf_define_dump_helper_func")
-#        define maf_restore_macro_mc_maf_define_dump_helper_func
+#    ifdef mc_maf_define_dump_function
+#        pragma push_macro("mc_maf_define_dump_function")
+#        define maf_restore_macro_mc_maf_define_dump_function
 #    endif
 #    ifdef mc_maf_define_dump_helper_func
 #        pragma push_macro("mc_maf_define_dump_helper_func")
 #        define maf_restore_macro_mc_maf_define_dump_helper_func
+#    endif
+#    ifdef mc_maf_define_load_from_json_functions
+#        pragma push_macro("mc_maf_define_load_from_json_functions")
+#        define maf_restore_macro_mc_maf_define_load_from_json_functions
+#    endif
+#    ifdef mc_maf_dump_each_property
+#        pragma push_macro("mc_maf_dump_each_property")
+#        define maf_restore_macro_mc_maf_dump_each_property
+#    endif
+#    ifdef mc_maf_dump_each_property_
+#        pragma push_macro("mc_maf_dump_each_property_")
+#        define maf_restore_macro_mc_maf_dump_each_property_
+#    endif
+#    ifdef mc_maf_dump_each_property_with_index
+#        pragma push_macro("mc_maf_dump_each_property_with_index")
+#        define maf_restore_macro_mc_maf_dump_each_property_with_index
 #    endif
 #    ifdef mc_maf_get_default_value
 #        pragma push_macro("mc_maf_get_default_value")
@@ -47,13 +63,25 @@
 #        pragma push_macro("mc_maf_has_default")
 #        define maf_restore_macro_mc_maf_has_default
 #    endif
+#    ifdef mc_maf_load_from_json_each_property
+#        pragma push_macro("mc_maf_load_from_json_each_property")
+#        define maf_restore_macro_mc_maf_load_from_json_each_property
+#    endif
+#    ifdef mc_maf_load_json_on_each_property_
+#        pragma push_macro("mc_maf_load_json_on_each_property_")
+#        define maf_restore_macro_mc_maf_load_json_on_each_property_
+#    endif
+#    ifdef mc_maf_load_json_on_each_property_with_index
+#        pragma push_macro("mc_maf_load_json_on_each_property_with_index")
+#        define maf_restore_macro_mc_maf_load_json_on_each_property_with_index
+#    endif
 #    ifdef mc_maf_no_default
 #        pragma push_macro("mc_maf_no_default")
 #        define maf_restore_macro_mc_maf_no_default
 #    endif
 #    ifdef mc_maf_properties_map
 #        pragma push_macro("mc_maf_properties_map")
-#        define maf_restore_macro_mc_maf_properties_map_
+#        define maf_restore_macro_mc_maf_properties_map
 #    endif
 #    ifdef mc_maf_take_2_first_params_param
 #        pragma push_macro("mc_maf_take_2_first_params_param")
@@ -85,7 +113,7 @@
 #    endif
 #    ifdef mc_maf_tuple_like_object_end
 #        pragma push_macro("mc_maf_tuple_like_object_end")
-#        define maf_restore_macro_mc_maf_tuple_like_object_end_
+#        define maf_restore_macro_mc_maf_tuple_like_object_end
 #    endif
 #    ifdef mc_maf_tuple_like_object_has_base_
 #        pragma push_macro("mc_maf_tuple_like_object_has_base_")
@@ -99,15 +127,11 @@
 #        pragma push_macro("mc_maf_tuple_value_at")
 #        define maf_restore_macro_mc_maf_tuple_value_at
 #    endif
-#    ifdef mc_maf_define_load_from_json_functions
-#        pragma push_macro("mc_maf_define_load_from_json_functions")
-#        define maf_restore_macro_mc_maf_define_load_from_json_functions
-#    endif
 
 #include <maf/utils/cppextension/Loop.mc.h>
 #include <maf/utils/serialization/BasicTypes.h>
 
-#ifdef MAF_ENABLE_JSON
+#ifndef MAF_DISABLE_JSON
 #   include <maf/utils/serialization/JsonTrait.h>
 #endif
 
@@ -181,7 +205,7 @@ private: \
 /// ----------------------------Macros to generate dump functions for class ClassName------------------------------------------------------
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 
-#ifdef MAF_ENABLE_DUMP
+#ifndef MAF_DISABLE_DUMP
 
 #define mc_maf_define_dump_helper_func \
     template<typename T> \
@@ -194,7 +218,7 @@ private: \
     }
 
 #   define mc_maf_dump_each_property_(Type, Name, index) \
-        dump(#Name, Name(), maf::srz::nextLevel(level), strOut);
+        dump(#Name, get_##Name(), maf::srz::nextLevel(level), strOut);
 
 #   define mc_maf_dump_each_property(...) mc_maf_msvc_expand_va_args( mc_maf_dump_each_property_(__VA_ARGS__) )
 
@@ -233,19 +257,19 @@ private: \
 #define mc_maf_tuple_value_at(index) std::get< __propertiesCount - index>(_data)
 #define mc_maf_declare_get_set_funcs_(Type, Name, index) \
 public: \
-    void set_##Name(const Type& value__) { this->Name() = value__; } \
-    void set_##Name(Type&& value__) { this->Name() = std::move(value__); } \
-    const Type& Name() const { return mc_maf_tuple_value_at(index); } \
-    Type& Name() { return mc_maf_tuple_value_at(index); }
+    void set_##Name(const Type& value__) { this->get_##Name() = value__; } \
+    void set_##Name(Type&& value__) { this->get_##Name() = std::move(value__); } \
+    const Type& get_##Name() const { return mc_maf_tuple_value_at(index); } \
+    Type& get_##Name() { return mc_maf_tuple_value_at(index); }
 
 
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 /// ----------------------------Macros to load data from json ---------------------------------------------------------------------------
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 
-#ifdef MAF_ENABLE_JSON
+#ifdef MAF_DISABLE_JSON
 #   define mc_maf_load_json_on_each_property_(Type, Name, index) \
-      auto& Name##__ = Name(); \
+      auto& Name##__ = get_##Name(); \
       if(TheJsonTrait::template has<Type>(jsonIn, #Name)) { \
            Name##__ = TheJsonTrait::template get<Type>(jsonIn, #Name); \
       }

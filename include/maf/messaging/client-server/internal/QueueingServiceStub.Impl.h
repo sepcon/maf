@@ -47,16 +47,14 @@ const ServiceID &QueueingServiceStub<MessageTrait>::serviceID() const
     return _provider->serviceID();
 }
 
-template <class MessageTrait> template<class property_status>
+template <class MessageTrait> template<class property_status,
+         std::enable_if_t<
+             std::is_base_of_v<cs_status, property_status>,
+             bool>>
 ActionCallStatus QueueingServiceStub<MessageTrait>::setStatus(
     const std::shared_ptr<property_status> &status
     )
 {
-    static_assert(
-        std::is_base_of_v<cs_status, property_status>,
-        "status must be type of cs_status"
-        );
-
     if(status)
     {
         auto propertyID = MessageTrait::template getOperationID<property_status>();
@@ -82,14 +80,12 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::setStatus(
 }
 
 template <class MessageTrait>
-template<class property_status, typename...Args>
+template<class property_status, typename...Args,
+         std::enable_if_t<
+             std::is_base_of_v<cs_status, property_status>,
+             bool>>
 ActionCallStatus QueueingServiceStub<MessageTrait>::setStatus(Args&&... args)
 {
-    static_assert(
-        std::is_base_of_v<cs_status, property_status>,
-        "status class must be type of cs_status"
-        );
-
     return setStatus(
         std::make_shared<property_status>(std::forward<Args>(args)...)
         );
@@ -97,14 +93,13 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::setStatus(Args&&... args)
 
 
 template <class MessageTrait>
-template<class property_status>
-std::shared_ptr<const property_status> QueueingServiceStub<MessageTrait>::getStatus()
+template<class property_status,
+         std::enable_if_t<
+             std::is_base_of_v<cs_status, property_status>,
+             bool>>
+std::shared_ptr<const property_status>
+QueueingServiceStub<MessageTrait>::getStatus()
 {
-    static_assert(
-        std::is_base_of_v<cs_status, property_status>,
-        "status must be type of cs_status"
-        );
-
     if(auto baseStatus = _provider->getStatus(
             MessageTrait::template getOperationID<property_status>()
             )
@@ -119,16 +114,14 @@ std::shared_ptr<const property_status> QueueingServiceStub<MessageTrait>::getSta
 }
 
 template <class MessageTrait>
-template<class signal_attributes>
+template<class signal_attributes,
+         std::enable_if_t<
+             std::is_base_of_v<cs_attributes, signal_attributes>,
+             bool>>
 ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
     const std::shared_ptr<signal_attributes>& attr
     )
 {
-    static_assert(
-        std::is_base_of_v<cs_attributes, signal_attributes>,
-        "signal_attributes class must be type of cs_attributes"
-        );
-
     return _provider->broadcastSignal(
         MessageTrait::template getOperationID<signal_attributes>(),
         MessageTrait::template encode<cs_attributes>(attr)
@@ -136,15 +129,14 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
 }
 
 template <class MessageTrait>
-template<class signal_attributes, typename... Args>
+template<class signal_attributes, typename... Args,
+         std::enable_if_t<
+             std::is_base_of_v<cs_attributes, signal_attributes>,
+             bool>>
 ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
     Args&&... args
     )
 {
-    static_assert(
-        std::is_base_of_v<cs_attributes, signal_attributes>,
-        "signal_attributes class must be type of cs_attributes"
-        );
 
     return broadcastSignal(
         std::make_shared<signal_attributes>(std::forward<Args>(args)...)
@@ -152,14 +144,12 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal(
 }
 
 template <class MessageTrait>
-template<class signal_class>
+template<class signal_class,
+         std::enable_if_t<
+             std::is_base_of_v<cs_signal, signal_class>,
+             bool>>
 ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal()
 {
-    static_assert(
-        std::is_base_of_v<cs_signal, signal_class>,
-        "signal_class class must be type of cs_signal"
-        );
-
     return _provider->broadcastSignal(
         MessageTrait::template getOperationID<signal_class>(),
         {}
@@ -168,95 +158,59 @@ ActionCallStatus QueueingServiceStub<MessageTrait>::broadcastSignal()
 
 
 template<class MessageTrait>
-template <class request_input,
+template <class RequestInput,
          std::enable_if_t<
-             std::is_base_of_v<cs_input, request_input>, bool>
-         >
+             std::is_base_of_v<cs_input, RequestInput> ||
+             std::is_base_of_v<cs_operation, RequestInput>,
+             bool>>
 bool QueueingServiceStub<MessageTrait>::registerRequestHandler(
-std::function<void(
-            RequestPtr,
-            const std::shared_ptr<request_input>&
-            )> handlerFunction
+    RequestHandlerFunction<RequestInput> handlerFunction
     )
 {
-    auto opID = MessageTrait::template getOperationID<request_input>();
+    using TheRequestType = RequestType<RequestInput>;
+    auto requestID = MessageTrait::template getOperationID<RequestInput>();
     ComponentRef compref;
     if(getHandlerComponent(compref))
     {
         auto requestHandler =
-            [compref = std::move(compref),
-             handlerFunction = std::move(handlerFunction)
-        ] ( const std::shared_ptr<RequestInterface>& request ) mutable {
-                if(auto comp = compref.lock()) {
-                    auto requestT = std::make_shared<RequestType>(request);
-                    auto requestInput = requestT->template getInput<request_input>();
-                    comp->template postMessage<CallbackExcMsg>(
-                        std::move(handlerFunction),
-                        std::move(requestT),
-                        std::move(requestInput)
-                        );
-                }
-                else {
-                    Logger::warn("Component is not available for handling request");
-                }
-            };
-
-        return _provider->registerRequestHandler( opID, std::move(requestHandler) );
-    }
-    else
-    {
-        Logger::error("Failed on registerRequestHandler for id[", opID, "]"
-                      "\nPlease make sure to call registerRequestHandler method"
-                      " in context of a component!");
-    }
-
-    return false;
-}
-
-template<class MessageTrait>
-template <class request_class,
-         std::enable_if_t<
-             std::is_base_of_v<cs_request, request_class> ||
-             std::is_base_of_v<cs_property, request_class>, bool>
-         >
-bool QueueingServiceStub<MessageTrait>::registerRequestHandler(
-        std::function<void(RequestPtr)> handlerFunction
-        )
-{
-    auto requestID = MessageTrait::template getOperationID<request_class>();
-    ComponentRef compref;
-    if(getHandlerComponent(compref))
-    {
-
-        auto requestHandler =
-            [compref = std::move(compref), handlerFunction = std::move(handlerFunction)]
+            [ compref = std::move(compref),
+             handlerFunction = std::move(handlerFunction) ]
             ( const std::shared_ptr<RequestInterface>& request ) mutable {
                 if(auto comp = compref.lock()) {
-                    auto requestT = std::make_shared<RequestType>(request);
                     comp->template postMessage<CallbackExcMsg>(
                         std::move(handlerFunction),
-                        std::move(requestT)
+                        std::make_shared<TheRequestType>(request)
                         );
                 }
                 else {
-                    Logger::warn("Component is not available for handling request");
+                    Logger::warn(
+                        "Component is not available for handling request"
+                        );
                 }
             };
 
-        return _provider->registerRequestHandler(requestID, std::move(requestHandler));
+        return _provider->registerRequestHandler(
+            requestID,
+            std::move(requestHandler)
+            );
     }
     else
     {
-        Logger::error("Failed on registerRequestHandler for id[", requestID, "]"
-                      "\nPlease make sure to call registerRequestHandler method"
-                      " in context of a component!"
-                      );
+        Logger::error(
+            "Failed on registerRequestHandler for id "
+            "[", requestID, "]"
+            "\nPlease make sure to call registerRequestHandler method"
+            " in context of a component!"
+            );
     }
     return false;
 }
 
+
 template<class MessageTrait>
-bool QueueingServiceStub<MessageTrait>::unregisterRequestHandler(const OpID& opID)
+bool QueueingServiceStub<MessageTrait>::unregisterRequestHandler(
+    const OpID& opID
+    )
 {
     return _provider->unregisterRequestHandler(opID);
 }

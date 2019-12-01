@@ -40,9 +40,9 @@ ENDOBJECT(SecurityScanRequestMsg)
 static void serializeTest(maf::srz::Serializer& srz)
 {
     SecurityScanRequestMsg s;
-    s.special_map()["hello"]["bello"].push_back(
+    s.get_special_map()["hello"]["bello"].push_back(
         {1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4} );
-    s.special_map()["hello"]["cello"].push_back(
+    s.get_special_map()["hello"]["cello"].push_back(
         {1, 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3, 4} );
 
     std::cout << "s before cleared is: " << std::endl;

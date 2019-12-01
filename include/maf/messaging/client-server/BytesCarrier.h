@@ -11,7 +11,13 @@ using PayloadType = srz::ByteArray;
 class BytesCarrier : public CSMessageContentBase
 {
 public:
-    bool equal(const CSMessageContentBase *other) override
+    BytesCarrier(Type type, PayloadType payload = {})
+        : _payload(std::move(payload))
+    {
+        setType(std::move(type));
+    }
+
+    bool equal(const CSMessageContentBase *other) const override
     {
         util::debugAssertTypesEqual(other, this);
         auto otherAsBytesCarrier = static_cast<const BytesCarrier*>(other);
@@ -21,6 +27,11 @@ public:
             );
     }
 
+    CSMessageContentBase* clone() const override
+    {
+        return new BytesCarrier(type(), payload());
+    }
+
     PayloadType& mutablePayload() { return _payload; }
     const PayloadType& payload() const { return _payload; }
     void setPayload(PayloadType pl) { _payload = std::move(pl); }
@@ -28,6 +39,8 @@ public:
 protected:
     PayloadType _payload;
 };
+
+
 
 }
 }

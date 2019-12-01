@@ -12,7 +12,7 @@ constexpr maf::messaging::Address::Port REQUESTS_PER_CLIENT = 100;
 constexpr maf::messaging::Address::Port WEATHER_SERVER_PORT  = 0 ;
 
 constexpr const char* const SERVER_ADDRESS = "nocpes.github.com";
-constexpr const maf::messaging::ServiceIDConstant SID_WeatherService = "weather_service";
+constexpr const maf::messaging::ServiceIDConst SID_WeatherService = "weather_service";
 constexpr const int SERVER_UPDATE_CYCLE = 10;
 constexpr const int SERVER_TOTAL_UPDATES_PER_REQUEST = 10000000;
 
@@ -144,7 +144,7 @@ SERVICE(weather)
         STATUS((uint64_t, seconds, 0))
     ENDPROPERTY(boot_time)
 
-    VOID_SIGNAL(server_arbittrary_request)
+    VOID_SIGNAL(server_request_signal)
 
     SIGNAL(client_info_request)
         ATTRIBUTES

@@ -19,7 +19,7 @@ class IAMessageRouter :
 public:
     static std::shared_ptr<IAMessageRouter> instance();
     bool deinit() override;
-    ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr = Address::INVALID_ADDRESS) override;
+    ActionCallStatus sendMessageToClient(const CSMessagePtr& msg, const Address& addr = {}) override;
     ActionCallStatus sendMessageToServer(const CSMessagePtr& msg) override;
     void notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus) override;
 };

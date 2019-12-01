@@ -1,5 +1,6 @@
 #include "ServiceProviderImpl.h"
 #include <maf/messaging/client-server/ServiceProvider.h>
+#include <maf/messaging/client-server/CSContentError.h>
 #include <maf/messaging/client-server/Request.h>
 #include <maf/messaging/client-server/ServiceStubHandlerInterface.h>
 #include <maf/messaging/client-server/ServerInterface.h>
@@ -24,13 +25,13 @@ bool ServiceProviderImpl::onIncomingMessage(const CSMessagePtr &msg)
     bool handled = true;
     switch (msg->operationCode())
     {
-    case OpCode::Register:
+    case OpCode::StatusRegister:
         onStatusChangeRegister(msg);
         break;
-    case OpCode::RegisterSignal:
+    case OpCode::SignalRegister:
         saveRegisterInfo(msg);
         break;
-    case OpCode::UnRegister:
+    case OpCode::Unregister:
         onStatusChangeUnregister(msg);
         break;
     case OpCode::UnregisterServiceStatus:
@@ -92,7 +93,7 @@ ActionCallStatus ServiceProviderImpl::setStatus(
         property
         );
 
-    return broadcast(propertyID, OpCode::Register, property);
+    return broadcast(propertyID, OpCode::StatusRegister, property);
 }
 
 ActionCallStatus ServiceProviderImpl::broadcastSignal(
@@ -100,7 +101,7 @@ ActionCallStatus ServiceProviderImpl::broadcastSignal(
     const CSMsgContentBasePtr& signal
     )
 {
-    return broadcast(signalID, OpCode::RegisterSignal, signal);
+    return broadcast(signalID, OpCode::SignalRegister, signal);
 }
 
 ActionCallStatus ServiceProviderImpl::broadcast(
@@ -147,7 +148,11 @@ ActionCallStatus ServiceProviderImpl::broadcast(
                 auto errCode = sendMessage(csMsg, addr);
                 if(errCode == ActionCallStatus::Success)
                 {
-                    //Logger::info("Sent message id: " ,  msg->operationID() ,  " from server side!");
+                    Logger::info(
+                        "Sent message id: ",
+                        csMsg->operationID(),
+                        " from server side!"
+                        );
                 }
                 else if(errCode == ActionCallStatus::ReceiverBusy)
                 {
@@ -156,11 +161,11 @@ ActionCallStatus ServiceProviderImpl::broadcast(
                 else
                 {
                     this->removeRegistersOfAddress(addr);
-                    Logger::warn("Failed to send message id [" ,
-                                 csMsg->operationID() ,
-                                 "] to client " ,
-                                 addr.dump()
-                                 );
+                    Logger::warn(
+                        "Failed to send message "
+                        "[", csMsg->operationID(),"] "
+                        "to client ", addr.dump()
+                        );
                 }
             }
             return busyReceivers;
@@ -170,7 +175,9 @@ ActionCallStatus ServiceProviderImpl::broadcast(
         if(!busyReceivers.empty())
         {
             //If someones are busy, try with them once
-            Logger::warn("Trying to send message to busy addresses once again!");
+            Logger::warn(
+                "Trying to send message to busy addresses once again!"
+                );
             busyReceivers = trySendToDestinations(busyReceivers);
         }
 
@@ -253,30 +260,24 @@ void ServiceProviderImpl::onStatusChangeRegister(const CSMessagePtr &msg)
 
 void ServiceProviderImpl::onStatusChangeUnregister(const CSMessagePtr &msg)
 {
-    auto request = pickOutRequestInfo(msg);
-    if(request)
-    {
-        request->invalidate();
-    }
-
     removeRegisterInfo(msg);
 }
 
 
-ServiceProviderImpl::RequestPtr ServiceProviderImpl::saveRequestInfo(
+ServiceProviderImpl::RequestPtrType ServiceProviderImpl::saveRequestInfo(
     const CSMessagePtr &msg
     )
 {
-    RequestPtr request{ new Request(msg, _delegator->weak_from_this()) };
+    RequestPtrType request{ new Request(msg, _delegator->weak_from_this()) };
     (*_requestsMap.atomic())[msg->operationID()].push_back(request);
     return request;
 }
 
-ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(
+ServiceProviderImpl::RequestPtrType ServiceProviderImpl::pickOutRequestInfo(
     const CSMessagePtr &msg
     )
 {
-    RequestPtr request;
+    RequestPtrType request;
     std::lock_guard lock(_requestsMap);
     auto itRequestList = _requestsMap->find(msg->operationID());
     if(itRequestList != _requestsMap->end())
@@ -286,7 +287,7 @@ ServiceProviderImpl::RequestPtr ServiceProviderImpl::pickOutRequestInfo(
              itRequest != requestList.end(); ++itRequest
              )
         {
-            RequestPtr&  requestTmp = *itRequest;
+            RequestPtrType&  requestTmp = *itRequest;
             if(requestTmp->getRequestID() == msg->requestID())
             {
                 request = std::move(requestTmp);
@@ -355,8 +356,12 @@ void ServiceProviderImpl::onActionRequest(const CSMessagePtr &msg)
     auto request = saveRequestInfo(msg);
     if(!invokeRequestHandlerCallback(request))
     {
-        //TODO: must provide error code to client?
-        request->respond({});
+        request->respond(
+            std::make_shared<CSContentError>(
+                "Handler unavailable!",
+                CSContentError::PreservedErrorCode::HandlerUnavailable
+                )
+            );
 
         Logger::error("Not found handler for ActionRequest with OpID[",
                       msg->operationID(),
@@ -386,9 +391,7 @@ bool ServiceProviderImpl::registerRequestHandler(
     else
     {
         Logger::error(
-            "Trying to set empty function as handler for OpID[",
-            opID,
-            "]"
+            "Trying to set empty function as handler for OpID [", opID, "]"
             );
     }
     return false;
@@ -410,8 +413,11 @@ void ServiceProviderImpl::updateLatestStatus(const CSMessagePtr &registerMsg)
             "] hasn't been set yet!"
             );
     }
-    registerMsg->setContent(currentStatus);
-    respondToRequest(registerMsg);
+    else
+    {
+        registerMsg->setContent(currentStatus);
+        sendBackMessageToClient(registerMsg);
+    }
 }
 
 void ServiceProviderImpl::onStatusGetRequest(const CSMessagePtr& getMsg)
@@ -419,14 +425,26 @@ void ServiceProviderImpl::onStatusGetRequest(const CSMessagePtr& getMsg)
     auto request = saveRequestInfo(getMsg);
     if(!invokeRequestHandlerCallback(request))
     {
-        request->respond(
-            getStatus(request->getOperationID())
-            );
+        if(auto status = getStatus(request->getOperationID()))
+        {
+            request->respond(
+                status
+                );
+        }
+        else
+        {
+            request->respond(
+                std::make_shared<CSContentError>(
+                    "Status unavailable",
+                    CSContentError::PreservedErrorCode::StatusUnavailable
+                    )
+                );
+        }
     }
 }
 
 bool ServiceProviderImpl::invokeRequestHandlerCallback(
-    const RequestPtr& request
+    const RequestPtrType& request
     )
 {
     auto opID = request->getOperationID();

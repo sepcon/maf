@@ -54,6 +54,7 @@ public:
             [this](const auto& request){
             Logger::debug("Received clear status request....");
             this->resetAllStatuses();
+//            request->error("Some error occurred while clearing statuses!");
             request->respond();
         });
 
@@ -90,8 +91,17 @@ public:
         }).start().detach();
 
         _stub->registerRequestHandler<broad_cast_signal_request>(
-            [this](const auto& request){
+            [this](const local::RequestPtrType<broad_cast_signal_request>& request){
             request->respond();
+			if (auto input = request->getInput())
+			{
+                Logger::debug("request ", request->getOperationID(), " has input");
+			}
+			else
+			{
+				Logger::error("Failed to get input from request ", request->getOperationID());
+			}
+
             Logger::debug("Received broad cast signal request....");
             this->broadcastSignal();
         });
@@ -106,13 +116,30 @@ public:
                 );
         });
 
-        _stub->registerRequestHandler<shutdown>([this](const auto& request) {
-            Logger::debug("Recevied shutdown request from client!");
-            request->respond();
-            stop();
+        _stub->registerRequestHandler<shutdown>(
+            [this](const auto& request) {
+                static auto retried = 0;
+
+                Logger::debug("Recevied shutdown request from client!");
+                if(++retried == 10)
+                {
+                    Logger::debug("Shutdown server due to many requests from client!");
+                    request->respond();
+                    stop();
+                }
+                else
+                {
+                    request->error("Client is not allowed to shutdown server");
+                }
             }
         );
 
+        _stub->registerRequestHandler<today_weather::input>(
+                 [](const auto& request) {
+                today_weather::input_ptr input = request->getInput();
+                Logger::debug(input->dump());
+                request->error("today weather is not updated yet!");
+            });
         _stub->startServing();
     }
 
@@ -142,7 +169,7 @@ public:
 
     void broadcastSignal()
     {
-        _stub->broadcastSignal<server_arbittrary_request>();
+        _stub->broadcastSignal<server_request_signal>();
         _stub->broadcastSignal<client_info_request::attributes>(
             "nocpes.nocpes"
             );
@@ -157,6 +184,7 @@ private:
 
 int main()
 {
+    std::cout.sync_with_stdio(false);
     auto logFunc = [](const std::string& msg) {
         std::cout << msg << std::endl;
     };
@@ -164,7 +192,9 @@ int main()
         std::cerr << msg << std::endl;
     };
 
-    maf::Logger::init(maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_FROM_WARN,
+    maf::Logger::init(
+        maf::logging::LOG_LEVEL_DEBUG
+            | maf::logging::LOG_LEVEL_FROM_INFO,
                       std::move(logFunc), std::move(errFunc));
 
     Address a;

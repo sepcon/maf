@@ -33,7 +33,7 @@ inline bool isValidSocketPath(const SocketPath& path)
 
 inline SocketPath constructSocketPath(const Address& addr)
 {
-    return/* "/var/run/.ipc.messaging.maf.socketpath." + */addr.name() + "/" + std::to_string(addr.port());
+    return addr.get_name() + "/" + std::to_string(addr.get_port());
 }
 
 inline sockaddr_un createUnixAbstractSocketAddr(const SocketPath& sockpath)

@@ -41,7 +41,7 @@ void TimerManager::restart(JobID jid)
 TimerManager::JobID TimerManager::start(Duration milliseconds, TimeOutCallback callback, bool cyclic)
 {
     auto jid = _idManager.allocateNewID();
-    if(jid != util::IDManager::INVALID_ID)
+    if(jid != IDManager::INVALID_ID)
     {
         auto jobDoneCallback = [callback, this](JobID jid, bool isCyclic)
         {
@@ -89,7 +89,7 @@ void TimerManager::setCyclic(TimerManager::JobID jid, bool cyclic)
 
 bool TimerManager::isValid(TimerManager::JobID jid)
 {
-    return util::IDManager::isValidID(jid);
+    return IDManager::isValidID(jid);
 }
 
 }

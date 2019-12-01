@@ -11,33 +11,9 @@
 #include <maf/messaging/BasicMessages.h>
 #include <maf/logging/Logger.h>
 
-#ifndef mc_maf_assert_status_type
-#define mc_maf_assert_status_type(StatusClass)          \
-    static_assert (                                     \
-        std::is_base_of_v<cs_status, StatusClass>,      \
-        "PropertyStatus must be a cs_status object"     \
-        )
-#endif
-
-#ifndef mc_maf_assert_request_input_type
-#define mc_maf_assert_request_input_type(RequestClass)        \
-    static_assert (                                     \
-        std::is_base_of_v<cs_input, RequestClass>,    \
-        #RequestClass " must be a cs_input object"    \
-        )
-#endif
-
-#ifndef mc_maf_assert_request_output_type
-#define mc_maf_assert_request_output_type(ResultClass)          \
-    static_assert (                                     \
-        std::is_base_of_v<cs_output, ResultClass>,      \
-        #ResultClass " must be a cs_output object"      \
-        )
-#endif
-
-
 namespace maf { using logging::Logger;
 namespace messaging {
+
 
 template<class MessageTrait>
 std::shared_ptr<QueueingServiceProxy<MessageTrait>>
@@ -52,8 +28,7 @@ QueueingServiceProxy<MessageTrait>::createProxy(
             addr,
             sid))
     {
-        auto proxy = std::shared_ptr<QueueingServiceProxy<MessageTrait>>
-            {
+        auto proxy = std::shared_ptr<QueueingServiceProxy<MessageTrait>> {
                 new QueueingServiceProxy<MessageTrait>(requester)
             };
         requester->addServiceStatusObserver(proxy);
@@ -141,111 +116,202 @@ QueueingServiceProxy<MessageTrait>::onServiceStatusChanged(
     updateServiceStatusToComponent(oldStatus, newStatus);
 }
 
-template<class MessageTrait> template<class IncomingMsgContent>
+
+template<class MessageTrait>
+template<class CSParam>
 CSMessageContentHandlerCallback
-QueueingServiceProxy<MessageTrait>::createMsgHandlerAsyncCallback(
-        PayloadProcessCallback<IncomingMsgContent> callback
-        )
-{
-    if(callback)
-    {
-        // NOTE: this is not main component
-        // Every component that emits the request should handle the request
-        // itsef, then here we try to use Component::getActiveWeakPtr() instead
-        // of _compref
-        // compref must be captured by value instead of reference
-        CSMessageContentHandlerCallback ipcMessageHandlerCB =
-                [
-                callback = std::move(callback),
-                compref = Component::getActiveWeakPtr()
-                ] (const CSMsgContentBasePtr& msgContent) {
-            try
-            {
-                MessageTraitBase::EncodeDecodeStatus decodeStatus;
-                auto operationID = MessageTrait::template
-                    getOperationID<IncomingMsgContent>();
-                auto consumable = MessageTrait::template
-                    decode<IncomingMsgContent>(msgContent, &decodeStatus);
-                if(decodeStatus != MessageTraitBase::MalformInput)
-                {
-                    if(auto component = compref.lock())
-                    {
-                        // Request the requesting Component to execute the callback but
-                        component->postMessage<CallbackExcMsg>(
-                                    [
-                                    consumable,
-                                    callback = std::move(callback)
-                                    ]
-                        {
-                            callback(consumable);
-                        });
-                    }
-                    else
-                    {
-                        Logger::warn (
-                            "The component that sending the request of "
-                            "operationID: [", operationID, "] has no longer"
-                            " existed"
-                            );
-                    }
-                }
-                else
-                {
-                    Logger::error(
-                                "Could not decode incomming message with id: ",
-                                operationID
-                                );
-                }
-            }
-            catch(const std::exception& e)
-            {
-                Logger::error(e.what());
-            }
-        };
-        return ipcMessageHandlerCB;
-    }
-
-    return {}; //don't care about result
-}
-
-template<class MessageTrait> template<class property_status>
-RegID QueueingServiceProxy<MessageTrait>::registerStatus(
-    PayloadProcessCallback<property_status> callback
+QueueingServiceProxy<MessageTrait>::createResponseMsgHandlerCallback(
+    ResponseProcessingCallback<CSParam> callback
     )
 {
-    mc_maf_assert_status_type(property_status);
-    auto propertyID = MessageTrait::template getOperationID<property_status>();
+    if(!callback)
+    {
+        return {};
+    }
+
+    auto csContentHandlerCallback = [ callback = std::move(callback),
+                                     compref = Component::getActiveWeakPtr() ]
+        (const CSMsgContentBasePtr& msgContent)
+    {
+        auto operationID = MessageTrait::template getOperationID<CSParam>();
+
+        if(auto component = compref.lock())
+        {
+            component->postMessage<CallbackExcMsg>(
+                callback,
+                getResposne<CSParam>(msgContent)
+                );
+        }
+        else
+        {
+            Logger::warn (
+                "The component that sending the request of "
+                "operationID: [", operationID, "] has no longer"
+                " existed"
+                );
+        }
+
+    };
+    return csContentHandlerCallback;
+}
+
+
+template<class MessageTrait>
+template<class CSParam>
+CSMessageContentHandlerCallback
+QueueingServiceProxy<MessageTrait>::createUpdateMsgHandlerCallback(
+    UpdateProcessingCallback<CSParam> callback
+    )
+{
+    if(!callback)
+        return {}; //don't care about result
+
+    // NOTE: this is not main component
+    // Every component that emits the request should handle the request
+    // itsef, then here we try to use Component::getActiveWeakPtr() instead
+    // of _compref
+    CSMessageContentHandlerCallback csContentHandlerCallback =
+        [
+            callback = std::move(callback),
+            compref = Component::getActiveWeakPtr()
+    ] (const CSMsgContentBasePtr& msgContent)
+    {
+        if(auto component = compref.lock())
+        {
+            // Request the requesting Component to execute the callback but
+            component->postMessage<CallbackExcMsg>(
+                callback,
+                getOutput<CSParam>(msgContent)
+                );
+        }
+        else
+        {
+            Logger::warn (
+                "The component that sending the request of "
+                "operationID: [",
+                MessageTrait::template getOperationID<CSParam>(), "] "
+                "has no longer existed"
+                );
+        }
+    };
+    return csContentHandlerCallback;
+}
+
+
+template <class MessageTrait>
+template<class CSParam>
+typename QueueingServiceProxy<MessageTrait>::template ResponsePtrType<CSParam>
+QueueingServiceProxy<MessageTrait>::getResposne(
+    const CSMsgContentBasePtr& msgContent
+    )
+{
+    if(!msgContent)
+    {
+        return std::make_shared<ResponseType<CSParam>>(
+            std::shared_ptr<CSParam>{} );
+    }
+
+    if(msgContent->type() == CSMessageContentBase::Type::Error)
+    {
+        return std::make_shared<ResponseType<CSParam>>(
+            std::static_pointer_cast<CSContentError>(msgContent)
+            );
+    }
+
+    if constexpr(!MessageTrait::template encodable<CSParam>())
+    {
+        return std::make_shared<ResponseType<CSParam>>(
+            std::shared_ptr<CSParam>{}
+            );
+    }
+
+    return std::make_shared<ResponseType<CSParam>>(
+        getOutput<CSParam>(msgContent)
+        );
+
+}
+
+template <class MessageTrait> template<class CSParam>
+std::shared_ptr<CSParam> QueueingServiceProxy<MessageTrait>::getOutput(
+    const CSMsgContentBasePtr& msgContent
+    )
+{
+    if constexpr ( !MessageTrait::template encodable<CSParam>() )
+    {
+        return {};
+    }
+    else if(msgContent->type() != CSMessageContentBase::Type::Error)
+    {
+        MessageTraitBase::CodecStatus decodeStatus;
+        auto output = MessageTrait::template decode<CSParam>(
+            msgContent,
+            &decodeStatus
+            );
+
+        if(decodeStatus != MessageTraitBase::MalformInput)
+        {
+            return output;
+        }
+        else
+        {
+            Logger::warn(
+                "Failed to get status of [",
+                MessageTrait::template getOperationID<CSParam>(), "] "
+                "from server"
+                );
+        }
+    }
+
+    return {};
+}
+template<class MessageTrait> template<class PropertyStatus,
+         std::enable_if_t<
+             std::is_base_of_v<cs_status, PropertyStatus>,
+             bool>>
+RegID QueueingServiceProxy<MessageTrait>::registerStatus(
+    UpdateProcessingCallback<PropertyStatus> callback,
+    ActionCallStatus* callStatus
+    )
+{
+    auto propertyID = MessageTrait::template getOperationID<PropertyStatus>();
     if(callback)
     {
         return _requester->registerStatus(
             propertyID,
-            createMsgHandlerAsyncCallback(std::move(callback))
+            createUpdateMsgHandlerCallback(std::move(callback)),
+            callStatus
             );
     }
     else
     {
-        Logger::error("Registering status id[, ",
-                      propertyID,
-                      "] failed, Please provide non-empty callback");
+        Logger::error(
+            "Registering status id[ ", propertyID, "] "
+            "failed, Please provide non-empty callback"
+            );
     }
     return {};
 }
 
-template<class MessageTrait> template<class signal_attributes>
+template<class MessageTrait> template<class SignalAttributes,
+         std::enable_if_t<
+             std::is_base_of_v<cs_attributes, SignalAttributes>,
+             bool>>
 RegID QueueingServiceProxy<MessageTrait>::registerSignal(
-    PayloadProcessCallback<signal_attributes> callback
+    UpdateProcessingCallback<SignalAttributes> callback,
+    ActionCallStatus* callStatus
     )
 {
     static_assert (
-        std::is_base_of_v<cs_attributes, signal_attributes>,
-        "signal_attributes must be a cs_attributes "
+        std::is_base_of_v<cs_attributes, SignalAttributes>,
+        "SignalAttributes must be a cs_attributes "
         );
-    auto signalID = MessageTrait::template getOperationID<signal_attributes>();
+    auto signalID = MessageTrait::template getOperationID<SignalAttributes>();
     if(callback)
     {
         return _requester->registerSignal(
             signalID,
-            createMsgHandlerAsyncCallback(std::move(callback))
+            createUpdateMsgHandlerCallback(std::move(callback)),
+            callStatus
             );
     }
     else
@@ -257,39 +323,44 @@ RegID QueueingServiceProxy<MessageTrait>::registerSignal(
     return {};
 }
 
-template<class MessageTrait> template<class signal_class>
+template<class MessageTrait> template<class SignalClass,
+         std::enable_if_t<
+             std::is_base_of_v<cs_signal, SignalClass>,
+             bool>>
 RegID QueueingServiceProxy<MessageTrait>::registerSignal(
-    std::function<void(void)> callback
+    std::function<void()> callback,
+    ActionCallStatus* callStatus
     )
 {
     static_assert (
-        std::is_base_of_v<cs_signal, signal_class>,
-        "signal_class must be a cs_signal "
+        std::is_base_of_v<cs_signal, SignalClass>,
+        "SignalClass must be a cs_signal "
         );
 
-    auto signalID = MessageTrait::template getOperationID<signal_class>();
+    auto signalID = MessageTrait::template getOperationID<SignalClass>();
     if(callback)
     {
-        return _requester->registerSignal(
-            signalID,
-            [
-                signalID,
-                callback = std::move(callback),
-                compref = Component::getActiveWeakPtr()
+        auto asyncHandler = [ signalID, callback = std::move(callback),
+                             compref = Component::getActiveWeakPtr()
         ] (const auto&) mutable {
-                if(auto component = compref.lock())
-                {
-                    // Request the requesting Component to execute the callback but
-                    component->postMessage<CallbackExcMsg>(std::move(callback));
-                }
-                else
-                {
-                    Logger::warn(
-                        "The component that sending the request of operationID: "
-                        "[", signalID, "] has no longer existed"
-                        );
-                }
+            if(auto component = compref.lock())
+            {
+                // Request the requesting Component to execute the callback but
+                component->postMessage<CallbackExcMsg>(std::move(callback));
             }
+            else
+            {
+                Logger::warn(
+                    "The component that sending the request of operationID: "
+                    "[", signalID, "] has no longer existed"
+                    );
+            }
+        };
+
+        return _requester->registerSignal(
+            signalID,
+            std::move(asyncHandler),
+            callStatus
             );
     }
     else
@@ -303,45 +374,40 @@ RegID QueueingServiceProxy<MessageTrait>::registerSignal(
 
 
 template<class MessageTrait>
-void QueueingServiceProxy<MessageTrait>::unregisterStatus(const RegID& regID)
+ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterStatus(const RegID& regID)
 {
-    _requester->unregisterStatus(regID);
+    return _requester->unregisterStatus(regID);
 }
 
 template<class MessageTrait>
-void QueueingServiceProxy<MessageTrait>::unregisterStatusAll(const OpID& propertyID)
+ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterStatusAll(
+    const OpID& propertyID
+    )
 {
-    _requester->unregisterStatusAll(propertyID);
+    return _requester->unregisterStatusAll(propertyID);
 }
 
-template<class MessageTrait> template<class property_status>
-RegID QueueingServiceProxy<MessageTrait>::getStatusAsync(
-        CSMessageContentHandlerCallback callback
-        )
+template<class MessageTrait>
+template<class PropertyStatus,
+         std::enable_if_t<
+             std::is_base_of_v<cs_status, PropertyStatus>,
+             bool>>
+std::shared_ptr<PropertyStatus>
+QueueingServiceProxy<MessageTrait>::getStatus(
+    unsigned long maxWaitTimeMs,
+    ActionCallStatus* callStatus
+    )
 {
-    mc_maf_assert_status_type(property_status);
-
-    return _requester->getStatusAsync(
-                MessageTrait::template getOperationID<property_status>(),
-                createMsgHandlerAsyncCallback(std::move(callback))
-                );
-}
-
-template<class MessageTrait> template<class property_status>
-std::shared_ptr<property_status> QueueingServiceProxy<MessageTrait>::getStatus(
-        unsigned long maxWaitTimeMs
-        )
-{
-    mc_maf_assert_status_type(property_status);
-
-    auto propertyID = MessageTrait::template getOperationID<property_status>();
-    if(auto msgContent = _requester->getStatus(
+    auto propertyID = MessageTrait::template getOperationID<PropertyStatus>();
+    if(auto msgContent =
+            _requester->getStatus(
                 propertyID,
-                maxWaitTimeMs
+                maxWaitTimeMs,
+                callStatus
                 )
-            )
+        )
     {
-        return MessageTrait::template decode<property_status>(msgContent);
+        return getOutput<PropertyStatus>(msgContent);
     }
     else
     {
@@ -350,137 +416,117 @@ std::shared_ptr<property_status> QueueingServiceProxy<MessageTrait>::getStatus(
 }
 
 template<class MessageTrait>
-template<class request_output,
-         std::enable_if_t<std::is_base_of_v<cs_output, request_output>, bool>
-         >
+template <class OperationOrOutput,
+         std::enable_if_t<
+             std::is_base_of_v<cs_output, OperationOrOutput> ||
+                 std::is_base_of_v<cs_operation, OperationOrOutput>, bool>>
 RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
     const std::shared_ptr<cs_input> &requestInput,
-    PayloadProcessCallback<request_output> callback
+    ResponseProcessingCallback<OperationOrOutput> callback,
+    ActionCallStatus* callStatus
     )
 {
-    mc_maf_assert_request_output_type(request_output);
-
     return _requester->sendRequestAsync(
-        MessageTrait::template getOperationID<request_output>(),
+        MessageTrait::template getOperationID<OperationOrOutput>(),
         MessageTrait::template encode<cs_input>(requestInput),
-        createMsgHandlerAsyncCallback(callback)
+        createResponseMsgHandlerCallback(std::move(callback)),
+        callStatus
         );
 }
 
 template<class MessageTrait>
-template<class request_output,
-         std::enable_if_t<std::is_base_of_v<cs_output, request_output>, bool>
-         >
+template <class OperationOrOutput,
+         std::enable_if_t<
+             std::is_base_of_v<cs_output, OperationOrOutput> ||
+                 std::is_base_of_v<cs_operation, OperationOrOutput>,
+             bool> >
 RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
-        PayloadProcessCallback<request_output> callback
-        )
-{
-    mc_maf_assert_request_output_type(request_output);
-    return _requester->sendRequestAsync(
-        MessageTrait::template getOperationID<request_output>(),
-        {},
-        createMsgHandlerAsyncCallback(std::move(callback))
-        );
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_input, request_input)
-RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync(
-        const std::shared_ptr<request_input> &requestInput
-        )
-{
-    return _requester->sendRequestAsync(
-        MessageTrait::template getOperationID<request_input>(),
-        MessageTrait::template encode(requestInput),
-        {});
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_request, request_class)
-RegID QueueingServiceProxy<MessageTrait>::sendRequestAsync()
-{
-    return _requester->sendRequestAsync(
-        MessageTrait::template getOperationID<request_class>(),
-        {},
-        {});
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_output, request_output)
-std::shared_ptr<request_output> QueueingServiceProxy<MessageTrait>::sendRequest(
-    const std::shared_ptr<cs_input> &requestInput,
-    unsigned long maxWaitTimeMs
+    ResponseProcessingCallback<OperationOrOutput> callback,
+    ActionCallStatus* callStatus
     )
 {
-    mc_maf_assert_request_output_type(request_output);
-    if(auto msgContent = _requester->sendRequest(
-            MessageTrait::template getOperationID<request_output>(),
-            MessageTrait::template encode<cs_input>(requestInput),
-            maxWaitTimeMs
-            )
-        )
-    {
-        return MessageTrait::template decode<request_output>(msgContent);
-    }
-    else
-    {
-        return {};
-    }
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_output, request_output)
-std::shared_ptr<request_output>
-QueueingServiceProxy<MessageTrait>::sendRequest(unsigned long maxWaitTimeMs)
-{
-    mc_maf_assert_request_output_type(request_output);
-
-    auto actionID = MessageTrait::template getOperationID<request_output>();
-    if(auto msgContent = _requester->sendRequest(
-                actionID,
-                {},
-                maxWaitTimeMs
-                )
-            )
-    {
-        return MessageTrait::template decode<request_output>( msgContent );
-    }
-    else
-    {
-        return {};
-    }
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_input, request_input)
-void QueueingServiceProxy<MessageTrait>::sendRequest(
-        const std::shared_ptr<request_input>& input,
-        unsigned long maxWaitTimeMs)
-{
-    mc_maf_assert_request_input_type(request_input);
-
-    auto actionID = MessageTrait::template getOperationID<request_input>();
-    _requester->sendRequest(
-                    actionID,
-                    input,
-                    maxWaitTimeMs
-                    );
-}
-
-template<class MessageTrait>
-mc_maf_tpl_enable_if_is_base_of(cs_request, request_class)
-    void QueueingServiceProxy<MessageTrait>::sendRequest(
-        unsigned long maxWaitTimeMs
-        )
-{
-
-    auto actionID = MessageTrait::template getOperationID<request_class>();
-    _requester->sendRequest(
-        actionID,
+    return _requester->sendRequestAsync(
+        MessageTrait::template getOperationID<OperationOrOutput>(),
         {},
-        maxWaitTimeMs
+        createResponseMsgHandlerCallback(std::move(callback)),
+        callStatus
         );
 }
+
+template<class MessageTrait>
+template <class OperationOrOutput,
+         std::enable_if_t<
+             std::is_base_of_v<cs_output, OperationOrOutput> ||
+                 std::is_base_of_v<cs_operation, OperationOrOutput>,
+             bool> >
+typename QueueingServiceProxy<MessageTrait>::template
+    ResponsePtrType<OperationOrOutput>
+    QueueingServiceProxy<MessageTrait>::sendRequest(
+        const std::shared_ptr<cs_input> &requestInput,
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
+        )
+{
+    return sendRequest<OperationOrOutput>(
+        MessageTrait::template getOperationID<OperationOrOutput>(),
+        MessageTrait::template encode<cs_input>(requestInput),
+        maxWaitTimeMs,
+        callStatus
+        );
+}
+
+template<class MessageTrait>
+template <class OperationOrOutput,
+         std::enable_if_t<
+             std::is_base_of_v<cs_output, OperationOrOutput> ||
+                 std::is_base_of_v<cs_operation, OperationOrOutput>,
+             bool> >
+typename QueueingServiceProxy<MessageTrait>::template
+    ResponsePtrType<OperationOrOutput>
+QueueingServiceProxy<MessageTrait>::sendRequest(
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
+        )
+{
+    return sendRequest<OperationOrOutput>(
+               MessageTrait::template getOperationID<OperationOrOutput>(),
+               {},
+               maxWaitTimeMs,
+               callStatus
+        );
+}
+
+template<class MessageTrait>
+template<class OperationOrOutput>
+typename QueueingServiceProxy<MessageTrait>::template
+    ResponsePtrType<OperationOrOutput>
+    QueueingServiceProxy<MessageTrait>::sendRequest(
+    OpID actionID,
+    const CSMsgContentBasePtr& requestInput,
+    unsigned long maxWaitTimeMs,
+    ActionCallStatus* callStatus
+    )
+{
+    auto callStatus_ = ActionCallStatus::FailedUnknown;
+    auto rawResponse = _requester->sendRequest(
+        actionID,
+        requestInput,
+        maxWaitTimeMs,
+        &callStatus_
+        );
+
+    if(callStatus) { *callStatus = callStatus_; }
+
+    if(callStatus_ == ActionCallStatus::Success)
+    {
+        return getResposne<OperationOrOutput>(rawResponse);
+    }
+    else
+    {
+        return {};
+    }
+}
+
 
 }
 }

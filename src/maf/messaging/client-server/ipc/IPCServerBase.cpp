@@ -27,20 +27,41 @@ bool IPCServerBase::deinit()
     return _communicator->deinit() && ServerBase::deinit();
 }
 
-ActionCallStatus IPCServerBase::sendMessageToClient(const CSMessagePtr &msg, const Address &addr)
+ActionCallStatus IPCServerBase::sendMessageToClient(
+    const CSMessagePtr &msg,
+    const Address &addr
+    )
 {
     return _communicator->send(std::static_pointer_cast<IPCMessage>(msg), addr);
 }
 
-void IPCServerBase::notifyServiceStatusToClient(const ServiceID& sid, Availability oldStatus, Availability newStatus)
+void IPCServerBase::notifyServiceStatusToClient(
+    const ServiceID& sid,
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
     if(oldStatus != newStatus)
     {
-        auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
+        auto serviceStatusMsg = createCSMessage<IPCMessage>(
+            sid,
+            newStatus == Availability::Available ?
+                                                 OpID_ServiceAvailable
+                                                 : OpID_ServiceUnavailable,
+            OpCode::ServiceStatusUpdate
+            );
+
         std::lock_guard lock(_registedClAddrs);
-        for (auto itAddr = _registedClAddrs->begin(); itAddr != _registedClAddrs->end(); /*intenedTobeEmpy*/) {
+        for (
+            auto itAddr = _registedClAddrs->begin();
+             itAddr != _registedClAddrs->end();
+            )
+        {
             auto ec = sendMessageToClient(serviceStatusMsg, *itAddr);
-            if((ec == ActionCallStatus::ReceiverUnavailable) || (ec == ActionCallStatus::FailedUnknown))
+            if(
+                (ec == ActionCallStatus::ReceiverUnavailable)
+                || (ec == ActionCallStatus::FailedUnknown)
+                )
             {
                 //Client has been off, then don't keep their contact anymore
                 itAddr = _registedClAddrs->erase(itAddr);
@@ -62,7 +83,12 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
             std::lock_guard lock(_providers);
             for(auto& [sid, provider] : *_providers)
             {
-                notifyServiceStatusToClient(csMsg->sourceAddress(), provider->serviceID(), Availability::Unavailable, Availability::Available);
+                notifyServiceStatusToClient(
+                    csMsg->sourceAddress(),
+                    provider->serviceID(),
+                    Availability::Unavailable,
+                    Availability::Available
+                    );
             }
         }
         return true;
@@ -89,12 +115,22 @@ bool IPCServerBase::onIncomingMessage(const CSMessagePtr &csMsg)
     return ServerBase::onIncomingMessage(csMsg);
 }
 
-void IPCServerBase::notifyServiceStatusToClient(const Address &clAddr, const ServiceID& sid, Availability oldStatus, Availability newStatus)
+void IPCServerBase::notifyServiceStatusToClient(
+    const Address &clAddr,
+    const ServiceID& sid,
+    Availability oldStatus,
+    Availability newStatus
+    )
 {
     if(oldStatus != newStatus)
     {
-        Logger::info("Update service id " ,  sid ,  " status to client at address: " ,  clAddr.dump());
-        auto serviceStatusMsg = createCSMessage<IPCMessage>(sid, newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
+        Logger::info(
+            "Update service ",  sid ,  " status to client at address: " ,
+            clAddr.dump()
+            );
+        auto serviceStatusMsg = createCSMessage<IPCMessage>(
+            sid,
+            newStatus == Availability::Available ? OpID_ServiceAvailable : OpID_ServiceUnavailable, OpCode::ServiceStatusUpdate);
         auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
         if((ec != ActionCallStatus::Success) && (ec != ActionCallStatus::ReceiverBusy))
         {

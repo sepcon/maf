@@ -19,53 +19,68 @@ namespace messaging {
 template <class MessageTrait>
 class QueueingServiceStub final
 {
-    using Stub                     = QueueingServiceStub<MessageTrait>;
-    using StubPtr                  = std::shared_ptr<Stub>;
+    using Stub                    = QueueingServiceStub<MessageTrait>;
+    using StubPtr                 = std::shared_ptr<Stub>;
 public:
-    using RequestType               = QueuedRequest<MessageTrait>;
-    using RequestPtr                = std::shared_ptr<RequestType>;
+    template <typename InputType  = nullptr_t>
+    using RequestType             = QueuedRequest<MessageTrait, InputType>;
+    template <typename InputType  = nullptr_t>
+    using RequestPtrType          = std::shared_ptr<RequestType<InputType>>;
+    template <typename InputType  = nullptr_t>
+    using RequestHandlerFunction  = std::function<
+                                        void(const RequestPtrType<InputType>& )
+                                    >;
 
     static StubPtr createStub(const ConnectionType& contype, const Address& addr, const ServiceID& sid);
 
     const ServiceID& serviceID() const;
 
-    template<class property_status>
+    template<class property_status,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_status, property_status>,
+                 bool> = true>
     ActionCallStatus setStatus(const std::shared_ptr<property_status>& status);
 
-    template<class property_status, typename... Args>
+    template<class property_status, typename... Args,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_status, property_status>,
+                 bool> = true>
     ActionCallStatus setStatus(Args&&...);
 
-    template<class property_status>
+    template<class property_status,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_status, property_status>,
+                 bool> = true>
     std::shared_ptr<const property_status> getStatus();
 
-    template<class signal_attributes>
+    template<class signal_attributes,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_attributes, signal_attributes>,
+                 bool> = true>
     ActionCallStatus broadcastSignal(
         const std::shared_ptr<signal_attributes>& attr
         );
 
-    template<class signal_attributes, typename... Args>
+    template<class signal_attributes, typename... Args,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_attributes, signal_attributes>,
+                 bool> = true>
     ActionCallStatus broadcastSignal(Args&&... args);
 
-    template<class signal_class>
+    template<class signal_class,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_signal, signal_class>,
+                 bool> = true>
     ActionCallStatus broadcastSignal();
 
-    template <class request_input,
+    template <class RequestInput,
              std::enable_if_t<
-                 std::is_base_of_v<cs_input, request_input>, bool> = true
+                 std::is_base_of_v<cs_input, RequestInput> ||
+                 std::is_base_of_v<cs_operation, RequestInput>,
+                 bool> = true
              >
     bool registerRequestHandler(
-        std::function<
-            void(RequestPtr,const std::shared_ptr<request_input>&)
-            > handlerFunction
-        );
-
-    template <class request_class,
-             std::enable_if_t<
-                 std::is_base_of_v<cs_request, request_class> ||
-                 std::is_base_of_v<cs_property, request_class>, bool> = true
-             >
-    bool registerRequestHandler(
-        std::function<void(RequestPtr)> handlerFunction
+        RequestHandlerFunction<RequestInput> handlerFunction
         );
 
     bool unregisterRequestHandler( const OpID& opID );
@@ -76,6 +91,7 @@ public:
     void stopServing();
 
 private:
+
     QueueingServiceStub(std::shared_ptr<ServiceProviderInterface> provider);
     bool getHandlerComponent(ComponentRef &compref) const;
     void onComponentUnavailable();

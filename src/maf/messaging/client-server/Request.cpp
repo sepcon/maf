@@ -1,4 +1,5 @@
 #include <maf/messaging/client-server/Request.h>
+#include <maf/messaging/client-server/CSContentError.h>
 #include <maf/messaging/client-server/ServiceProviderInterface.h>
 #include <maf/logging/Logger.h>
 
@@ -78,7 +79,7 @@ CSMsgContentBasePtr Request::getInput()
     return _csMsg->content();
 }
 
-void Request::onAbortRequest(AbortRequestCallback abortCallback)
+void Request::setAbortRequestHandler(AbortRequestCallback abortCallback)
 {
     std::lock_guard lock(_mutex);
     if(!_valid)

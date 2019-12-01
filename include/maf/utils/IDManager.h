@@ -31,20 +31,36 @@ private:
 
 namespace maf {
 namespace util {
-
-
+namespace details {
+template<typename IDType_>
 class IDManager
 {
 public:
-    using IDType = uint32_t;
-    static constexpr const IDType INVALID_ID = static_cast<uint32_t>(-1);
+    using IDType = IDType_;
+    static constexpr const IDType INVALID_ID = static_cast<IDType>(-1);
     IDManager() : _idCounter(0){}
-    IDType allocateNewID();
+    IDType allocateNewID()
+    {
+        auto id = _idCounter.fetch_add(1, std::memory_order_relaxed);
+        if(id == INVALID_ID)
+        {
+            id = _idCounter.fetch_add(1, std::memory_order_relaxed);
+        }
+        return id;
+    }
     void reclaimUsedID(IDType /*id*/) {}
     static inline bool isValidID(IDType id) { return id != INVALID_ID; }
 private:
     std::atomic<IDType> _idCounter;
 };
+}
+
+template<typename IDType>
+using IDManagerT = details::IDManager<IDType>;
+
+using IDManager = IDManagerT<uint64_t>;
+
+
 }
 }
 #endif

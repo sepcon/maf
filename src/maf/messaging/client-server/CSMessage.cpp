@@ -3,7 +3,14 @@
 namespace maf {
 namespace messaging {
 
-CSMessage::CSMessage(ServiceID sid, OpID opID, OpCode opCode, RequestID reqID, CSMsgContentBasePtr msgContent, Address sourceAddr) :
+CSMessage::CSMessage(
+    ServiceID sid,
+    OpID opID,
+    OpCode opCode,
+    RequestID reqID,
+    CSMsgContentBasePtr msgContent,
+    Address sourceAddr
+    ) :
     _serviceID(std::move(sid)),
     _operationID(std::move(opID)),
     _requestID(std::move(reqID)),
@@ -77,9 +84,19 @@ void CSMessage::setContent(CSMsgContentBasePtr content)
     _content = std::move(content);
 }
 
+
+// Section of CSMessageContentBase
 CSMessageContentBase::~CSMessageContentBase() = default;
 
+CSMessageContentBase::Type CSMessageContentBase::type() const
+{
+    return _type;
+}
 
+void CSMessageContentBase::setType(Type t)
+{
+    _type = std::move(t);
+}
 
 } // messaging
 } // maf

@@ -1,7 +1,7 @@
 #include "Server.h"
 #include "ControllableInterface.h"
 #include <maf/export/MafExport_global.h>
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
+#include <maf/messaging/client-server/DefaultMessageTrait.h>
 #include <maf/logging/Logger.h>
 
 namespace maf {
@@ -10,7 +10,7 @@ using namespace messaging;
 
 class TestServer : public ControllableDefault
 {
-    using MessageTrait  = messaging::SerializableMessageTrait;
+    using MessageTrait  = messaging::DefaultMessageTrait;
     using ClientComp    = maf::test::ServerComponent<MessageTrait>;
     using Stub          = QueueingServiceStub<MessageTrait>;
 public:
@@ -44,9 +44,8 @@ void TestServer::deinit()
 void TestServer::start()
 {
     server.startTest(
-        "local_ipc",
-        {"com.github.sepcon", 0},
-        "weather_service"
+        "app_internal",
+        {"com.github.sepcon", 0}
         );
 }
 

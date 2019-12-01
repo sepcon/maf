@@ -4,3 +4,4 @@ build-*-Release
 bin
 build*
 .vs*
+.cmake

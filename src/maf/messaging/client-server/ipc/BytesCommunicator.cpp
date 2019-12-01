@@ -59,7 +59,7 @@ ActionCallStatus BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg,
             }
             else
             {
-                return _pSender->send(msg->toBytes());
+                return _pSender->send(msg->toBytes(), {});
             }
         }
         catch (const std::bad_alloc& e)
@@ -80,7 +80,7 @@ void BytesCommunicator::onBytesCome(const std::shared_ptr<srz::ByteArray>& bytes
     std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
     if(csMsg->fromBytes(bytes))
     {
-        if(_isClient && csMsg->sourceAddress() != Address::INVALID_ADDRESS)
+        if(_isClient && csMsg->sourceAddress().valid())
         {
             assert(csMsg->sourceAddress() == _pReceiver->address());
         }

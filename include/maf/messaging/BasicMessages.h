@@ -11,14 +11,13 @@ namespace messaging {
 struct CallbackExcMsg : public CompMessageBase
 {
     template<class Callback, class... Args>
-    CallbackExcMsg(Callback&& callback_, Args&&... args) {
-        auto invoker = util::makeInvoker(
+    CallbackExcMsg(Callback&& callback_, Args&&... args)
+        : callback{
+            std::bind(
             std::forward<Callback>(callback_),
-            std::forward<Args>(args)...
-            );
-        callback = [invoker = std::move(invoker)]() mutable {
-            invoker.invoke();
-        };
+                std::forward<Args>(args)...
+                )}
+    {
     }
     void execute()
     {
@@ -30,7 +29,10 @@ private:
 };
 struct TimeoutMessage : public CallbackExcMsg
 {
-    TimeoutMessage(unsigned int timerID_, std::function<void()> timeoutCallback): CallbackExcMsg(std::move(timeoutCallback)), timerID(timerID_)
+    TimeoutMessage(
+        unsigned int timerID_,
+        std::function<void()> timeoutCallback
+        ) : CallbackExcMsg(std::move(timeoutCallback)), timerID(timerID_)
     {
         setPriority(1000);
     }
