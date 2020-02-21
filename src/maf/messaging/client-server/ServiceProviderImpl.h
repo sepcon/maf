@@ -19,9 +19,9 @@ struct ServiceProviderImpl
     template <typename ValueType>
     using OpIDMap                = threading::Lockable<std::map<OpID, ValueType>>;
 
-    using RequestPtr             = std::shared_ptr<Request>;
+    using RequestPtrType         = std::shared_ptr<Request>;
     using PropertyPtr            = CSMsgContentBasePtr;
-    using RequestMap             = OpIDMap<std::list<RequestPtr>>;
+    using RequestMap             = OpIDMap<std::list<RequestPtrType>>;
     using PropertyMap            = OpIDMap<PropertyPtr>;
     using RequestHandlerMap      = OpIDMap<RequestHandlerFunction>;
     using Address2OpIDsMap       = threading::Lockable<std::map<Address, std::set<OpID>>>;
@@ -76,8 +76,8 @@ struct ServiceProviderImpl
     void onStatusChangeUnregister(const CSMessagePtr& msg);
 
 
-    RequestPtr saveRequestInfo(const CSMessagePtr& msg);
-    RequestPtr pickOutRequestInfo(const CSMessagePtr &msgContent);
+    RequestPtrType saveRequestInfo(const CSMessagePtr& msg);
+    RequestPtrType pickOutRequestInfo(const CSMessagePtr &msgContent);
 
     void invalidateAndRemoveAllRequests();
 
@@ -93,7 +93,7 @@ struct ServiceProviderImpl
     void onActionRequest(const CSMessagePtr& msg);
     void updateLatestStatus(const CSMessagePtr& registerMsg);
     void onStatusGetRequest(const CSMessagePtr &getMsg);
-    bool invokeRequestHandlerCallback(const RequestPtr& request);
+    bool invokeRequestHandlerCallback(const RequestPtrType& request);
 
     bool registerRequestHandler(
         const OpID&  opID,

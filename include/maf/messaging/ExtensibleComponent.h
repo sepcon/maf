@@ -12,24 +12,24 @@ protected:
 public:
     using BaseMessageHandlerFunc = Component::BaseMessageHandlerFunc;
 
-    inline ExtensibleComponent(const std::string& name = "")
+    ExtensibleComponent(const std::string& name = "")
     {
         _comp = Component::create();
         _comp->setName(name);
     }
 
-    inline const std::string& name() const { return _comp->name(); }
-    inline void setName(std::string name);
-    inline void run(LaunchMode launchMode = LaunchMode::Async);
-    inline void stop();
-    inline void postMessage(messaging::MessageBasePtr msg);
+    const std::string& name() const { return _comp->name(); }
+    void setName(std::string name);
+    void run(LaunchMode launchMode = LaunchMode::Async);
+    void stop();
+    void postMessage(messaging::MessageBasePtr msg);
 
-    inline void registerMessageHandler(
+    void registerMessageHandler(
         CompMessageBase::Type msgType,
         MessageHandler* handler
         );
 
-    inline void registerMessageHandler(
+    void registerMessageHandler(
         CompMessageBase::Type msgType,
         BaseMessageHandlerFunc onMessageFunc
         );
@@ -38,7 +38,7 @@ public:
              std::enable_if_t<std::is_constructible_v<Msg, Args...>,
                               bool> = true
              >
-    inline void postMessage(Args&&... args)
+    void postMessage(Args&&... args)
     {
         _comp->postMessage<Msg>(std::forward<Args>(args)...);
     }
@@ -66,31 +66,31 @@ public:
     }
 
 protected:
-    virtual void onEntry() = 0;
+    virtual void onEntry() {}
     virtual void onExit() {}
 
     ComponentPtr _comp;
 };
 
-void ExtensibleComponent::setName(std::string name)
+inline void ExtensibleComponent::setName(std::string name)
 { _comp->setName(std::move(name)); }
 
-void ExtensibleComponent::run(LaunchMode launchMode)
+inline void ExtensibleComponent::run(LaunchMode launchMode)
 {
     _comp->run(launchMode, [this]{ onEntry(); }, [this]{onExit(); });
 }
 
-void ExtensibleComponent::stop()
+inline void ExtensibleComponent::stop()
 {
     _comp->stop();
 }
 
-void ExtensibleComponent::postMessage(MessageBasePtr msg)
+inline void ExtensibleComponent::postMessage(MessageBasePtr msg)
 {
     _comp->postMessage(std::move(msg));
 }
 
-void ExtensibleComponent::registerMessageHandler(
+inline void ExtensibleComponent::registerMessageHandler(
     CompMessageBase::Type msgType,
     MessageHandler *handler
     )
@@ -98,7 +98,7 @@ void ExtensibleComponent::registerMessageHandler(
     _comp->registerMessageHandler(msgType, handler);
 }
 
-void ExtensibleComponent::registerMessageHandler(
+inline void ExtensibleComponent::registerMessageHandler(
     CompMessageBase::Type msgType,
     ExtensibleComponent::BaseMessageHandlerFunc onMessageFunc
     )

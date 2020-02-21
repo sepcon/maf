@@ -35,6 +35,13 @@
 #        pragma pop_macro("mc_maf_define_constructors_")
 #        undef maf_restore_macro_mc_maf_define_constructors_
 #    endif
+#    ifdef mc_maf_define_dump_function
+#        undef mc_maf_define_dump_function
+#    endif
+#    ifdef maf_restore_macro_mc_maf_define_dump_function
+#        pragma pop_macro("mc_maf_define_dump_function")
+#        undef maf_restore_macro_mc_maf_define_dump_function
+#    endif
 #    ifdef mc_maf_define_dump_helper_func
 #        undef mc_maf_define_dump_helper_func
 #    endif
@@ -42,12 +49,33 @@
 #        pragma pop_macro("mc_maf_define_dump_helper_func")
 #        undef maf_restore_macro_mc_maf_define_dump_helper_func
 #    endif
-#    ifdef mc_maf_define_dump_helper_func
-#        undef mc_maf_define_dump_helper_func
+#    ifdef mc_maf_define_load_from_json_functions
+#        undef mc_maf_define_load_from_json_functions
 #    endif
-#    ifdef maf_restore_macro_mc_maf_define_dump_helper_func
-#        pragma pop_macro("mc_maf_define_dump_helper_func")
-#        undef maf_restore_macro_mc_maf_define_dump_helper_func
+#    ifdef maf_restore_macro_mc_maf_define_load_from_json_functions
+#        pragma pop_macro("mc_maf_define_load_from_json_functions")
+#        undef maf_restore_macro_mc_maf_define_load_from_json_functions
+#    endif
+#    ifdef mc_maf_dump_each_property
+#        undef mc_maf_dump_each_property
+#    endif
+#    ifdef maf_restore_macro_mc_maf_dump_each_property
+#        pragma pop_macro("mc_maf_dump_each_property")
+#        undef maf_restore_macro_mc_maf_dump_each_property
+#    endif
+#    ifdef mc_maf_dump_each_property_
+#        undef mc_maf_dump_each_property_
+#    endif
+#    ifdef maf_restore_macro_mc_maf_dump_each_property_
+#        pragma pop_macro("mc_maf_dump_each_property_")
+#        undef maf_restore_macro_mc_maf_dump_each_property_
+#    endif
+#    ifdef mc_maf_dump_each_property_with_index
+#        undef mc_maf_dump_each_property_with_index
+#    endif
+#    ifdef maf_restore_macro_mc_maf_dump_each_property_with_index
+#        pragma pop_macro("mc_maf_dump_each_property_with_index")
+#        undef maf_restore_macro_mc_maf_dump_each_property_with_index
 #    endif
 #    ifdef mc_maf_get_default_value
 #        undef mc_maf_get_default_value
@@ -84,6 +112,27 @@
 #        pragma pop_macro("mc_maf_has_default")
 #        undef maf_restore_macro_mc_maf_has_default
 #    endif
+#    ifdef mc_maf_load_from_json_each_property
+#        undef mc_maf_load_from_json_each_property
+#    endif
+#    ifdef maf_restore_macro_mc_maf_load_from_json_each_property
+#        pragma pop_macro("mc_maf_load_from_json_each_property")
+#        undef maf_restore_macro_mc_maf_load_from_json_each_property
+#    endif
+#    ifdef mc_maf_load_json_on_each_property_
+#        undef mc_maf_load_json_on_each_property_
+#    endif
+#    ifdef maf_restore_macro_mc_maf_load_json_on_each_property_
+#        pragma pop_macro("mc_maf_load_json_on_each_property_")
+#        undef maf_restore_macro_mc_maf_load_json_on_each_property_
+#    endif
+#    ifdef mc_maf_load_json_on_each_property_with_index
+#        undef mc_maf_load_json_on_each_property_with_index
+#    endif
+#    ifdef maf_restore_macro_mc_maf_load_json_on_each_property_with_index
+#        pragma pop_macro("mc_maf_load_json_on_each_property_with_index")
+#        undef maf_restore_macro_mc_maf_load_json_on_each_property_with_index
+#    endif
 #    ifdef mc_maf_no_default
 #        undef mc_maf_no_default
 #    endif
@@ -94,9 +143,9 @@
 #    ifdef mc_maf_properties_map
 #        undef mc_maf_properties_map
 #    endif
-#    ifdef maf_restore_macro_mc_maf_properties_map_
+#    ifdef maf_restore_macro_mc_maf_properties_map
 #        pragma pop_macro("mc_maf_properties_map")
-#        undef maf_restore_macro_mc_maf_properties_map_
+#        undef maf_restore_macro_mc_maf_properties_map
 #    endif
 #    ifdef mc_maf_take_2_first_params_param
 #        undef mc_maf_take_2_first_params_param
@@ -150,9 +199,9 @@
 #    ifdef mc_maf_tuple_like_object_end
 #        undef mc_maf_tuple_like_object_end
 #    endif
-#    ifdef maf_restore_macro_mc_maf_tuple_like_object_end_
+#    ifdef maf_restore_macro_mc_maf_tuple_like_object_end
 #        pragma pop_macro("mc_maf_tuple_like_object_end")
-#        undef maf_restore_macro_mc_maf_tuple_like_object_end_
+#        undef maf_restore_macro_mc_maf_tuple_like_object_end
 #    endif
 #    ifdef mc_maf_tuple_like_object_has_base_
 #        undef mc_maf_tuple_like_object_has_base_
@@ -174,19 +223,5 @@
 #    ifdef maf_restore_macro_mc_maf_tuple_value_at
 #        pragma pop_macro("mc_maf_tuple_value_at")
 #        undef maf_restore_macro_mc_maf_tuple_value_at
-#    endif
-#   ifdef mc_maf_define_load_from_json_functions
-#       undef mc_maf_define_load_from_json_functions
-#   endif
-#    ifdef maf_restore_macro_mc_maf_define_load_from_json_functions
-#        pragma pop_macro("mc_maf_define_load_from_json_functions")
-#        undef maf_restore_macro_mc_maf_tuple_value_at
-#    endif
-#   ifdef mc_maf_define_dump_function
-#       undef mc_maf_define_dump_function
-#   endif
-#    ifdef maf_restore_macro_mc_maf_define_dump_function
-#        pragma pop_macro("mc_maf_define_dump_function")
-#        undef maf_restore_macro_mc_maf_define_dump_function
 #    endif
 

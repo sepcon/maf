@@ -1,6 +1,8 @@
 #include <maf/logging/Logger.h>
 #include "LocalIPCReceiverImpl.h"
 #include "PipeShared.h"
+#include <AccCtrl.h>
+#include <AclAPI.h>
 
 #define CONNECTING_STATE 0
 #define READING_STATE 1
@@ -52,6 +54,73 @@ static void disconnectAndClosePipeInstances(const PipeInstances& pipeInstances)
         CloseHandle(instance->hPipeInst);
     }
 }
+
+static void disablePermissionRestriction(HANDLE hPipe)
+{
+    // An ACE must be added to pipe's DACL so that client processes
+    // running under low-privilege accounts are also able to change state
+    // of client end of this pipe to Non-Blocking and Message-Mode.
+    PACL pACL = nullptr;
+    PACL pNewACL = nullptr;
+    EXPLICIT_ACCESS explicit_access_list[1];
+    TRUSTEE trustee[1];
+    DWORD hr;
+
+    do
+    {
+        hr = GetSecurityInfo(
+            hPipe,
+            SE_KERNEL_OBJECT,                   // Type of object
+            DACL_SECURITY_INFORMATION,          // Type of security information to retrieve
+            nullptr, nullptr,                   // Pointer that receives owner SID & group SID
+            &pACL,                              // Pointer that receives a pointer to the DACL
+            nullptr, nullptr                    // Pointer that receives a pointer to the SACL & security descriptr of the object
+            );
+
+        if(FAILED(hr)){ break; }
+
+        char ptsName[] = TEXT("Everyone");
+        // Identifies the user, group, or program to which the access control entry (ACE) applies
+        trustee[0].TrusteeForm = TRUSTEE_IS_NAME;
+        trustee[0].TrusteeType = TRUSTEE_IS_GROUP;
+        trustee[0].ptstrName = ptsName;
+        trustee[0].MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        trustee[0].pMultipleTrustee = nullptr;
+
+        ZeroMemory(&explicit_access_list[0], sizeof(EXPLICIT_ACCESS));
+        explicit_access_list[0].grfAccessMode = GRANT_ACCESS;
+        explicit_access_list[0].grfAccessPermissions = GENERIC_READ | GENERIC_WRITE; // Make sure to use exact same permissions for client!
+        explicit_access_list[0].grfInheritance = NO_INHERITANCE;
+        explicit_access_list[0].Trustee = trustee[0];
+
+        // Merge access control information to the existing ACL
+        hr = SetEntriesInAcl(
+            _countof(explicit_access_list),  // Size of array passed in the next argument
+            explicit_access_list,            // Pointer to array that describe the access control information
+            pACL,                            // Pointer to existing ACL
+            &pNewACL                         // Pointer that receives a pointer to the new ACL
+            );
+
+        if(FAILED(hr)){ break; }
+
+        // Sets specified security information in the security descriptor of a specified object
+        hr = SetSecurityInfo(
+            hPipe,
+            SE_KERNEL_OBJECT,                    // Type of object
+            DACL_SECURITY_INFORMATION,           // Type of security information to set
+            nullptr, nullptr,                    // Pointer that identifies the owner SID & group SID
+            pNewACL,                             // Pointer to the new DACL
+            nullptr                              // Pointer to the new SACL
+            );
+
+        if(FAILED(hr)){ break; }
+
+    } while(false);
+
+    if(pNewACL)
+        LocalFree(pNewACL);
+}
+
 LocalIPCReceiverImpl::LocalIPCReceiverImpl()
 {
 }
@@ -80,7 +149,7 @@ bool LocalIPCReceiverImpl::initPipes()
     // along with an event object for each instance.  An
     // overlapped ConnectNamedPipe operation is started for
     // each instance.
-    for (size_t index = 0; index < _pipeInstances.size(); index++)
+    for (auto& instance : _pipeInstances)
     {
 
         // Create an event object for this instance.
@@ -97,29 +166,35 @@ bool LocalIPCReceiverImpl::initPipes()
             return false;
         }
 
-        _pipeInstances[index]->oOverlap.hEvent = _hEvents.back();
+        instance->oOverlap.hEvent = _hEvents.back();
 
-        _pipeInstances[index]->hPipeInst = CreateNamedPipeA(
+        instance->hPipeInst = CreateNamedPipeA(
             _pipeName.c_str(),          // pipe name
-            PIPE_ACCESS_INBOUND |        // Read only
+            PIPE_ACCESS_INBOUND  |      // Read only
+            WRITE_DAC            |
             FILE_FLAG_OVERLAPPED,       // overlapped mode
-            PIPE_TYPE_MESSAGE |            // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
-            PIPE_READMODE_MESSAGE |     // * block of bytes that greater than buffer_size
+            PIPE_TYPE_MESSAGE    |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
+            PIPE_READMODE_MESSAGE|      // * block of bytes that greater than buffer_size
             PIPE_WAIT,                  // blocking mode
-            static_cast<DWORD>(_pipeInstances.size()),        // number of instances
+            _2dw(_pipeInstances.size()),// number of instances
             0,                          // output buffer size
             BUFFER_SIZE*sizeof(char),   // input buffer size
             PIPE_TIMEOUT,               // client time-out
             nullptr);                   // default security attributes
 
-        if (_pipeInstances[index]->hPipeInst == INVALID_HANDLE_VALUE)
+        if (instance->hPipeInst == INVALID_HANDLE_VALUE)
         {
             Logger::error("CreateNamedPipe failed with " ,  GetLastError());
             return false;
         }
 
+        disablePermissionRestriction(instance->hPipeInst);
+
         // Call the subroutine to connect to the new client
-        connectToNewClient( _pipeInstances[index]->hPipeInst, &_pipeInstances[index]->oOverlap);
+        connectToNewClient(
+            instance->hPipeInst,
+            &instance->oOverlap
+            );
     }
     return true;
 }
@@ -133,9 +208,9 @@ void LocalIPCReceiverImpl::listningThreadFunction()
     {
         dwWait = WaitForMultipleObjects(
             static_cast<DWORD>(_hEvents.size()),    // number of event objects
-            &_hEvents[0],        // array of event objects
-            FALSE,              // does not wait for all
-            INFINITE);          // waits indefinitely
+            &_hEvents[0],                           // array of event objects
+            FALSE,                                  // does not wait for all
+            INFINITE);                              // waits indefinitely
 
         if(!listening()) { break; }
 
@@ -149,11 +224,19 @@ void LocalIPCReceiverImpl::listningThreadFunction()
         size_t index = static_cast<size_t>(i);
         if (readOnPipe(index))
         {
-            notifyObervers(std::make_shared<srz::ByteArray>(std::move(_pipeInstances[index]->ba)));
+            notifyObervers(
+                std::make_shared<srz::ByteArray>(
+                    std::move(_pipeInstances[index]->ba)
+                    )
+                );
         }
         else
         {
-            Logger::warn("Read nothing, GLE = " ,  GetLastError() ,  "-->" ,  _pipeInstances[index]->ba ,  "<--");
+            Logger::warn(
+                "Read nothing, GLE = " ,
+                GetLastError(),
+                "-->", _pipeInstances[index]->ba ,  "<--"
+                );
         }
 
         disconnectAndReconnect(index);
@@ -207,7 +290,10 @@ void LocalIPCReceiverImpl::disconnectAndReconnect(size_t index)
     }
 
     // Call a subroutine to connect to the new client.
-    connectToNewClient( _pipeInstances[index]->hPipeInst, &_pipeInstances[index]->oOverlap);
+    connectToNewClient(
+        _pipeInstances[index]->hPipeInst,
+        &_pipeInstances[index]->oOverlap
+        );
 }
 
 // ConnectToNewClient(HANDLE, LPOVERLAPPED)

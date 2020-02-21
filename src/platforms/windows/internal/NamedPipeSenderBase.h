@@ -17,7 +17,7 @@ public:
     ~NamedPipeSenderBase() override = default;
     bool initConnection(const Address &addr) override
     {
-        if(addr != Address::INVALID_ADDRESS && _receiverAddress != addr)
+        if(addr.valid() && _receiverAddress != addr)
         {
             _receiverAddress = addr;
             _pipeName = constructPipeName(addr);

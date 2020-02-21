@@ -2,6 +2,7 @@
 #define MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICEPROXY_H
 
 #include "CSDefines.h"
+#include "ResponseT.h"
 #include "ServiceRequesterInterface.h"
 #include "ServiceStatusObserverInterface.h"
 #include "internal/cs_param.h"
@@ -11,20 +12,29 @@ namespace maf {
 namespace messaging {
 
 
-
-#define mc_maf_tpl_enable_if_is_base_of_d(base, derive) \
-template <class derive, std::enable_if_t<std::is_base_of_v<base, derive>, bool> = true>
-
-#define mc_maf_tpl_enable_if_is_base_of(base, derive) \
-template <class derive, std::enable_if_t<std::is_base_of_v<base, derive>, bool>>
-
-
-
 template<class MessageTrait>
 class QueueingServiceProxy : public ServiceStatusObserverInterface
 {
     QueueingServiceProxy(std::shared_ptr<ServiceRequesterInterface> requester);
 public:
+
+    template<class CSParam>
+    using ResponseType = ResponseT<CSParam>;
+
+    template<class CSParam>
+    using ResponsePtrType = std::shared_ptr<ResponseT<CSParam>>;
+
+    template <class CSParam>
+    using ResponseProcessingCallback
+        = std::function<void(const ResponsePtrType<CSParam> &)>;
+
+    template <class CSParam>
+    using UpdateProcessingCallback
+        = std::function<void(const std::shared_ptr<CSParam>&)>;
+
+    static constexpr unsigned long InfiniteWaitPeriod =
+        static_cast<unsigned long>(-1);
+
     static std::shared_ptr<QueueingServiceProxy> createProxy(
             const ConnectionType& contype,
             const Address& addr,
@@ -32,87 +42,95 @@ public:
             );
 
     const ServiceID& serviceID() const;
+    Availability serviceStatus() const;
 
-    template <class SpecificMsgContent> using PayloadProcessCallback
-    = std::function<void(const std::shared_ptr<SpecificMsgContent>&)>;
-
-    template<class property_status>
+    template<class PropertyStatus,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_status, PropertyStatus>,
+                 bool> = true>
     RegID registerStatus(
-            PayloadProcessCallback<property_status> callback
-            );
+        UpdateProcessingCallback<PropertyStatus> callback,
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    template<class signal_attributes>
-    RegID registerSignal(PayloadProcessCallback<signal_attributes> callback);
+    template<class SignalAttributes,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_attributes, SignalAttributes>,
+                 bool> = true>
+    RegID registerSignal(
+        UpdateProcessingCallback<SignalAttributes> callback,
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    template<class signal_class>
-    RegID registerSignal(std::function<void(void)> callback);
+    template<class SignalClass,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_signal, SignalClass>,
+                 bool> = true>
+    RegID registerSignal(
+        std::function<void()> callback,
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    void unregisterStatus(const RegID &regID);
-    void unregisterStatusAll(const OpID& propertyID);
+    ActionCallStatus unregisterStatus(const RegID &regID);
+    ActionCallStatus unregisterStatusAll(const OpID& propertyID);
 
-    template<class property_status>
-    RegID getStatusAsync(
-            CSMessageContentHandlerCallback callback
-            );
+    template<class PropertyStatus,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_status, PropertyStatus>,
+                 bool> = true>
+    std::shared_ptr<PropertyStatus> getStatus(
+        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    template<class property_status>
-    std::shared_ptr<property_status> getStatus(
-            unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
-            );
+    template <class OperationOrOutput,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_output, OperationOrOutput> ||
+                     std::is_base_of_v<cs_operation, OperationOrOutput>,
+                 bool> = true>
+    RegID sendRequestAsync(
+        const std::shared_ptr<cs_input>& requestInput,
+        ResponseProcessingCallback<OperationOrOutput> callback = {},
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
-    RegID sendRequestAsync
-    (
-            const std::shared_ptr<cs_input>& requestInput,
-            PayloadProcessCallback<request_output> callback = {}
-            );
+    template <class OperationOrOutput,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_output, OperationOrOutput> ||
+                    std::is_base_of_v<cs_operation, OperationOrOutput>,
+                 bool> = true>
+    RegID sendRequestAsync(
+        ResponseProcessingCallback<OperationOrOutput> callback = {},
+        ActionCallStatus* callStatus = nullptr
+        );
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
-    RegID sendRequestAsync
-    (
-            PayloadProcessCallback<request_output> callback = {}
-            );
-
-
-    mc_maf_tpl_enable_if_is_base_of_d(cs_input, request_input)
-    RegID sendRequestAsync
-    (
-            const std::shared_ptr<request_input>& requestInput
-            );
-
-
-    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_class)
-    RegID sendRequestAsync();
-
-    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
-    std::shared_ptr<request_output> sendRequest
-    (
-            const std::shared_ptr<cs_input>& requestInput,
-            unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
-            );
+    template <class OperationOrOutput,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_output, OperationOrOutput> ||
+                 std::is_base_of_v<cs_operation, OperationOrOutput>,
+                 bool> = true>
+    ResponsePtrType<OperationOrOutput> sendRequest(
+        const std::shared_ptr<cs_input>& requestInput,
+        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        ActionCallStatus* callStatus = nullptr
+        );
 
 
-    mc_maf_tpl_enable_if_is_base_of_d(cs_output, request_output)
-    std::shared_ptr<request_output> sendRequest(
-            unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
-            );
-
-    mc_maf_tpl_enable_if_is_base_of_d(cs_input, request_input)
-    void sendRequest(
-            const std::shared_ptr<request_input>& input,
-            unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
-            );
-
-    mc_maf_tpl_enable_if_is_base_of_d(cs_request, request_class)
-    void sendRequest(
-        unsigned long maxWaitTimeMs = maf_MAX_OPERATION_WAIT_MS
+    template <class OperationOrOutput,
+             std::enable_if_t<
+                 std::is_base_of_v<cs_output, OperationOrOutput> ||
+                     std::is_base_of_v<cs_operation, OperationOrOutput>,
+                 bool> = true>
+    ResponsePtrType<OperationOrOutput> sendRequest(
+        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        ActionCallStatus* callStatus = nullptr
         );
 
     void setMainComponent(ComponentRef compref);
 
     ~QueueingServiceProxy(){}
 
-protected:
+private:
     void onServerStatusChanged(
             Availability oldStatus,
             Availability newStatus
@@ -126,14 +144,42 @@ protected:
             Availability oldStatus,
             Availability newStatus
             );
-    template<class IncomingMsgContent>
-    CSMessageContentHandlerCallback createMsgHandlerAsyncCallback(
-            PayloadProcessCallback<IncomingMsgContent> callback
+
+    template<class CSParam>
+    CSMessageContentHandlerCallback createUpdateMsgHandlerCallback(
+            UpdateProcessingCallback<CSParam> callback
             );
+
+    template<class CSParam>
+    CSMessageContentHandlerCallback createResponseMsgHandlerCallback(
+        ResponseProcessingCallback<CSParam> callback
+        );
+
+    template<class OperationOrOutput>
+    ResponsePtrType<OperationOrOutput> sendRequest(
+        OpID actionID,
+        const CSMsgContentBasePtr& requestInput,
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
+        );
+
+    template<class CSParam>
+    static ResponsePtrType<CSParam> getResposne(const CSMsgContentBasePtr&);
+
+    template<class CSParam>
+    static std::shared_ptr<CSParam> getOutput(const CSMsgContentBasePtr&);
+
 
     ComponentRef                                   _compref;
     std::shared_ptr<ServiceRequesterInterface>     _requester;
 };
+
+template<class MessageTrait>
+Availability QueueingServiceProxy<MessageTrait>::serviceStatus() const
+{
+    return _requester->serviceStatus();
+}
+
 
 
 }

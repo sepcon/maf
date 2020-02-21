@@ -51,11 +51,10 @@ struct ServiceRequesterImpl
     SyncRequestPromises              _syncRequestPromises;
     ServiceStatusObservers           _serviceStatusObservers;
     CSMsgContentMap                  _propertiesCache;
-    std::thread                      _serviceMonitoringThread;
     std::weak_ptr<ClientInterface>   _client;
     util::IDManager                  _idMgr;
     ServiceID                        _sid;
-    Availability                     _serviceStatus;
+    std::atomic<Availability>        _serviceStatus;
     std::atomic_bool                 _stopFlag;
 
 
@@ -63,42 +62,46 @@ struct ServiceRequesterImpl
     ~ServiceRequesterImpl();
 
     Availability serviceStatus() const;
+    bool serviceUnavailable() const;
 
     RegID registerStatus(
         const OpID& propertyID,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         );
 
     RegID registerSignal(const OpID& eventID,
-        CSMessageContentHandlerCallback callback
-        );
+                         CSMessageContentHandlerCallback callback,
+                         ActionCallStatus* callStatus
+                         );
 
-    void unregisterStatus(const RegID& regID);
-    void unregisterStatusAll(const OpID& propertyID);
-
-    RegID getStatusAsync(
-        const OpID& propertyID,
-        CSMessageContentHandlerCallback callback
-        );
+    ActionCallStatus unregisterStatus(const RegID& regID);
+    ActionCallStatus unregisterStatusAll(const OpID& propertyID);
 
     RegID sendRequestAsync(
         const OpID& opID,
         const CSMsgContentBasePtr& msgContent,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         );
 
     CSMsgContentBasePtr getStatus(
         const OpID& propertyID,
-        unsigned long maxWaitTimeMs
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
         );
 
     CSMsgContentBasePtr sendRequest(
         const OpID& opID,
-        const CSMsgContentBasePtr& msgContent = {},
-        unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
+        const CSMsgContentBasePtr& msgContent,
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
         );
 
-    void abortAction(const RegID& regID);
+    void abortAction(
+        const RegID& regID,
+        ActionCallStatus* callStatus
+        );
 
     void addServiceStatusObserver(
         ServiceStatusObserverIFPtr serviceStatusObserver
@@ -132,22 +135,25 @@ struct ServiceRequesterImpl
     RegID registerNotification(
         const OpID& opID,
         OpCode opCode,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         );
 
     //Helper functions
     RegID sendMessageAsync(
         const OpID& operationID,
         OpCode operationCode,
-        const CSMsgContentBasePtr& msgContent = {},
-        CSMessageContentHandlerCallback callback = {}
+        const CSMsgContentBasePtr& msgContent,
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         );
 
     CSMsgContentBasePtr sendMessageSync(
         const OpID& operationID,
         OpCode opCode,
-        const CSMsgContentBasePtr& msgContent = {},
-        unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
+        const CSMsgContentBasePtr& msgContent,
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
         );
 
     CSMessagePtr createCSMessage(
@@ -155,17 +161,21 @@ struct ServiceRequesterImpl
         OpCode opCode,
         const CSMsgContentBasePtr& msgContent = nullptr
         );
+
     void onPropChangeUpdate(const CSMessagePtr& msg);
     void onRequestResult(const CSMessagePtr& msg);
     void abortAllSyncRequest();
     void clearAllAsyncRequests();
     void clearAllRegisterEntries();
-    ActionCallStatus sendMessageToServer(const CSMessagePtr& outgoingMsg);
+    ActionCallStatus sendMessageToServer(
+        const CSMessagePtr& outgoingMsg
+        );
 
     RegID storeAndSendRequestToServer(
         RegEntriesMap& regEntriesMap,
         const CSMessagePtr& outgoingMsg,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         );
 
     size_t storeRegEntry(

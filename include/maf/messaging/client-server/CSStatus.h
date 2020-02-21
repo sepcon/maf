@@ -5,9 +5,8 @@ namespace messaging {
 
 enum class Availability : char
 {
-    Available,
     Unavailable,
-    Busy,
+    Available,
     Unknown
 };
 
@@ -19,6 +18,7 @@ enum class ActionCallStatus : char
     ServiceUnavailable,
     ReceiverBusy,
     ReceiverUnavailable,
+    Timeout,
     FailedUnknown
 };
 

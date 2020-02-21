@@ -21,6 +21,7 @@ file(GLOB_RECURSE MAF_LIBRARY_PRIV_HEADERS
 # <-- platforms dependent sources/headers
 
 
+
 # --> Collect platforms specific sources/headers
 if(UNIX)
     set(MAF_PLATFORM_NAME "unix")
@@ -40,7 +41,6 @@ if(MAF_PLATFORM_NAME)
         "${MAF_PLATFORM_DIR}/internal/*.cpp"
         )
     include_directories(${MAF_PLATFORM_DIR})
-
 endif(MAF_PLATFORM_NAME)
 
 if(MAF_ENABLE_SHARE)
@@ -52,7 +52,7 @@ endif()
 # <-- platforms specific sources/headers
 
 # Add maf.lib
-add_library(maf_objlib OBJECT
+set( MAF_ALL_SOURCES
     ${MAF_LIBRARY_SOURCES}
     ${MAF_PLATFORM_SOURCES}
     ${MAF_LIBRARY_HEADERS}
@@ -62,13 +62,10 @@ add_library(maf_objlib OBJECT
 
 set(MAF_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-set(MAFLIB maf)
-
 if(MAF_ENABLE_SHARE)
-    set_property(TARGET maf_objlib PROPERTY POSITION_INDEPENDENT_CODE 1)
-    add_library(maf SHARED $<TARGET_OBJECTS:maf_objlib>)
+    add_library(maf SHARED ${MAF_ALL_SOURCES})
 else()
-    add_library(maf STATIC $<TARGET_OBJECTS:maf_objlib>)
+    add_library(maf STATIC ${MAF_ALL_SOURCES})
 endif(MAF_ENABLE_SHARE)
 
 
@@ -80,11 +77,13 @@ endif(MAF_ENABLE_TEST)
 
 
 # Grouping sources/headers into tree layout for IDE browsing
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_SOURCES} )
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_SOURCES} )
-source_group(TREE ${PROJECT_SOURCE_DIR}/include PREFIX "Headers" FILES ${MAF_LIBRARY_HEADERS} )
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Headers" FILES ${MAF_LIBRARY_PRIV_HEADERS} )
-source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Headers" FILES ${MAF_PLATFORM_HEADERS} )
+#if(ENABLE_SOURCE_GROUP)
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_SOURCES} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_SOURCES} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_PRIV_HEADERS} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_HEADERS} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/include PREFIX "include" FILES ${MAF_LIBRARY_HEADERS} )
+#endif(ENABLE_SOURCE_GROUP)
 
 
 

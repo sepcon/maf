@@ -1,7 +1,34 @@
 #include <maf/messaging/client-server/ClientInterface.h>
+#include <maf/messaging/client-server/CSContentError.h>
 #include <maf/logging/Logger.h>
 #include "ServiceRequesterImpl.h"
 
+#define mc_maf_throw_error(condition, explanation, errorCode)                  \
+    if(condition)                                                              \
+    {                                                                          \
+        throw std::make_shared<CSContentError>(                                  \
+            explanation,                                                       \
+            errorCode                                                          \
+        );                                                                     \
+    }
+
+#define mc_maf_set_ptr_value(pErrorStore, errorValue)                          \
+if(pErrorStore)                                                                \
+{                                                                              \
+    *pErrorStore = errorValue;                                                 \
+} static_cast<void*>(nullptr)
+
+#define mc_maf_set_error_and_return(                                           \
+                            condition,                                         \
+                            pErrorStore,                                       \
+                            errorValue,                                        \
+                            returnedValue                                      \
+                            )                                                  \
+    if(condition)                                                              \
+    {                                                                          \
+        mc_maf_set_ptr_value(pErrorStore, errorValue);                         \
+        return returnedValue;                                                  \
+    } static_cast      <void*>(nullptr)                                        \
 
 namespace maf { using logging::Logger;
 namespace messaging {
@@ -9,16 +36,18 @@ namespace messaging {
 bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg)
 {
     bool handled = true;
-    Logger::info("New Incoming message from server: sid[" ,
-                 csMsg->serviceID() ,  "]-opID[" ,
-                 csMsg->operationID() ,  "]-opCode[" ,
-                 csMsg->operationCode() ,  "]"
-                 );
+    Logger::info(
+        "New Incoming message from server:"
+        "\n\t\t sid     = [", csMsg->serviceID(),       "]"
+        "\n\t\t opID    = [", csMsg->operationID(),     "]"
+        "\n\t\t opCode  = [", csMsg->operationCode(),   "]"
+        );
+
     if(csMsg && csMsg->serviceID() == _sid)
     {
         switch (csMsg->operationCode()) {
-        case OpCode::Register:
-        case OpCode::RegisterSignal:
+        case OpCode::StatusRegister:
+        case OpCode::SignalRegister:
             onPropChangeUpdate(csMsg);
             break;
         case OpCode::Request:
@@ -29,9 +58,8 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg)
             handled = false;
             Logger::error(
                 "Invalid RESPONSE operation code, "
-                "then cannot match to any INPUT code[" ,
-                csMsg->operationCode() ,
-                "]"
+                "then cannot match to any INPUT code "
+                "[", csMsg->operationCode(), "]"
                 );
             break;
         }
@@ -55,52 +83,74 @@ ServiceRequesterImpl::~ServiceRequesterImpl()
 RegID ServiceRequesterImpl::sendRequestAsync(
     const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
-    CSMessageContentHandlerCallback callback
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus* callStatus
     )
 {
+    mc_maf_set_error_and_return(
+        serviceUnavailable(),
+        callStatus,
+        ActionCallStatus::ServiceUnavailable,
+        {} );
+
     return sendMessageAsync(
         opID,
         OpCode::Request,
         msgContent,
-        std::move(callback)
+        std::move(callback),
+        callStatus
         );
 }
 
-void ServiceRequesterImpl::abortAction(const RegID &regID)
+void ServiceRequesterImpl::abortAction(
+    const RegID &regID,
+    ActionCallStatus* callStatus
+    )
 {
-    if(regID.opID != OpIDInvalid)
-    {
-        bool found = false;
-        { // create {block} for releasing lock on _requestEntriesMap
-            std::lock_guard lock(_requestEntriesMap);
-            auto it = _requestEntriesMap->find(regID.opID);
-            if(it != _requestEntriesMap->end())
-            {
-                auto& listOfRequests = it->second;
+    mc_maf_set_error_and_return(
+        !regID.valid(),
+        callStatus,
+        ActionCallStatus::InvalidParam,
+        /*void*/
+        );
 
-                for(
-                    auto requestEntryIt = listOfRequests.begin();
-                    requestEntryIt != listOfRequests.end();
-                    ++requestEntryIt
-                    )
+    bool found = false;
+
+    { // create {block} for releasing lock on _requestEntriesMap
+        std::lock_guard lock(_requestEntriesMap);
+        auto it = _requestEntriesMap->find(regID.opID);
+        if(it != _requestEntriesMap->end())
+        {
+            auto& listOfRequests = it->second;
+
+            for(
+                auto requestEntryIt = listOfRequests.begin();
+                requestEntryIt != listOfRequests.end();
+                ++requestEntryIt
+                )
+            {
+                if(requestEntryIt->requestID == regID.requestID)
                 {
-                    if(requestEntryIt->requestID == regID.requestID)
-                    {
-                        listOfRequests.erase(requestEntryIt);
-                        found = true;
-                        break;
-                    }
+                    listOfRequests.erase(requestEntryIt);
+                    found = true;
+                    break;
                 }
             }
         }
+    }
 
-        if(found)
+    if(found)
+    {
+        auto msg = this->createCSMessage(regID.opID, OpCode::Abort);
+        msg->setRequestID(regID.requestID);
+        auto status = sendMessageToServer(msg);
+
+        if(status == ActionCallStatus::Success)
         {
-            auto msg = this->createCSMessage(regID.opID, OpCode::Abort);
-            msg->setRequestID(regID.requestID);
-            sendMessageToServer(msg);
             RegID::reclaimID(regID, _idMgr);
         }
+
+        mc_maf_set_ptr_value(callStatus, status);
     }
 }
 
@@ -128,14 +178,22 @@ void ServiceRequesterImpl::removeServiceStatusObserver(
 CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
     const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
-    unsigned long maxWaitTimeMs
+    unsigned long maxWaitTimeMs,
+    ActionCallStatus* callStatus
     )
 {
+    mc_maf_set_error_and_return(
+        serviceUnavailable(),
+        callStatus,
+        ActionCallStatus::ServiceUnavailable,
+        {} );
+
     return sendMessageSync(
         opID,
         OpCode::Request,
         msgContent,
-        maxWaitTimeMs
+        maxWaitTimeMs,
+        callStatus
         );
 }
 
@@ -144,11 +202,17 @@ Availability ServiceRequesterImpl::serviceStatus() const
     return _serviceStatus;
 }
 
+bool ServiceRequesterImpl::serviceUnavailable() const
+{
+    return _serviceStatus != Availability::Available;
+}
+
 RegID ServiceRequesterImpl::sendMessageAsync(
     const OpID& operationID,
     OpCode operationCode,
     const CSMsgContentBasePtr &msgContent,
-    CSMessageContentHandlerCallback callback
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus* callStatus
     )
 {
     auto csMsg = this->createCSMessage(
@@ -159,7 +223,8 @@ RegID ServiceRequesterImpl::sendMessageAsync(
     return storeAndSendRequestToServer(
         _requestEntriesMap,
         csMsg,
-        std::move(callback)
+        std::move(callback),
+        callStatus
         );
 }
 
@@ -167,20 +232,26 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
     const OpID& operationID,
     OpCode opCode,
     const CSMsgContentBasePtr &msgContent,
-    unsigned long maxWaitTimeMs
+    unsigned long maxWaitTimeMs,
+    ActionCallStatus* callStatus
     )
 {
     auto promsise = std::make_shared<std::promise<CSMsgContentBasePtr>>();
     _syncRequestPromises.atomic()->push_back(promsise);
     auto resultFuture = promsise->get_future();
+    auto onSyncMsgCallback =
+        [&promsise, this](const CSMsgContentBasePtr& msg ) {
+        removeRequestPromies(promsise);
+        promsise->set_value(msg);
+    };
+
     auto regID = sendMessageAsync(
         operationID,
         opCode,
         msgContent,
-        [&promsise, this](const CSMsgContentBasePtr& msg ) {
-            removeRequestPromies(promsise);
-            promsise->set_value(msg);
-        });
+        std::move(onSyncMsgCallback),
+        callStatus
+        );
 
     if(regID.valid())
     {
@@ -193,30 +264,33 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
                 {
                     return msg;
                 }
-                else
-                {
-                    Logger::warn(
-                        "Request id: " ,
-                        regID.requestID ,
-                        " has been cancelled"
-                        );
-                }
             }
             else
             {
-                abortAction(regID);
+                Logger::warn(
+                    "Request id: " ,
+                    regID.requestID ,
+                    " has expired!, then request server to abort action"
+                    );
+
+                abortAction(regID, nullptr);
+
+                mc_maf_set_ptr_value(callStatus, ActionCallStatus::Timeout);
             }
         }
         catch(const std::exception& e)
         {
+            mc_maf_set_ptr_value(callStatus, ActionCallStatus::FailedUnknown);
             Logger::error(
-                "Error while waiting for result from server(Exception): " ,
-                e.what()
+                    "Error while waiting for result from server(Exception): ",
+                    e.what()
                 );
         }
         catch(...)
         {
-            Logger::error("Unknown exception when sending sync request to server");
+            mc_maf_set_ptr_value(callStatus, ActionCallStatus::FailedUnknown);
+            Logger::error(
+                "Unknown exception when sending sync request to server");
         }
     }
     else // failed to send request to server
@@ -308,43 +382,52 @@ void ServiceRequesterImpl::forwardServiceStatusToObservers(
 RegID ServiceRequesterImpl::registerNotification(
     const OpID& opID,
     OpCode opCode,
-    CSMessageContentHandlerCallback callback
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus* callStatus
     )
 {
+
+    mc_maf_set_error_and_return(
+        !callback,
+        callStatus,
+        ActionCallStatus::InvalidParam,
+        {} );
+
+
     RegID regID;
-    if(callback && serviceStatus() == Availability::Available)
+    auto sameRegisterCount = storeRegEntry(
+        _registerEntriesMap,
+        opID,
+        callback,
+        regID
+        );
+    if(sameRegisterCount == 1)
     {
-        auto sameRegisterCount = storeRegEntry(
-            _registerEntriesMap,
+        auto registerMessage = createCSMessage(
             opID,
-            callback,
-            regID
+            opCode
             );
-        if(sameRegisterCount == 1)
-        {
-            auto registerMessage = createCSMessage(
-                opID,
-                opCode
-                );
 
-            registerMessage->setRequestID(regID.requestID);
+        registerMessage->setRequestID(regID.requestID);
 
-            if(
-                sendMessageToServer(registerMessage) != ActionCallStatus::Success
-                )
-            {
-                removeRegEntry(_registerEntriesMap, regID);
-                regID.clear();
-            }
-        }
-        else if( opCode == OpCode::Register )
+        auto status = sendMessageToServer(registerMessage);
+        if( status != ActionCallStatus::Success )
         {
-            if( auto cachedProperty = getCachedProperty(opID) )
-            {
-                callback(cachedProperty);
-            }
+            removeRegEntry(_registerEntriesMap, regID);
+            regID.clear();
         }
+
+        mc_maf_set_ptr_value(callStatus, status);
     }
+    else if( opCode == OpCode::StatusRegister )
+    {
+        if( auto cachedProperty = getCachedProperty(opID) )
+        {
+            callback(cachedProperty);
+        }
+        mc_maf_set_ptr_value(callStatus, ActionCallStatus::Success);
+    }
+
     return regID;
 }
 
@@ -365,20 +448,53 @@ CSMessagePtr ServiceRequesterImpl::createCSMessage(
 
 RegID ServiceRequesterImpl::registerStatus(
     const OpID& propertyID,
-    CSMessageContentHandlerCallback callback
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus *callStatus
     )
 {
-    return registerNotification(propertyID, OpCode::Register, std::move(callback));
+    mc_maf_set_error_and_return(
+        serviceUnavailable(),
+        callStatus,
+        ActionCallStatus::ServiceUnavailable,
+        {} );
+
+    return registerNotification(
+        propertyID,
+        OpCode::StatusRegister,
+        std::move(callback),
+        callStatus
+        );
 }
 
-RegID ServiceRequesterImpl::registerSignal(const OpID& eventID, CSMessageContentHandlerCallback callback)
+RegID ServiceRequesterImpl::registerSignal(
+    const OpID& eventID,
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus* callStatus
+    )
 {
-    return registerNotification(eventID, OpCode::RegisterSignal, std::move(callback));
+    mc_maf_set_error_and_return(
+        serviceUnavailable(),
+        callStatus,
+        ActionCallStatus::ServiceUnavailable,
+        {} );
+
+    return registerNotification(
+        eventID,
+        OpCode::SignalRegister,
+        std::move(callback),
+        callStatus
+        );
 }
 
-void ServiceRequesterImpl::unregisterStatus(const RegID &regID)
+ActionCallStatus ServiceRequesterImpl::unregisterStatus(const RegID &regID)
 {
-    if(regID.valid())
+    auto callstatus = ActionCallStatus::Success;
+
+    if(serviceUnavailable())
+    {
+        callstatus = ActionCallStatus::ServiceUnavailable;
+    }
+    else if(regID.valid())
     {
         auto propertyID = regID.opID;
         auto totalRemainer = removeRegEntry(_registerEntriesMap, regID);
@@ -386,48 +502,42 @@ void ServiceRequesterImpl::unregisterStatus(const RegID &regID)
         {
             // send unregister if no one from client side interested
             // in this propertyID anymore
-            sendMessageToServer(createCSMessage(propertyID, OpCode::UnRegister));
+            sendMessageToServer(
+                createCSMessage(propertyID, OpCode::Unregister)
+                );
             removeCachedProperty(propertyID);
         }
     }
     else
     {
+        callstatus = ActionCallStatus::InvalidParam;
         Logger::warn("Try to Unregister invalid RegID");
     }
+
+    return callstatus;
 }
 
-void ServiceRequesterImpl::unregisterStatusAll(const OpID& propertyID)
+ActionCallStatus ServiceRequesterImpl::unregisterStatusAll(const OpID& propertyID)
 {
-    _registerEntriesMap.atomic()->erase(propertyID);
-    sendMessageToServer(createCSMessage(propertyID, OpCode::UnRegister));
-    removeCachedProperty(propertyID);
-}
-
-RegID ServiceRequesterImpl::getStatusAsync(
-    const OpID& propertyID,
-    CSMessageContentHandlerCallback callback
-    )
-{
-    if(auto property = getCachedProperty(propertyID))
+    auto callstatus = ActionCallStatus::Success;
+    if(serviceUnavailable())
     {
-        callback(property);
-        return {};
+        callstatus = ActionCallStatus::ServiceUnavailable;
     }
     else
     {
-        return sendMessageAsync(
-            propertyID,
-            OpCode::StatusGet,
-            CSMsgContentBasePtr{},
-            std::move(callback)
-            );
+        _registerEntriesMap.atomic()->erase(propertyID);
+        sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
+        removeCachedProperty(propertyID);
     }
-}
 
+    return callstatus;
+}
 
 CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
     const OpID& propertyID,
-    unsigned long maxWaitTimeMs
+    unsigned long maxWaitTimeMs,
+    ActionCallStatus* callStatus
     )
 {
     if(auto property = getCachedProperty(propertyID))
@@ -436,11 +546,18 @@ CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
     }
     else
     {
+        mc_maf_set_error_and_return(
+            serviceUnavailable(),
+            callStatus,
+            ActionCallStatus::ServiceUnavailable,
+            {} );
+
         return sendMessageSync(
             propertyID,
             OpCode::StatusGet,
             {},
-            maxWaitTimeMs
+            maxWaitTimeMs,
+            callStatus
             );
     }
 }
@@ -479,7 +596,11 @@ void ServiceRequesterImpl::onRequestResult(const CSMessagePtr& msg)
         if(it != _requestEntriesMap->end())
         {
             auto& regEntries = it->second;
-            for(auto itRegEntry = regEntries.begin(); itRegEntry != regEntries.end(); ++itRegEntry)
+            for(
+                auto itRegEntry = regEntries.begin();
+                itRegEntry != regEntries.end();
+                ++itRegEntry
+                )
             {
                 if(itRegEntry->requestID == msg->requestID())
                 {
@@ -497,7 +618,12 @@ void ServiceRequesterImpl::onRequestResult(const CSMessagePtr& msg)
     }
     else
     {
-        Logger::warn("The request entry for requset OpID[" ,  msg->operationID() ,  "] - RequestiD[" ,  msg->requestID() , "] could not be found!");
+        Logger::warn(
+            "The request entry for request "
+            "OpID [",       msg->operationID(),     "] - "
+            "RequestiD[" ,  msg->requestID(),       "] "
+            "could not be found!"
+            );
     }
 }
 
@@ -527,7 +653,9 @@ void ServiceRequesterImpl::clearAllRegisterEntries()
     _registerEntriesMap.atomic()->clear();
 }
 
-ActionCallStatus ServiceRequesterImpl::sendMessageToServer(const CSMessagePtr &outgoingMsg)
+ActionCallStatus ServiceRequesterImpl::sendMessageToServer(
+    const CSMessagePtr &outgoingMsg
+    )
 {
     if(auto client = _client.lock())
     {
@@ -542,32 +670,32 @@ ActionCallStatus ServiceRequesterImpl::sendMessageToServer(const CSMessagePtr &o
 RegID ServiceRequesterImpl::storeAndSendRequestToServer(
     RegEntriesMap& regEntriesMap,
     const CSMessagePtr& outgoingMsg,
-    CSMessageContentHandlerCallback callback
+    CSMessageContentHandlerCallback callback,
+    ActionCallStatus* callStatus
     )
 {
     RegID regID;
-    // dont need to check for callback empty here,
-    // sometimes the one request doesnt need to care about return msg
-    if(serviceStatus() == Availability::Available)
+    if(callback)
     {
-        if(callback)
-        {
-            storeRegEntry(
-                regEntriesMap,
-                outgoingMsg->operationID(),
-                std::move(callback),
-                regID
-                );
-        }
-
-        outgoingMsg->setRequestID(regID.requestID);
-        if( sendMessageToServer(outgoingMsg) != ActionCallStatus::Success
-            && callback )
-        {
-            removeRegEntry(regEntriesMap, regID);
-            regID.clear();
-        }
+        storeRegEntry(
+            regEntriesMap,
+            outgoingMsg->operationID(),
+            std::move(callback),
+            regID
+            );
     }
+
+    outgoingMsg->setRequestID(regID.requestID);
+
+    auto status = sendMessageToServer(outgoingMsg);
+    if( status != ActionCallStatus::Success )
+    {
+        removeRegEntry(regEntriesMap, regID);
+        regID.clear();
+    }
+
+    mc_maf_set_ptr_value(callStatus, status);
+
     return regID;
 }
 
@@ -628,7 +756,7 @@ void ServiceRequesterImpl::removeRequestPromies(
             _syncRequestPromises->end(),
             promise
             )
-        );
+                );
 }
 
 CSMsgContentBasePtr ServiceRequesterImpl::getCachedProperty(

@@ -64,7 +64,7 @@ private:
     static void setTLRef(ComponentRef ref);
     static TimerMgrPtr getTimerManager();
 
-    friend class Timer;
+    friend class TimerImpl;
     friend struct ComponentImpl;
     friend class CompThread;
 };

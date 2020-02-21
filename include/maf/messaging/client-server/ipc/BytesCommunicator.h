@@ -23,7 +23,7 @@ public:
     bool init(const Address& serverAddress);
     bool deinit();
     bool isWaiting() const;
-    ActionCallStatus send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = Address::INVALID_ADDRESS);
+    ActionCallStatus send(const std::shared_ptr<IPCMessage>& msg, const Address & recvAddr = {});
     ~BytesCommunicator() override; //Not allow to make instance of this class
 
 protected:

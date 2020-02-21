@@ -13,7 +13,7 @@ class  LocalIPCSenderImpl: public IPCSender
 public:
     LocalIPCSenderImpl();
     ~LocalIPCSenderImpl() override;
-    ActionCallStatus send(const maf::srz::ByteArray &payload, const Address& destination = Address::INVALID_ADDRESS) override;
+    ActionCallStatus send(const maf::srz::ByteArray &payload, const Address& destination) override;
     bool initConnection(const Address&receiverAddr) override;
     Availability checkReceiverStatus() const override;
     const Address& receiverAddress() const override;

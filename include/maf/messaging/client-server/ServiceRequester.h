@@ -20,41 +20,43 @@ public:
 
     RegID registerStatus(
         const OpID& propertyID,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         ) override;
 
     RegID registerSignal(
         const OpID& propertyID,
-        CSMessageContentHandlerCallback callback) override;
-
-    void unregisterStatus(const RegID &regID) override;
-    void unregisterStatusAll(const OpID& propertyID) override;
-
-    RegID getStatusAsync(
-        const OpID& propertyID,
-        CSMessageContentHandlerCallback callback
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
         ) override;
 
-    RegID sendRequestAsync
-        (
-            const OpID& opID,
-            const CSMsgContentBasePtr& msgContent,
-            CSMessageContentHandlerCallback callback
-            ) override;
+    ActionCallStatus unregisterStatus(const RegID &regID) override;
+    ActionCallStatus unregisterStatusAll(const OpID& propertyID) override;
+
+    RegID sendRequestAsync(
+        const OpID& opID,
+        const CSMsgContentBasePtr& msgContent,
+        CSMessageContentHandlerCallback callback,
+        ActionCallStatus* callStatus
+        ) override;
 
     CSMsgContentBasePtr getStatus(
         const OpID& propertyID,
-        unsigned long maxWaitTimeMs
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
         ) override;
 
-    CSMsgContentBasePtr sendRequest
-        (
-            const OpID& opID,
-            const CSMsgContentBasePtr& msgContent,
-            unsigned long maxWaitTimeMs = maf_INFINITE_WAIT_PERIOD
-            ) override;
+    CSMsgContentBasePtr sendRequest(
+        const OpID& opID,
+        const CSMsgContentBasePtr& msgContent,
+        unsigned long maxWaitTimeMs,
+        ActionCallStatus* callStatus
+        ) override;
 
-    void abortAction(const RegID& regID) override;
+    void abortAction(
+        const RegID& regID,
+        ActionCallStatus* callStatus
+        ) override;
 
     void addServiceStatusObserver(
         std::weak_ptr<ServiceStatusObserverInterface> serviceStatusObserver

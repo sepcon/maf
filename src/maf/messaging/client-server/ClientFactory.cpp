@@ -2,9 +2,11 @@
 #include <maf/messaging/client-server/IAMessageRouter.h>
 #include <maf/messaging/client-server/ipc/LocalIPCClient.h>
 #include <maf/utils/containers/Map2D.h>
+#include <maf/logging/Logger.h>
 
 namespace maf {
 namespace messaging {
+using logging::Logger;
 
 class ClientFactoryImpl
 {
@@ -73,7 +75,10 @@ ClientFactory::ClientFactory(Invisible)
 
 ClientFactory::~ClientFactory() = default;
 
-std::shared_ptr<ClientInterface> ClientFactory::getClient(const ConnectionType &connectionType, const Address &addr)
+std::shared_ptr<ClientInterface> ClientFactory::getClient(
+    const ConnectionType &connectionType,
+    const Address &addr
+    )
 {
     return _pImpl->getClient(connectionType, addr);
 }

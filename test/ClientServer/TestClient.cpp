@@ -3,8 +3,9 @@
 #include "ControllableInterface.h"
 #include <maf/export/MafExport_global.h>
 #include <maf/messaging/Component.h>
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
+#include <maf/messaging/client-server/DefaultMessageTrait.h>
 #include <maf/logging/Logger.h>
+#include "WeatherContract.h"
 
 namespace maf {
 namespace test {
@@ -12,7 +13,7 @@ using namespace messaging;
 
 class TestClient : public ControllableDefault
 {
-    using MessageTrait = messaging::SerializableMessageTrait;
+    using MessageTrait = DefaultMessageTrait;
     using ClientComp = maf::test::ClientComponent<MessageTrait>;
     using Proxy      = QueueingServiceProxy<MessageTrait>;
 public:
@@ -20,7 +21,7 @@ public:
     void init() override;
     void deinit() override;
     void start() override;
-    std::shared_ptr<ClientComp> cls[3];
+    std::shared_ptr<ClientComp> cls[1];
 };
 
 
@@ -45,7 +46,7 @@ void TestClient::init()
     for(auto& c : cls)
     {
         auto proxy = Proxy::createProxy(
-            "local_ipc",
+            "app_internal",
             {"com.github.sepcon", 0},
             "weather_service"
             );
@@ -67,12 +68,15 @@ void TestClient::deinit()
 
 void TestClient::start()
 {
+    ConnectionType contype = "app_internal";
+    Address serverAddr = {SERVER_ADDRESS, WEATHER_SERVER_PORT};
     for(auto& c : cls)
     {
         logging::Logger::debug(
             "Client compoent ", c->name(), " starts!"
             );
-        c->startTest();
+
+        c->startTest(contype, serverAddr);
     }
 }
 

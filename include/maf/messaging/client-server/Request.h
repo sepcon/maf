@@ -36,7 +36,7 @@ public:
     bool valid() const override;
     ActionCallStatus respond(const CSMsgContentBasePtr& answer) override;
     CSMsgContentBasePtr getInput() override;
-    void onAbortRequest(AbortRequestCallback abortCallback) override;
+    void setAbortRequestHandler(AbortRequestCallback abortCallback) override;
 
 
 };

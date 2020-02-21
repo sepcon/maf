@@ -15,7 +15,7 @@ public:
     LocalIPCSender();
     ~LocalIPCSender() override;
     bool initConnection(const Address &addr) override;
-    ActionCallStatus send(const maf::srz::ByteArray &ba, const Address& destination = Address::INVALID_ADDRESS) override;
+    ActionCallStatus send(const maf::srz::ByteArray &ba, const Address& destination = {}) override;
     const Address &receiverAddress() const override;
     Availability checkReceiverStatus() const override;
 

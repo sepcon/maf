@@ -7,9 +7,11 @@
 namespace maf {
 namespace messaging {
 
-/// We combine 2 below values  with OpCode::ServiceStatusUpdate to inform client about server's service status(Available/UnAvailable)
-constexpr OpIDConstant OpID_ServiceAvailable    = "OpID_ServiceAvailable";
-constexpr OpIDConstant OpID_ServiceUnavailable  = "OpID_ServiceUnavailable";
+// We combine 2 below values  with OpCode::ServiceStatusUpdate to inform client
+// about server's service status(Available/UnAvailable)
+// TODO: Should be enhanced later
+constexpr OpIDConst OpID_ServiceAvailable    = "OpID_ServiceAvailable";
+constexpr OpIDConst OpID_ServiceUnavailable  = "OpID_ServiceUnavailable";
 
 using CSMsgContentBasePtr = std::shared_ptr<class CSMessageContentBase>;
 using CSMessagePtr = std::shared_ptr<class CSMessage>;
@@ -19,11 +21,11 @@ class CSMessage
 public:
     CSMessage() = default;
     MAF_EXPORT  CSMessage(ServiceID sid,
-        OpID opID,
-        OpCode opCode,
-        RequestID reqID = RequestIDInvalid,
-        CSMsgContentBasePtr msgContent = nullptr,
-        Address sourceAddr = {} );
+                         OpID opID,
+                         OpCode opCode,
+                         RequestID reqID = RequestIDInvalid,
+                         CSMsgContentBasePtr msgContent = nullptr,
+                         Address sourceAddr = {});
 
     CSMessage(CSMessage&& other) = default;
     CSMessage& operator=(CSMessage&& other) = default;
@@ -52,38 +54,51 @@ public:
     MAF_EXPORT void setContent(CSMsgContentBasePtr content);
 
 protected:
-    ServiceID _serviceID = ServiceIDInvalid;
-    OpID _operationID = OpIDInvalid;
-    RequestID _requestID = RequestIDInvalid;
-    OpCode _operationCode = OpCode::Invalid;
+    ServiceID           _serviceID      = ServiceIDInvalid;
+    OpID                _operationID    = OpIDInvalid;
+    RequestID           _requestID      = RequestIDInvalid;
+    OpCode              _operationCode  = OpCode::Invalid;
     CSMsgContentBasePtr _content;
-    Address _sourceAddress = Address::INVALID_ADDRESS;
+    Address             _sourceAddress;
 };
 
 class CSMessageContentBase
 {
 public:
+    enum class Type : char
+    {
+        Data,
+        Error,
+        NA
+    };
+
     MAF_EXPORT virtual ~CSMessageContentBase();
-    virtual bool equal(const CSMessageContentBase* other) = 0;
+    MAF_EXPORT Type type() const;
+    MAF_EXPORT void setType(Type t);
+    virtual bool equal(const CSMessageContentBase* other) const = 0;
+    virtual CSMessageContentBase* clone() const = 0;
+
+private:
+    Type             _type   = Type::NA;
 };
 
-template <class CSMessageDerived = CSMessage,
-            std::enable_if_t
-             <
-                (std::is_base_of_v<CSMessage, CSMessageDerived> || std::is_same_v<CSMessage, CSMessageDerived>) &&
-                std::is_constructible_v<CSMessageDerived, ServiceID, OpID, OpCode, RequestID, CSMsgContentBasePtr, Address>,
-                bool
-             > = true
-         >
+template <class CSMessageDerived = CSMessage>
 std::shared_ptr<CSMessageDerived> createCSMessage (
     ServiceID sID,
     OpID opID,
     OpCode opCode,
     RequestID reqID = RequestIDInvalid,
     CSMsgContentBasePtr msgContent = {},
-    Address sourceAddr = {} )
+    Address sourceAddr = {})
 {
-    return std::make_shared<CSMessageDerived>(std::move(sID), std::move(opID), std::move(opCode), std::move(reqID), std::move(msgContent), std::move(sourceAddr));
+    return std::make_shared<CSMessageDerived>(
+        std::move(sID),
+        std::move(opID),
+        std::move(opCode),
+        std::move(reqID),
+        std::move(msgContent),
+        std::move(sourceAddr)
+        );
 }
 
 } // messaging

@@ -16,7 +16,7 @@ public:
     virtual bool valid() const = 0;
     virtual ActionCallStatus respond(const CSMsgContentBasePtr& answer) = 0;
     virtual CSMsgContentBasePtr getInput() = 0;
-    virtual void onAbortRequest(AbortRequestCallback abortCallback) = 0;
+    virtual void setAbortRequestHandler(AbortRequestCallback abortCallback) = 0;
 };
 
 } // messaging

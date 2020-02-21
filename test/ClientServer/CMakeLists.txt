@@ -41,7 +41,7 @@ add_library(TestServer SHARED
     )
 
 
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/plugin)
+set(LIBRARY_OUTPUT_PATH ${MAF_TEST_BINARY_PATH}/plugin)
 
 add_executable(${IPC_CLIENT_PROJECT_NAME}
     IPCClient/main.cpp
@@ -53,7 +53,7 @@ add_executable(${IPC_SERVER_PROJECT_NAME}
 
 
 foreach(PRJ_ ${TEST_PROJECTS})
-    target_link_libraries(${PRJ_} ${MAFLIB})
+    target_link_libraries(${PRJ_} maf)
 
     if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
         target_link_libraries(${PRJ_} pthread)

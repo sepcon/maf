@@ -1,7 +1,6 @@
 #pragma once
 
 #include "NamedPipeReceiverBase.h"
-#include <windows.h>
 
 namespace maf {
 namespace messaging {
