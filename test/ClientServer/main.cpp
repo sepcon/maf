@@ -22,9 +22,10 @@ class MainComponent
     {
         using maf::logging::Logger;
 
+#ifdef WIN32 // should be fixed for unix??
         for(auto& m : modules)
         {
-            auto lib = "plugin/Test" + m + ".dll";
+            auto lib = "Test" + m + ".dll";
 
             if(auto h = LoadLibraryA(lib.c_str()))
             {
@@ -55,7 +56,7 @@ class MainComponent
                 Logger::debug("Failed to load ", lib);
             }
         }
-
+#endif
         if(testables.size() == modules.size())
         {
             for(auto& testable : testables)

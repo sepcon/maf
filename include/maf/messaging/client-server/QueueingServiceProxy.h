@@ -71,8 +71,8 @@ public:
         ActionCallStatus* callStatus = nullptr
         );
 
-    ActionCallStatus unregisterStatus(const RegID &regID);
-    ActionCallStatus unregisterStatusAll(const OpID& propertyID);
+    ActionCallStatus unregisterBroadcast(const RegID &regID);
+    ActionCallStatus unregisterBroadcastAll(const OpID& propertyID);
 
     template<class PropertyStatus,
              std::enable_if_t<

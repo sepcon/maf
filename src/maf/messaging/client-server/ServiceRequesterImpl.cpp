@@ -3,22 +3,14 @@
 #include <maf/logging/Logger.h>
 #include "ServiceRequesterImpl.h"
 
-#define mc_maf_throw_error(condition, explanation, errorCode)                  \
-    if(condition)                                                              \
-    {                                                                          \
-        throw std::make_shared<CSContentError>(                                  \
-            explanation,                                                       \
-            errorCode                                                          \
-        );                                                                     \
-    }
 
-#define mc_maf_set_ptr_value(pErrorStore, errorValue)                          \
+#define SET_PTR_VALUE(pErrorStore, errorValue)                                 \
 if(pErrorStore)                                                                \
 {                                                                              \
     *pErrorStore = errorValue;                                                 \
 } static_cast<void*>(nullptr)
 
-#define mc_maf_set_error_and_return(                                           \
+#define SET_ERROR_AND_RETURN(                                                  \
                             condition,                                         \
                             pErrorStore,                                       \
                             errorValue,                                        \
@@ -26,7 +18,7 @@ if(pErrorStore)                                                                \
                             )                                                  \
     if(condition)                                                              \
     {                                                                          \
-        mc_maf_set_ptr_value(pErrorStore, errorValue);                         \
+        SET_PTR_VALUE(pErrorStore, errorValue);                                \
         return returnedValue;                                                  \
     } static_cast      <void*>(nullptr)                                        \
 
@@ -87,7 +79,7 @@ RegID ServiceRequesterImpl::sendRequestAsync(
     ActionCallStatus* callStatus
     )
 {
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         serviceUnavailable(),
         callStatus,
         ActionCallStatus::ServiceUnavailable,
@@ -107,7 +99,7 @@ void ServiceRequesterImpl::abortAction(
     ActionCallStatus* callStatus
     )
 {
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         !regID.valid(),
         callStatus,
         ActionCallStatus::InvalidParam,
@@ -150,12 +142,12 @@ void ServiceRequesterImpl::abortAction(
             RegID::reclaimID(regID, _idMgr);
         }
 
-        mc_maf_set_ptr_value(callStatus, status);
+        SET_PTR_VALUE(callStatus, status);
     }
 }
 
 void ServiceRequesterImpl::addServiceStatusObserver(
-    std::weak_ptr<ServiceStatusObserverInterface> serviceStatusObserver
+    ServiceStatusObserverIFPtr serviceStatusObserver
     )
 {
     _serviceStatusObservers.atomic()->push_back(
@@ -164,13 +156,14 @@ void ServiceRequesterImpl::addServiceStatusObserver(
 }
 
 void ServiceRequesterImpl::removeServiceStatusObserver(
-    const std::weak_ptr<ServiceStatusObserverInterface>& serviceStatusObserver
+    const ServiceStatusObserverIFPtr& serviceStatusObserver
     )
 {
     std::lock_guard lock(_serviceStatusObservers);
     _serviceStatusObservers->remove_if(
         [&serviceStatusObserver](const auto& obsv) {
-            return obsv.lock() == serviceStatusObserver.lock();
+            // if the observer is already destroyed, then doesnt keep it as well
+            return !obsv.lock() || (obsv.lock() == serviceStatusObserver.lock());
         }
         );
 }
@@ -182,7 +175,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
     ActionCallStatus* callStatus
     )
 {
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         serviceUnavailable(),
         callStatus,
         ActionCallStatus::ServiceUnavailable,
@@ -275,12 +268,12 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
 
                 abortAction(regID, nullptr);
 
-                mc_maf_set_ptr_value(callStatus, ActionCallStatus::Timeout);
+                SET_PTR_VALUE(callStatus, ActionCallStatus::Timeout);
             }
         }
         catch(const std::exception& e)
         {
-            mc_maf_set_ptr_value(callStatus, ActionCallStatus::FailedUnknown);
+            SET_PTR_VALUE(callStatus, ActionCallStatus::FailedUnknown);
             Logger::error(
                     "Error while waiting for result from server(Exception): ",
                     e.what()
@@ -288,7 +281,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
         }
         catch(...)
         {
-            mc_maf_set_ptr_value(callStatus, ActionCallStatus::FailedUnknown);
+            SET_PTR_VALUE(callStatus, ActionCallStatus::FailedUnknown);
             Logger::error(
                 "Unknown exception when sending sync request to server");
         }
@@ -387,7 +380,7 @@ RegID ServiceRequesterImpl::registerNotification(
     )
 {
 
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         !callback,
         callStatus,
         ActionCallStatus::InvalidParam,
@@ -417,7 +410,7 @@ RegID ServiceRequesterImpl::registerNotification(
             regID.clear();
         }
 
-        mc_maf_set_ptr_value(callStatus, status);
+        SET_PTR_VALUE(callStatus, status);
     }
     else if( opCode == OpCode::StatusRegister )
     {
@@ -425,7 +418,7 @@ RegID ServiceRequesterImpl::registerNotification(
         {
             callback(cachedProperty);
         }
-        mc_maf_set_ptr_value(callStatus, ActionCallStatus::Success);
+        SET_PTR_VALUE(callStatus, ActionCallStatus::Success);
     }
 
     return regID;
@@ -452,7 +445,7 @@ RegID ServiceRequesterImpl::registerStatus(
     ActionCallStatus *callStatus
     )
 {
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         serviceUnavailable(),
         callStatus,
         ActionCallStatus::ServiceUnavailable,
@@ -472,7 +465,7 @@ RegID ServiceRequesterImpl::registerSignal(
     ActionCallStatus* callStatus
     )
 {
-    mc_maf_set_error_and_return(
+    SET_ERROR_AND_RETURN(
         serviceUnavailable(),
         callStatus,
         ActionCallStatus::ServiceUnavailable,
@@ -486,7 +479,7 @@ RegID ServiceRequesterImpl::registerSignal(
         );
 }
 
-ActionCallStatus ServiceRequesterImpl::unregisterStatus(const RegID &regID)
+ActionCallStatus ServiceRequesterImpl::unregisterBroadcast(const RegID &regID)
 {
     auto callstatus = ActionCallStatus::Success;
 
@@ -517,7 +510,7 @@ ActionCallStatus ServiceRequesterImpl::unregisterStatus(const RegID &regID)
     return callstatus;
 }
 
-ActionCallStatus ServiceRequesterImpl::unregisterStatusAll(const OpID& propertyID)
+ActionCallStatus ServiceRequesterImpl::unregisterBroadcastAll(const OpID& propertyID)
 {
     auto callstatus = ActionCallStatus::Success;
     if(serviceUnavailable())
@@ -546,7 +539,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
     }
     else
     {
-        mc_maf_set_error_and_return(
+        SET_ERROR_AND_RETURN(
             serviceUnavailable(),
             callStatus,
             ActionCallStatus::ServiceUnavailable,
@@ -686,7 +679,6 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
     }
 
     outgoingMsg->setRequestID(regID.requestID);
-
     auto status = sendMessageToServer(outgoingMsg);
     if( status != ActionCallStatus::Success )
     {
@@ -694,7 +686,7 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
         regID.clear();
     }
 
-    mc_maf_set_ptr_value(callStatus, status);
+    SET_PTR_VALUE(callStatus, status);
 
     return regID;
 }

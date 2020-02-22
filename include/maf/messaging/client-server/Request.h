@@ -10,7 +10,7 @@ namespace messaging {
 
 class ServiceProviderInterface;
 
-class Request : public pattern::Unasignable, public RequestInterface
+class Request : public RequestInterface, public pattern::Unasignable
 {
     friend struct ServiceProviderImpl;
 

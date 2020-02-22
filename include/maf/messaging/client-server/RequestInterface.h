@@ -8,8 +8,7 @@ namespace messaging {
 class RequestInterface
 {
 public:
-    //  intended to not having destructor
-    //  virtual ~RequestInterface() = 0;
+    virtual ~RequestInterface() = default;
     virtual OpCode getOperationCode() const = 0;
     virtual const OpID& getOperationID() const = 0;
     virtual RequestID getRequestID() const = 0;

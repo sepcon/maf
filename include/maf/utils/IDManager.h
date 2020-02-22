@@ -32,6 +32,15 @@ private:
 namespace maf {
 namespace util {
 namespace details {
+
+/**
+ * @class IDManager is responsible for generating unique id, and reclaim the id when
+ * it is no longer used.
+ * @note: with the simple assumption that IDType is a large enough interger
+ * values range that can not be overflow during life cycle of program. But
+ * something wrong might happen in future, then new algorithm should be realized
+ * to rework.
+ */
 template<typename IDType_>
 class IDManager
 {

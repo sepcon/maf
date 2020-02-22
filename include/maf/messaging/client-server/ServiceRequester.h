@@ -30,8 +30,8 @@ public:
         ActionCallStatus* callStatus
         ) override;
 
-    ActionCallStatus unregisterStatus(const RegID &regID) override;
-    ActionCallStatus unregisterStatusAll(const OpID& propertyID) override;
+    ActionCallStatus unregisterBroadcast(const RegID &regID) override;
+    ActionCallStatus unregisterBroadcastAll(const OpID& propertyID) override;
 
     RegID sendRequestAsync(
         const OpID& opID,

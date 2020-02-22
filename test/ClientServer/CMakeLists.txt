@@ -41,7 +41,7 @@ add_library(TestServer SHARED
     )
 
 
-set(LIBRARY_OUTPUT_PATH ${MAF_TEST_BINARY_PATH}/plugin)
+#set(LIBRARY_OUTPUT_PATH ${MAF_TEST_BINARY_PATH}/plugin)
 
 add_executable(${IPC_CLIENT_PROJECT_NAME}
     IPCClient/main.cpp
