@@ -45,14 +45,14 @@ RegID ServiceRequester::registerSignal(
         );
 }
 
-ActionCallStatus ServiceRequester::unregisterStatus(const RegID& regID)
+ActionCallStatus ServiceRequester::unregisterBroadcast(const RegID& regID)
 {
-    return _pImpl->unregisterStatus(regID);
+    return _pImpl->unregisterBroadcast(regID);
 }
 
-ActionCallStatus ServiceRequester::unregisterStatusAll(const OpID& propertyID)
+ActionCallStatus ServiceRequester::unregisterBroadcastAll(const OpID& propertyID)
 {
-    return _pImpl->unregisterStatusAll(propertyID);
+    return _pImpl->unregisterBroadcastAll(propertyID);
 }
 
 RegID ServiceRequester::sendRequestAsync(

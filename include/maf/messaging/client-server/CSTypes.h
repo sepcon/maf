@@ -35,6 +35,8 @@ enum class OpCode : char
 constexpr OpIDConst         OpIDInvalid      = "";
 constexpr ServiceIDConst    ServiceIDInvalid = "";
 constexpr RequestID         RequestIDInvalid = util::IDManager::INVALID_ID;
+constexpr OpIDConst OpID_ServiceAvailable    = "#service_available.prop.opid#";
+constexpr OpIDConst OpID_ServiceUnavailable  = "#service_unavailable.prop.opid#";
 
 
 } // messaging

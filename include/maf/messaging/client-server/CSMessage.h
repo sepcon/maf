@@ -7,12 +7,6 @@
 namespace maf {
 namespace messaging {
 
-// We combine 2 below values  with OpCode::ServiceStatusUpdate to inform client
-// about server's service status(Available/UnAvailable)
-// TODO: Should be enhanced later
-constexpr OpIDConst OpID_ServiceAvailable    = "OpID_ServiceAvailable";
-constexpr OpIDConst OpID_ServiceUnavailable  = "OpID_ServiceUnavailable";
-
 using CSMsgContentBasePtr = std::shared_ptr<class CSMessageContentBase>;
 using CSMessagePtr = std::shared_ptr<class CSMessage>;
 

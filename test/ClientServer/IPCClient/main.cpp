@@ -28,7 +28,7 @@ public:
     {
         for(auto& regid : _regids)
         {
-            if(auto callstatus = _proxy->unregisterStatus(regid) != ActionCallStatus::Success)
+            if(auto callstatus = _proxy->unregisterBroadcast(regid) != ActionCallStatus::Success)
             {
                 Logger::error("Failed to unregister status: ", regid.opID, " with error: ", callstatus);
             }

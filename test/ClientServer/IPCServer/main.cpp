@@ -70,7 +70,7 @@ public:
                     maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
                         Logger::debug(
                             "Time to set compliance 5 status = ",
-                            elapsedMcs.count()
+                            std::chrono::duration_cast<std::chrono::milliseconds>(elapsedMcs).count()
                             );
                     }};
 

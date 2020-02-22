@@ -88,12 +88,21 @@ bool ClientBase::onIncomingMessage(const CSMessagePtr& msg)
     }
     else
     {
-        std::lock_guard lock(_requestersMap);
-        if(auto itProxy = _requestersMap->find(msg->serviceID());
-            itProxy != _requestersMap->end())
+        auto requester = ServiceRequesterInterfacePtr{};
         {
-            return itProxy->second->onIncomingMessage(msg);
+            std::lock_guard lock(_requestersMap);
+            if(auto itProxy = _requestersMap->find(msg->serviceID());
+                    itProxy != _requestersMap->end())
+            {
+                requester = itProxy->second;
+            }
         }
+
+        if(requester)
+        {
+            return requester->onIncomingMessage(msg);
+        }
+
         return false;
     }
 }

@@ -25,8 +25,8 @@ public:
         ActionCallStatus* callStatus
         ) = 0;
 
-    virtual ActionCallStatus unregisterStatus(const RegID& regID) = 0;
-    virtual ActionCallStatus unregisterStatusAll(const OpID& propertyID) = 0;
+    virtual ActionCallStatus unregisterBroadcast(const RegID& regID) = 0;
+    virtual ActionCallStatus unregisterBroadcastAll(const OpID& propertyID) = 0;
 
     virtual RegID sendRequestAsync(
         const OpID& opID,

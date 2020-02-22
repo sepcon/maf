@@ -374,17 +374,17 @@ RegID QueueingServiceProxy<MessageTrait>::registerSignal(
 
 
 template<class MessageTrait>
-ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterStatus(const RegID& regID)
+ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterBroadcast(const RegID& regID)
 {
-    return _requester->unregisterStatus(regID);
+    return _requester->unregisterBroadcast(regID);
 }
 
 template<class MessageTrait>
-ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterStatusAll(
+ActionCallStatus QueueingServiceProxy<MessageTrait>::unregisterBroadcastAll(
     const OpID& propertyID
     )
 {
-    return _requester->unregisterStatusAll(propertyID);
+    return _requester->unregisterBroadcastAll(propertyID);
 }
 
 template<class MessageTrait>

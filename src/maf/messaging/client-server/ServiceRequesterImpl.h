@@ -75,8 +75,8 @@ struct ServiceRequesterImpl
                          ActionCallStatus* callStatus
                          );
 
-    ActionCallStatus unregisterStatus(const RegID& regID);
-    ActionCallStatus unregisterStatusAll(const OpID& propertyID);
+    ActionCallStatus unregisterBroadcast(const RegID& regID);
+    ActionCallStatus unregisterBroadcastAll(const OpID& propertyID);
 
     RegID sendRequestAsync(
         const OpID& opID,
