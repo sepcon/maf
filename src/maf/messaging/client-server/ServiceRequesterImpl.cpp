@@ -171,7 +171,7 @@ void ServiceRequesterImpl::removeServiceStatusObserver(
 CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
     const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
@@ -185,7 +185,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendRequest(
         opID,
         OpCode::Request,
         msgContent,
-        maxWaitTimeMs,
+        timeout,
         callStatus
         );
 }
@@ -225,7 +225,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
     const OpID& operationID,
     OpCode opCode,
     const CSMsgContentBasePtr &msgContent,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
@@ -250,25 +250,32 @@ CSMsgContentBasePtr ServiceRequesterImpl::sendMessageSync(
     {
         try
         {
-            if(resultFuture.wait_for(std::chrono::milliseconds(maxWaitTimeMs))
-                == std::future_status::ready )
+            if(timeout == RequestTimeoutMs::max())
             {
-                if(auto msg = resultFuture.get())
-                {
-                    return msg;
-                }
+                return resultFuture.get();
             }
             else
             {
-                Logger::warn(
-                    "Request id: " ,
-                    regID.requestID ,
-                    " has expired!, then request server to abort action"
-                    );
+                if(resultFuture.wait_for(timeout)
+                        == std::future_status::ready )
+                {
+                    if(auto msg = resultFuture.get())
+                    {
+                        return msg;
+                    }
+                }
+                else
+                {
+                    Logger::warn(
+                                "Request id: " ,
+                                regID.requestID ,
+                                " has expired!, then request server to abort action"
+                                );
 
-                abortAction(regID, nullptr);
+                    abortAction(regID, nullptr);
 
-                SET_PTR_VALUE(callStatus, ActionCallStatus::Timeout);
+                    SET_PTR_VALUE(callStatus, ActionCallStatus::Timeout);
+                }
             }
         }
         catch(const std::exception& e)
@@ -529,7 +536,7 @@ ActionCallStatus ServiceRequesterImpl::unregisterBroadcastAll(const OpID& proper
 
 CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
     const OpID& propertyID,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
@@ -549,7 +556,7 @@ CSMsgContentBasePtr ServiceRequesterImpl::getStatus(
             propertyID,
             OpCode::StatusGet,
             {},
-            maxWaitTimeMs,
+            timeout,
             callStatus
             );
     }

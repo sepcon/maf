@@ -7,9 +7,6 @@
 namespace maf {
 namespace messaging {
 
-using DontCareOutputType = nullptr_t;
-
-
 template <class CSParam>
 class ResponseT
 {

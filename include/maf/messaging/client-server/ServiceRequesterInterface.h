@@ -4,9 +4,12 @@
 #include "ServiceStatusObserverInterface.h"
 #include "ServiceMessageReceiver.h"
 #include "internal/CSShared.h"
+#include <chrono>
 
 namespace maf {
 namespace messaging {
+
+using RequestTimeoutMs = std::chrono::milliseconds;
 
 class ServiceRequesterInterface:
     public ServiceMessageReceiver,
@@ -37,13 +40,13 @@ public:
 
     virtual CSMsgContentBasePtr getStatus(
         const OpID& propertyID,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         ) = 0;
     virtual CSMsgContentBasePtr sendRequest(
         const OpID& opID,
         const CSMsgContentBasePtr& msgContent,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         ) = 0;
 

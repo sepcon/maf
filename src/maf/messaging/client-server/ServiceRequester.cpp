@@ -72,25 +72,25 @@ RegID ServiceRequester::sendRequestAsync(
 
 CSMsgContentBasePtr ServiceRequester::getStatus(
     const OpID& propertyID,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
-    return _pImpl->getStatus(propertyID, maxWaitTimeMs, callStatus);
+    return _pImpl->getStatus(propertyID, timeout, callStatus);
 }
 
 
 CSMsgContentBasePtr ServiceRequester::sendRequest(
     const OpID& opID,
     const CSMsgContentBasePtr &msgContent,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
     return _pImpl->sendRequest(
         opID,
         msgContent,
-        maxWaitTimeMs,
+        timeout,
         callStatus
         );
 }

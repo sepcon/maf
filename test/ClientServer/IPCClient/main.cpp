@@ -91,7 +91,7 @@ public:
         registerStatus<compliance1::status>();
     }
 
-    template <class status>
+    template <class Status>
     void registerStatus()
     {
         auto dumpCallback = [this](const auto& status) {
@@ -103,14 +103,14 @@ public:
             }
         };
 
-        RegID regid = _proxy->registerStatus<status>(dumpCallback);
+        RegID regid = _proxy->registerStatus<Status>(dumpCallback);
         if(regid.valid())
         {
             _regids.push_back(std::move(regid));
         }
         else
         {
-            Logger::error("Failed to register property ", status::operationID());
+            Logger::error("Failed to register property ", Status::operationID());
         }
     }
 

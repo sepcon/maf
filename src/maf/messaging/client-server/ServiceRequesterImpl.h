@@ -87,14 +87,14 @@ struct ServiceRequesterImpl
 
     CSMsgContentBasePtr getStatus(
         const OpID& propertyID,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         );
 
     CSMsgContentBasePtr sendRequest(
         const OpID& opID,
         const CSMsgContentBasePtr& msgContent,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         );
 
@@ -152,7 +152,7 @@ struct ServiceRequesterImpl
         const OpID& operationID,
         OpCode opCode,
         const CSMsgContentBasePtr& msgContent,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         );
 

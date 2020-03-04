@@ -68,6 +68,10 @@ else()
     add_library(maf STATIC ${MAF_ALL_SOURCES})
 endif(MAF_ENABLE_SHARE)
 
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_link_libraries(maf pthread)
+endif()
+
 
 # specify variable MAF_ENABLE_TEST to disable building test programs
 if(MAF_ENABLE_TEST)

@@ -394,7 +394,7 @@ template<class PropertyStatus,
              bool>>
 std::shared_ptr<PropertyStatus>
 QueueingServiceProxy<MessageTrait>::getStatus(
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
@@ -402,7 +402,7 @@ QueueingServiceProxy<MessageTrait>::getStatus(
     if(auto msgContent =
             _requester->getStatus(
                 propertyID,
-                maxWaitTimeMs,
+                timeout,
                 callStatus
                 )
         )
@@ -463,14 +463,14 @@ typename QueueingServiceProxy<MessageTrait>::template
     ResponsePtrType<OperationOrOutput>
     QueueingServiceProxy<MessageTrait>::sendRequest(
         const std::shared_ptr<cs_input> &requestInput,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         )
 {
     return sendRequest<OperationOrOutput>(
         MessageTrait::template getOperationID<OperationOrOutput>(),
         MessageTrait::template encode<cs_input>(requestInput),
-        maxWaitTimeMs,
+        timeout,
         callStatus
         );
 }
@@ -484,14 +484,14 @@ template <class OperationOrOutput,
 typename QueueingServiceProxy<MessageTrait>::template
     ResponsePtrType<OperationOrOutput>
 QueueingServiceProxy<MessageTrait>::sendRequest(
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         )
 {
     return sendRequest<OperationOrOutput>(
                MessageTrait::template getOperationID<OperationOrOutput>(),
                {},
-               maxWaitTimeMs,
+               timeout,
                callStatus
         );
 }
@@ -503,7 +503,7 @@ typename QueueingServiceProxy<MessageTrait>::template
     QueueingServiceProxy<MessageTrait>::sendRequest(
     OpID actionID,
     const CSMsgContentBasePtr& requestInput,
-    unsigned long maxWaitTimeMs,
+    RequestTimeoutMs timeout,
     ActionCallStatus* callStatus
     )
 {
@@ -511,7 +511,7 @@ typename QueueingServiceProxy<MessageTrait>::template
     auto rawResponse = _requester->sendRequest(
         actionID,
         requestInput,
-        maxWaitTimeMs,
+        timeout,
         &callStatus_
         );
 
