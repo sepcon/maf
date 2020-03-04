@@ -1,7 +1,6 @@
 #ifndef MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICEPROXY_H
 #define MAF_MESSAGING_CLIENT_SERVER_QUEUEINGSERVICEPROXY_H
 
-#include "CSDefines.h"
 #include "ResponseT.h"
 #include "ServiceRequesterInterface.h"
 #include "ServiceStatusObserverInterface.h"
@@ -32,8 +31,7 @@ public:
     using UpdateProcessingCallback
         = std::function<void(const std::shared_ptr<CSParam>&)>;
 
-    static constexpr unsigned long InfiniteWaitPeriod =
-        static_cast<unsigned long>(-1);
+    static constexpr auto InfiniteTimeout = RequestTimeoutMs::max();
 
     static std::shared_ptr<QueueingServiceProxy> createProxy(
             const ConnectionType& contype,
@@ -79,7 +77,7 @@ public:
                  std::is_base_of_v<cs_status, PropertyStatus>,
                  bool> = true>
     std::shared_ptr<PropertyStatus> getStatus(
-        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        RequestTimeoutMs timeout = InfiniteTimeout,
         ActionCallStatus* callStatus = nullptr
         );
 
@@ -111,7 +109,7 @@ public:
                  bool> = true>
     ResponsePtrType<OperationOrOutput> sendRequest(
         const std::shared_ptr<cs_input>& requestInput,
-        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        RequestTimeoutMs timeout = InfiniteTimeout,
         ActionCallStatus* callStatus = nullptr
         );
 
@@ -122,7 +120,7 @@ public:
                      std::is_base_of_v<cs_operation, OperationOrOutput>,
                  bool> = true>
     ResponsePtrType<OperationOrOutput> sendRequest(
-        unsigned long maxWaitTimeMs = InfiniteWaitPeriod,
+        RequestTimeoutMs timeout = InfiniteTimeout,
         ActionCallStatus* callStatus = nullptr
         );
 
@@ -159,7 +157,7 @@ private:
     ResponsePtrType<OperationOrOutput> sendRequest(
         OpID actionID,
         const CSMsgContentBasePtr& requestInput,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         );
 

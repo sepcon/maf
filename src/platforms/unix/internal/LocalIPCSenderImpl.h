@@ -19,8 +19,9 @@ public:
     const Address& receiverAddress() const override;
 
 private:
-    std::unique_ptr<Address> _myReceiverAddr;
+    Address _myReceiverAddr;
     std::unique_ptr<SocketPath> _myReceiverSocketPath;
+    std::unique_ptr<sockaddr_un> _myReceiverSockAddr;
 };
 
 }}}

@@ -27,7 +27,7 @@ bool LocalIPCReceiverImpl::initConnection(const Address &addr, bool isClientMode
         static std::atomic<uint16_t> receiverCount(0);
         receiverCount += 1;
         uint16_t randomPort = receiverCount;
-        _myaddr = Address(addr.name() + std::to_string(getpid()), randomPort);
+        _myaddr = Address(addr.get_name() + std::to_string(getpid()), randomPort);
     }
     else
     {

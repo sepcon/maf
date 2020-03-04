@@ -7,6 +7,7 @@
 #include "WeatherContract.h"
 #include <thread>
 
+using namespace std::chrono_literals;
 
 namespace maf
 {
@@ -43,7 +44,7 @@ public:
                 maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
                 maf::Logger::debug("Sending requests to server");
 
-                auto response = _proxy->template sendRequest<clear_all_status_request>(1000);
+                auto response = _proxy->template sendRequest<clear_all_status_request>(1000ms);
                 if(auto error = response->getError())
                 {
                     Logger::error("Failed on request ",

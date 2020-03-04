@@ -1,4 +1,6 @@
 #include <maf/logging/Logger.h>
+
+#ifdef WIN32 // should be fixed for unix??
 #include "maf/utils/TimeMeasurement.h"
 #include "ControllableInterface.h"
 #include <iostream>
@@ -22,7 +24,6 @@ class MainComponent
     {
         using maf::logging::Logger;
 
-#ifdef WIN32 // should be fixed for unix??
         for(auto& m : modules)
         {
             auto lib = "Test" + m + ".dll";
@@ -56,7 +57,6 @@ class MainComponent
                 Logger::debug("Failed to load ", lib);
             }
         }
-#endif
         if(testables.size() == modules.size())
         {
             for(auto& testable : testables)
@@ -103,5 +103,14 @@ int main()
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    maf::logging::Logger::error("Do not test non-windows yet");
+}
+
+#endif
 
 

@@ -16,7 +16,7 @@ namespace
         {
             if( fd = socket(AF_UNIX, SOCK_STREAM, 0); fd == INVALID_FD)
             {
-                socketError("Cannot create socket on sockpath ", sockpath);
+                socketError("Could not allocate new socket");
             }
             else
             {
@@ -34,6 +34,23 @@ namespace
         }
 
         return fd;
+    }
+
+    bool connectable(const sockaddr_un& sockaddr)
+    {
+        AutoCloseFD<SockFD> fd;
+        if( fd = socket(AF_UNIX, SOCK_STREAM, 0); fd == INVALID_FD)
+        {
+            socketError("Cannot create socket");
+        }
+        else
+        {
+            if (connect(fd, _2sockAddr(const_cast<sockaddr_un*>(&sockaddr)), sizeof(sockaddr)) == INVALID_FD)
+            {
+                fd.reset();
+            }
+        }
+        return fd != INVALID_FD;
     }
 }
 
@@ -54,7 +71,7 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &payload, const A
     {
         sockpath = constructSocketPath(destination);
     }
-    else if(_myReceiverAddr && _myReceiverAddr->valid())
+    else if(_myReceiverAddr.valid())
     {
         sockpath = *_myReceiverSocketPath;
     }
@@ -115,31 +132,32 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &payload, const A
 
 bool LocalIPCSenderImpl::initConnection(const Address & receiverAddr)
 {
-    _myReceiverAddr = std::make_unique<Address>(receiverAddr);
-    _myReceiverSocketPath = std::make_unique<SocketPath>(constructSocketPath(receiverAddr));
-    return isValidSocketPath(*_myReceiverSocketPath);
+    _myReceiverAddr = receiverAddr;
+    auto socketPath = constructSocketPath(receiverAddr);
+    if(isValidSocketPath(socketPath))
+    {
+        _myReceiverSocketPath = std::make_unique<SocketPath>(std::move(socketPath));
+        _myReceiverSockAddr = std::make_unique<sockaddr_un>(
+                    createUnixAbstractSocketAddr(*_myReceiverSocketPath)
+                    );
+        return true;
+    }
+    return false;
 }
 
 Availability LocalIPCSenderImpl::checkReceiverStatus() const
 {
     auto status = Availability::Unknown;
-    if(_myReceiverSocketPath)
+    if(_myReceiverSocketPath && _myReceiverSockAddr)
     {
-        status = connectToSocket(*_myReceiverSocketPath) != INVALID_FD ? Availability::Available : Availability::Unavailable;
+        status = connectable(*_myReceiverSockAddr) ? Availability::Available : Availability::Unavailable;
     }
     return status;
 }
 
 const Address &LocalIPCSenderImpl::receiverAddress() const
 {
-    if(_myReceiverAddr)
-    {
-        return *_myReceiverAddr;
-    }
-    else
-    {
-        return Address::INVALID_ADDRESS;
-    }
+    return _myReceiverAddr;
 }
 
 }

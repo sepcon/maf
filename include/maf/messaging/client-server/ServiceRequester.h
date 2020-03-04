@@ -1,7 +1,6 @@
 #pragma once
 
 #include <maf/messaging/client-server/ServiceRequesterInterface.h>
-#include "CSDefines.h"
 
 namespace maf {
 namespace messaging {
@@ -42,14 +41,14 @@ public:
 
     CSMsgContentBasePtr getStatus(
         const OpID& propertyID,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         ) override;
 
     CSMsgContentBasePtr sendRequest(
         const OpID& opID,
         const CSMsgContentBasePtr& msgContent,
-        unsigned long maxWaitTimeMs,
+        RequestTimeoutMs timeout,
         ActionCallStatus* callStatus
         ) override;
 
