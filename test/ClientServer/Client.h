@@ -26,6 +26,7 @@ struct ClientComponent : public ExtensibleComponent
     using ResponsePtr = typename Proxy::template ResponsePtrType<CSParam>;
 private:
     std::shared_ptr<Proxy> _proxy;
+    std::future<void> _future;
     Timer _timer;
 
 public:
@@ -39,12 +40,12 @@ public:
         _proxy = Proxy::createProxy( contype, addr, "weather_service");
         _timer.setCyclic(true);
         _proxy->setMainComponent(component());
-        onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
-            if (msg->newStatus == Availability::Available) {
-                maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
+        onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
+            if (msg.newStatus == Availability::Available) {
+                maf::Logger::debug("Client component recevies status update of service: " ,  msg.serviceID);
                 maf::Logger::debug("Sending requests to server");
 
-                auto response = _proxy->template sendRequest<clear_all_status_request>(1000ms);
+                auto response = _proxy->template sendRequest<clear_all_status_request>(10000ms);
                 if(auto error = response->getError())
                 {
                     Logger::error("Failed on request ",
@@ -69,12 +70,17 @@ public:
                 maf::Logger::debug("Service is off for sometime, please wait for him to be available again!");
             }
         });
-        run(LaunchMode::Async);
+
+        _future = runAsync();
     }
     void stopTest()
     {
-        _proxy.reset();
         stop();
+        _proxy.reset();
+        if(_future.valid())
+        {
+            _future.wait();
+        }
     }
 
     template <typename Category>

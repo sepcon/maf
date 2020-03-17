@@ -1,10 +1,8 @@
 #ifndef IPCCOMMUNICATOR_H
 #define IPCCOMMUNICATOR_H
 
-#include <maf/messaging/CompMessageBase.h>
 #include <maf/messaging/client-server/ipc/IPCReceiver.h>
 #include <maf/messaging/client-server/ipc/IPCSender.h>
-#include <maf/messaging/client-server/ipc/MessageValidator.h>
 #include <maf/messaging/client-server/Address.h>
 #include <maf/messaging/client-server/CSMessageReceiver.h>
 #include "IPCFactory.h"

@@ -64,7 +64,7 @@ public:
                                  abortCallback = std::move(abortCallback)] {
                 if(auto component = compref.lock())
                 {
-                    component->postMessage<CallbackExcMsg>(
+                    component->post<CallbackExcMsg>(
                         std::move(abortCallback)
                         );
                 }

@@ -8,41 +8,41 @@
 namespace maf {  using logging::Logger;
 namespace messaging {
 
-class TimerImpl
-{
-public:
-    typedef std::function<void()> TimeOutCallback;
-    typedef long long Duration;
-    TimerImpl(bool cyclic = false);
-    ~TimerImpl();
-    void start(Duration milliseconds, TimeOutCallback callback);
-    void restart();
-    void stop();
-    bool running();
-    void setCyclic(bool cyclic = true);
+using JobID = TimerManager::JobID;
 
-private:
-    std::shared_ptr<TimerManager> _myMgr;
-    TimerManager::JobID _id;
-    bool _cyclic;
+struct TimerDataPrv
+{
+    TimerDataPrv(JobID _id, bool _cyclic)
+        : id{_id}, cyclic{_cyclic}
+    {}
+
+    JobID                   id;
+    bool                    cyclic;
 };
 
-TimerImpl::TimerImpl(bool cyclic) : _id(TimerManager::invalidJobID()), _cyclic(cyclic)
+static TimerManager& ourMgr()
+{
+    static TimerManager mgr;
+    return mgr;
+}
+
+Timer::Timer(bool cyclic) :
+    d_{new TimerDataPrv{TimerManager::invalidJobID(), cyclic}}
 {
 }
 
-TimerImpl::~TimerImpl()
+Timer::~Timer()
 {
     stop();
 }
 
-void TimerImpl::start(TimerImpl::Duration milliseconds, TimeOutCallback callback)
+void Timer::start(Timer::Duration milliseconds, TimeOutCallback callback)
 {
     if(!callback)
     {
         Logger::error("[TimerImpl]: Please specify not null callback");
     }
-    else if( _myMgr || ( !_myMgr && (_myMgr = Component::getTimerManager())))
+    else
     {
         if(running())
         {
@@ -54,92 +54,51 @@ void TimerImpl::start(TimerImpl::Duration milliseconds, TimeOutCallback callback
         {
             if(auto component = componentRef.lock())
             {
-                component->postMessage<TimeoutMessage>(_id, std::move(callback));
+                component->post<CallbackExcMsg>(std::move(callback));
             }
             else
             {
-                if(_cyclic && _myMgr)
+                if(d_->cyclic)
                 {
-                    _myMgr->stop(_id);
+                    ourMgr().stop(d_->id);
                 }
-                _id = TimerManager::invalidJobID();
+                d_->id = TimerManager::invalidJobID();
             }
-            if(!_cyclic)
+
+            if(!d_->cyclic)
             {
-                _id = TimerManager::invalidJobID(); //mark that timer is not running anymore
+                d_->id = TimerManager::invalidJobID(); //mark that timer is not running anymore
             }
         };
 
-        _id = _myMgr->start(milliseconds, onTimeout, _cyclic);
-        Logger::info("Start new timer with id = " ,  _id);
+        d_->id = ourMgr().start(milliseconds, onTimeout, d_->cyclic);
+        Logger::info("Start new timer with id = " ,  d_->id);
     }
-}
-
-void TimerImpl::restart()
-{
-    if(_myMgr)
-    {
-        _myMgr->restart(_id);
-    }
-}
-
-void TimerImpl::stop()
-{
-    if(_myMgr)
-    {
-        _myMgr->stop(_id);
-    }
-}
-
-bool TimerImpl::running()
-{
-    return _myMgr && _myMgr->isRunning(_id);
-}
-
-void TimerImpl::setCyclic(bool cyclic)
-{
-    if (cyclic != _cyclic)
-    {
-        _cyclic = cyclic;
-        if(_myMgr)
-        {
-            _myMgr->setCyclic(_id, cyclic);
-        }
-    }
-}
-
-Timer::Timer(bool cyclic):
-    _pI{std::make_unique<TimerImpl>(cyclic)}
-{
-}
-
-Timer::~Timer() = default;
-
-void Timer::start(Timer::Duration milliseconds, Timer::TimeOutCallback callback)
-{
-    _pI->start(milliseconds, std::move(callback));
 }
 
 void Timer::restart()
 {
-    _pI->restart();
+    ourMgr().restart(d_->id);
 }
 
 void Timer::stop()
 {
-    _pI->stop();
+    ourMgr().stop(d_->id);
 }
 
 bool Timer::running()
 {
-    return _pI->running();
+    return ourMgr().isRunning(d_->id);
 }
 
 void Timer::setCyclic(bool cyclic)
 {
-    _pI->setCyclic(cyclic);
+    if (cyclic != d_->cyclic)
+    {
+        d_->cyclic = cyclic;
+        ourMgr().setCyclic(d_->id, cyclic);
+    }
 }
-
 
 }
 }

@@ -2,7 +2,6 @@
 #include <maf/messaging/Timer.h>
 #include <maf/utils/TimeMeasurement.h>
 #include <maf/messaging/client-server/ipc/LocalIPCServiceStub.h>
-#include <maf/messaging/CompThread.h>
 #include "../WeatherContract.h"
 
 using namespace maf::messaging::ipc;
@@ -58,37 +57,35 @@ public:
             request->respond();
         });
 
-        CompThread ( [this] {
-            auto success = _stub->registerRequestHandler<update_status_request>(
-                [this](const auto& request) {
-                Logger::debug("Received status update request....");
-                this->setStatus();
-                request->respond();
+        auto success = _stub->registerRequestHandler<update_status_request>(
+            [this](const auto& request) {
+            Logger::debug("Received status update request....");
+            this->setStatus();
+            request->respond();
 
-                for(int i = 0; i < 10; ++i)
-                {
-                    maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
-                        Logger::debug(
-                            "Time to set compliance 5 status = ",
-                            std::chrono::duration_cast<std::chrono::milliseconds>(elapsedMcs).count()
-                            );
-                    }};
-
-                    auto compliance5 = _stub->getStatus<compliance5::status>();
-                    Logger::debug(
-                        "The value Server set to client: ",
-                        compliance5->dump()
-                        );
-                }
-
-            });
-            if(!success)
+            for(int i = 0; i < 10; ++i)
             {
-                maf::Logger::debug(
-                    "Failed to register request handler for message",
-                                   update_status_request::operationID());
+                maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
+                    Logger::debug(
+                        "Time to set compliance 5 status = ",
+                        std::chrono::duration_cast<std::chrono::milliseconds>(elapsedMcs).count()
+                        );
+                }};
+
+                auto compliance5 = _stub->getStatus<compliance5::status>();
+                Logger::debug(
+                    "The value Server set to client: ",
+                    compliance5->dump()
+                    );
             }
-        }).start().detach();
+
+        });
+        if(!success)
+        {
+            maf::Logger::debug(
+                "Failed to register request handler for message",
+                               update_status_request::operationID());
+        }
 
         _stub->registerRequestHandler<broad_cast_signal_request>(
             [this](const local::RequestPtrType<broad_cast_signal_request>& request){
@@ -201,7 +198,7 @@ int main()
     Logger::debug("Invalid address is: ", a.valid(), a.dump(-1));
     maf::Logger::debug("Server is starting up!");
     ServerComp s(SID_WeatherService);
-    s.run(LaunchMode::AttachToCurrentThread);
+    s.run();
     maf::Logger::debug("Component shutdown!");
 
 }

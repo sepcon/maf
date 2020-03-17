@@ -21,7 +21,6 @@
 #include <maf/utils/cppextension/TypeTraits.h>
 
 //#include "json11.hpp"
-//#include "D:\MetaAccess\Source\grsc-gsdk\xplat\3rdparty\json11\json11.hpp"
 
 namespace maf {
 namespace srz {

@@ -177,7 +177,7 @@ bool QueueingServiceStub<MessageTrait>::registerRequestHandler(
              handlerFunction = std::move(handlerFunction) ]
             ( const std::shared_ptr<RequestInterface>& request ) mutable {
                 if(auto comp = compref.lock()) {
-                    comp->template postMessage<CallbackExcMsg>(
+                    comp->template post<CallbackExcMsg>(
                         std::move(handlerFunction),
                         std::make_shared<TheRequestType>(request)
                         );

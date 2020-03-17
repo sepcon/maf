@@ -2,7 +2,6 @@
 
 #include <maf/messaging/client-server/QueueingServiceStub.h>
 #include <maf/messaging/ExtensibleComponent.h>
-#include <maf/messaging/CompThread.h>
 #include <maf/messaging/Timer.h>
 #include <maf/utils/TimeMeasurement.h>
 #include "WeatherContract.h"
@@ -32,7 +31,7 @@ public:
     {
         _stub = Stub::createStub(contype, addr, "weather_service");
         _stub->setMainComponent(component());
-        run(LaunchMode::AttachToCurrentThread);
+        run();
     }
 
     void stopTest()
@@ -51,37 +50,35 @@ public:
                 request->respond();
             });
 
-        CompThread ( [this] {
-            auto success = _stub->template registerRequestHandler<update_status_request>(
-                [this](const auto& request) {
-                    Logger::debug("Received status update request....");
-                    this->setStatus();
-                    request->respond();
+        auto success = _stub->template registerRequestHandler<update_status_request>(
+            [this](const auto& request) {
+                Logger::debug("Received status update request....");
+                this->setStatus();
+                request->respond();
 
-                    for(int i = 0; i < 10; ++i)
-                    {
-                        maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
-                            Logger::debug(
-                                "Time to set compliance 5 status = ",
-                                elapsedMcs.count()
-                                );
-                        }};
-
-                        auto compliance5 = _stub->template getStatus<compliance5::status>();
+                for(int i = 0; i < 10; ++i)
+                {
+                    maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
                         Logger::debug(
-                            "The value Server set to client: ",
-                            compliance5->dump()
+                            "Time to set compliance 5 status = ",
+                            elapsedMcs.count()
                             );
-                    }
+                    }};
 
-                });
-            if(!success)
-            {
-                maf::Logger::debug(
-                    "Failed to register request handler for message",
-                    update_status_request::operationID());
-            }
-        }).start().detach();
+                    auto compliance5 = _stub->template getStatus<compliance5::status>();
+                    Logger::debug(
+                        "The value Server set to client: ",
+                        compliance5->dump()
+                        );
+                }
+
+            });
+        if(!success)
+        {
+            maf::Logger::debug(
+                "Failed to register request handler for message",
+                update_status_request::operationID());
+        }
 
         _stub->template registerRequestHandler<broad_cast_signal_request>(
             [this](const auto& request){
