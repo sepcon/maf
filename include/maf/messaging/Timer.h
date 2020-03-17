@@ -13,8 +13,6 @@
 namespace maf {
 namespace messaging {
 
-class TimerManager;
-class TimerImpl;
 class Timer : public pattern::Unasignable
 {
 public:
@@ -29,7 +27,7 @@ public:
     MAF_EXPORT void setCyclic(bool cyclic = true);
 
 private:
-    std::unique_ptr<TimerImpl> _pI;
+    std::unique_ptr<struct TimerDataPrv> d_;
 };
 }
 }

@@ -47,10 +47,10 @@ public:
     static void fatal(Msg&& ... msg);
     template<typename... Msg>
     static void verbose(Msg&& ... msg);
-
-private:
     template<typename... Msg>
     static void log(LogLevel level, Msg&&... msg);
+
+private:
     MAF_EXPORT static void logImpl(LogLevel filteredLevel, const std::string& msg);
     MAF_EXPORT static bool allowed(LogLevel level);
 };

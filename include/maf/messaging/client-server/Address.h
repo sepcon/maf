@@ -1,6 +1,5 @@
 #pragma once
 
-#include <maf/export/MafExport_global.h>
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
 
 namespace maf {

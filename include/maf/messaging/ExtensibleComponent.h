@@ -10,7 +10,6 @@ class ExtensibleComponent
 protected:
     ~ExtensibleComponent() = default;
 public:
-    using BaseMessageHandlerFunc = Component::BaseMessageHandlerFunc;
 
     ExtensibleComponent(const std::string& name = "")
     {
@@ -18,48 +17,47 @@ public:
         _comp->setName(name);
     }
 
-    const std::string& name() const { return _comp->name(); }
+    const std::string& name() const;
     void setName(std::string name);
-    void run(LaunchMode launchMode = LaunchMode::Async);
+    void run();
+    std::future<void> runAsync();
     void stop();
-    void postMessage(messaging::MessageBasePtr msg);
+    void post(ComponentMessage &&msg);
 
     void registerMessageHandler(
-        CompMessageBase::Type msgType,
-        MessageHandler* handler
+            ComponentMessageID msgid,
+            std::weak_ptr<ComponentMessageHandler>  handler
         );
 
     void registerMessageHandler(
-        CompMessageBase::Type msgType,
-        BaseMessageHandlerFunc onMessageFunc
+            ComponentMessageID msgid,
+            GenericMsgHandlerFunction onMessageFunc
         );
 
     template<class Msg, typename... Args,
              std::enable_if_t<std::is_constructible_v<Msg, Args...>,
                               bool> = true
              >
-    void postMessage(Args&&... args)
+    bool post(Args&&... args)
     {
-        _comp->postMessage<Msg>(std::forward<Args>(args)...);
+        return _comp->post<Msg>(std::forward<Args>(args)...);
     }
-    mc_maf_tpl_with_a_message(SpecificMsg)
-        ExtensibleComponent& onMessage(MessageHandler* handler)
+
+    template<class Msg>
+    ExtensibleComponent* onMessage(
+            ComponentMessageHandlerFunction<Msg> f
+            )
     {
-        _comp->onMessage<SpecificMsg>(handler);
-        return *this;
+        _comp->onMessage<Msg>(f);
+        return this;
     }
-    mc_maf_tpl_with_a_message(SpecificMsg)
-        ExtensibleComponent& onMessage(MessageHandlerFunc<SpecificMsg> f)
+
+    template<class Msg>
+    bool ignoreMessage()
     {
-        _comp->onMessage<SpecificMsg>(f);
-        return *this;
+        return _comp->ignoreMessage<Msg>();
     }
-    mc_maf_tpl_with_a_message(SpecificMsg)
-    ExtensibleComponent& onSignal(SignalMsgHandlerFunc handler)
-    {
-        _comp->onSignal<SpecificMsg>(handler);
-        return *this;
-    }
+
     ComponentPtr component() const
     {
         return _comp;
@@ -72,12 +70,30 @@ protected:
     ComponentPtr _comp;
 };
 
-inline void ExtensibleComponent::setName(std::string name)
-{ _comp->setName(std::move(name)); }
-
-inline void ExtensibleComponent::run(LaunchMode launchMode)
+inline const std::string& ExtensibleComponent::name() const
 {
-    _comp->run(launchMode, [this]{ onEntry(); }, [this]{onExit(); });
+    return _comp->name();
+}
+
+inline void ExtensibleComponent::setName(std::string name)
+{
+    _comp->setName(std::move(name));
+}
+
+inline void ExtensibleComponent::run()
+{
+    return _comp->run(
+                std::bind(&ExtensibleComponent::onEntry, this),
+                std::bind(&ExtensibleComponent::onExit, this)
+                );
+}
+
+std::future<void> ExtensibleComponent::runAsync()
+{
+    return _comp->runAsync(
+                std::bind(&ExtensibleComponent::onEntry, this),
+                std::bind(&ExtensibleComponent::onExit, this)
+                );
 }
 
 inline void ExtensibleComponent::stop()
@@ -85,25 +101,24 @@ inline void ExtensibleComponent::stop()
     _comp->stop();
 }
 
-inline void ExtensibleComponent::postMessage(MessageBasePtr msg)
+inline void ExtensibleComponent::post(ComponentMessage&& msg)
 {
-    _comp->postMessage(std::move(msg));
+    _comp->post(std::move(msg));
 }
 
 inline void ExtensibleComponent::registerMessageHandler(
-    CompMessageBase::Type msgType,
-    MessageHandler *handler
+    ComponentMessageID msgid,
+    std::weak_ptr<ComponentMessageHandler> handler
     )
 {
-    _comp->registerMessageHandler(msgType, handler);
+    _comp->registerMessageHandler(std::move(msgid), handler);
 }
 
-inline void ExtensibleComponent::registerMessageHandler(
-    CompMessageBase::Type msgType,
-    ExtensibleComponent::BaseMessageHandlerFunc onMessageFunc
+inline void ExtensibleComponent::registerMessageHandler(ComponentMessageID msgid,
+    GenericMsgHandlerFunction onMessageFunc
     )
 {
-    _comp->registerMessageHandler(msgType, std::move(onMessageFunc));
+    _comp->registerMessageHandler(msgid, std::move(onMessageFunc));
 }
 
 
