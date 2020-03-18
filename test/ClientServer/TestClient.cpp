@@ -33,7 +33,7 @@ TestClient::TestClient()
 void TestClient::init()
 {
     logging::Logger::debug("Test client initializing....");
-    if(auto component = Component::getActiveSharedPtr())
+    if(auto component = RunningComponent::shared())
     {
         Logger::debug("My component is: ", component->name());
     }

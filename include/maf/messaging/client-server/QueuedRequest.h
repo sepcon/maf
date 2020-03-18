@@ -58,13 +58,13 @@ public:
 
     void setAbortRequestHandler(AbortRequestCallback abortCallback)
     {
-        if(Component::getActiveSharedPtr())
+        if(RunningComponent::shared())
         {
-            auto abortHandler = [ compref = Component::getActiveWeakPtr(),
+            auto abortHandler = [ compref = RunningComponent::weak(),
                                  abortCallback = std::move(abortCallback)] {
                 if(auto component = compref.lock())
                 {
-                    component->postMessage<CallbackExcMsg>(
+                    component->post<CallbackExcMsg>(
                         std::move(abortCallback)
                         );
                 }

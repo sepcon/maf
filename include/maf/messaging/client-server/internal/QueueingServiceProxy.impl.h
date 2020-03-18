@@ -93,12 +93,10 @@ QueueingServiceProxy<MessageTrait>::updateServiceStatusToComponent(
 {
     if(auto component = _compref.lock())
     {
-        component->postMessage(
-            messaging::makeCompMessage<ServiceStatusMsg>(
+        component->post<ServiceStatusMsg>(
                 _requester->serviceID(),
                 oldStatus,
                 newStatus
-                )
             );
         return true;
     }
@@ -130,14 +128,14 @@ QueueingServiceProxy<MessageTrait>::createResponseMsgHandlerCallback(
     }
 
     auto csContentHandlerCallback = [ callback = std::move(callback),
-                                     compref = Component::getActiveWeakPtr() ]
+                                     compref = RunningComponent::weak() ]
         (const CSMsgContentBasePtr& msgContent)
     {
         auto operationID = MessageTrait::template getOperationID<CSParam>();
 
         if(auto component = compref.lock())
         {
-            component->postMessage<CallbackExcMsg>(
+            component->post<CallbackExcMsg>(
                 callback,
                 getResposne<CSParam>(msgContent)
                 );
@@ -168,18 +166,18 @@ QueueingServiceProxy<MessageTrait>::createUpdateMsgHandlerCallback(
 
     // NOTE: this is not main component
     // Every component that emits the request should handle the request
-    // itsef, then here we try to use Component::getActiveWeakPtr() instead
+    // itsef, then here we try to use RunningComponent::weak() instead
     // of _compref
     CSMessageContentHandlerCallback csContentHandlerCallback =
         [
             callback = std::move(callback),
-            compref = Component::getActiveWeakPtr()
+            compref = RunningComponent::weak()
     ] (const CSMsgContentBasePtr& msgContent)
     {
         if(auto component = compref.lock())
         {
             // Request the requesting Component to execute the callback but
-            component->postMessage<CallbackExcMsg>(
+            component->post<CallbackExcMsg>(
                 callback,
                 getOutput<CSParam>(msgContent)
                 );
@@ -341,12 +339,12 @@ RegID QueueingServiceProxy<MessageTrait>::registerSignal(
     if(callback)
     {
         auto asyncHandler = [ signalID, callback = std::move(callback),
-                             compref = Component::getActiveWeakPtr()
+                             compref = RunningComponent::weak()
         ] (const auto&) mutable {
             if(auto component = compref.lock())
             {
                 // Request the requesting Component to execute the callback but
-                component->postMessage<CallbackExcMsg>(std::move(callback));
+                component->post<CallbackExcMsg>(std::move(callback));
             }
             else
             {

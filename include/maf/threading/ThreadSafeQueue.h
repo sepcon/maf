@@ -84,7 +84,7 @@ public:
         }
         if(!isClosed())
         {
-            value = _queue->front();
+            value = std::move(_queue->front());
             _queue->pop();
             return true;
         }

@@ -45,9 +45,9 @@ public:
         _timer.setCyclic(true);
         _proxy->setMainComponent(component());
 
-        onMessage<ServiceStatusMsg>([this](const MessagePtr<ServiceStatusMsg>& msg) {
-            if (msg->newStatus == Availability::Available) {
-                maf::Logger::debug("Client component recevies status update of service: " ,  msg->serviceID);
+        onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
+            if (msg.newStatus == Availability::Available) {
+                maf::Logger::debug("Client component recevies status update of service: " ,  msg.serviceID);
                 maf::Logger::debug("Sending requests to server");
 
                 Logger::debug("Server already clear all status, then start jobs...");
@@ -220,6 +220,9 @@ int main()
 
     maf::Logger::debug("Client is starting up!");
     ClientCompTest cl(SID_WeatherService);
-    cl.run(LaunchMode::AttachToCurrentThread);
+    cl.run();
     maf::Logger::debug("Client shutdown!");
+
+
+    return 0;
 }
