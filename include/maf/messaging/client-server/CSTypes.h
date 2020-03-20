@@ -1,9 +1,11 @@
 #pragma once
 
 #include <maf/utils/IDManager.h>
+#include <maf/utils/StringifyableEnum.h>
 #include <stdint.h>
 #include <string>
 
+// clang-format off
 namespace maf {
 namespace messaging {
 
@@ -16,8 +18,7 @@ using RequestID         = util::IDManager::IDType;
 using ConnectionType    = std::string;
 
 
-enum class OpCode : char
-{
+MC_MAF_STRINGIFYABLE_ENUM(OpCode, char,
 //  Client Request
     StatusRegister,
     SignalRegister,
@@ -30,15 +31,14 @@ enum class OpCode : char
     ServiceStatusUpdate,
 //  Unhandle
     Invalid
-};
+)
 
 constexpr OpIDConst         OpIDInvalid      = "";
 constexpr ServiceIDConst    ServiceIDInvalid = "";
 constexpr RequestID         RequestIDInvalid = util::IDManager::INVALID_ID;
-constexpr OpIDConst OpID_ServiceAvailable    = "#service_available.prop.opid#";
-constexpr OpIDConst OpID_ServiceUnavailable  = "#service_unavailable.prop.opid#";
+constexpr OpIDConst OpID_ServiceAvailable    = "service_available.property";
+constexpr OpIDConst OpID_ServiceUnavailable  = "service_unavailable.property";
 
-
+// clang-format on
 } // messaging
 } // maf
-

@@ -35,7 +35,7 @@
  * */
 
 #ifndef MAFOBJECTBEGIN_MC_H
-#   define MAFOBJECTBEGIN_MC_H
+#define MAFOBJECTBEGIN_MC_H
 #   include "Serializer.h"
 #   include "DumpHelper.h"
 #endif // MAFOBJECTBEGIN_MC_H

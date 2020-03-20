@@ -46,6 +46,7 @@ mafMacroBackUpRestoreGenerate()
 		print "#\tifdef " macro_name
 		print "#\t\tpragma push_macro(\"" macro_name "\")"
 		print "#\t\tdefine maf_restore_macro_" macro_name
+		print "#\t\tundef " macro_name
 		print "#\tendif"
         }' >> ${backup}
       
@@ -56,10 +57,8 @@ mafMacroBackUpRestoreGenerate()
     
     echo "#pragma once" > ${restore}
     echo "${pp}" | awk ' {
-        print "#\tifdef " $0
-        print "#\t\tundef " $0
-        print "#\tendif" 
         print "#\tifdef maf_restore_macro_" $0
+        print "#\t\tundef " $0
         print "#\t\tpragma pop_macro(\"" $0 "\")"
         print "#\t\tundef maf_restore_macro_" $0
         print "#\tendif" 

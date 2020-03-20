@@ -1,22 +1,21 @@
 #pragma once
 
 #include "CSMessage.h"
-#include "CSMessageReceiver.h"
-
+#include "CSMessageReceiverIF.h"
 
 namespace maf {
 namespace messaging {
 
-using CSMessageHandlerCallback = std::function<void (const CSMessagePtr&)>;
+using CSMessageHandlerCallback = std::function<void(const CSMessagePtr &)>;
 
-class ServiceMessageReceiver : public CSMessageReceiver
-{
+class ServiceMessageReceiver : public CSMessageReceiverIF {
 public:
-    const ServiceID &serviceID() const { return _serviceID; }
-    void setServiceID(ServiceID serviceID) { _serviceID = std::move(serviceID); }
+  const ServiceID &serviceID() const { return _serviceID; }
+  void setServiceID(ServiceID serviceID) { _serviceID = std::move(serviceID); }
+
 protected:
-    ServiceID _serviceID;
+  ServiceID _serviceID;
 };
 
-} // messaging
-} // maf
+} // namespace messaging
+} // namespace maf

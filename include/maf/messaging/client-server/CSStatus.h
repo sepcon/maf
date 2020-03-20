@@ -1,28 +1,26 @@
 #pragma once
 
+#include <maf/utils/StringifyableEnum.h>
+
 namespace maf {
 namespace messaging {
 
-enum class Availability : char
-{
-    Unavailable,
-    Available,
-    Unknown
-};
+// clang-format off
+MC_MAF_STRINGIFYABLE_ENUM(Availability, char,
+                    Unavailable,
+                    Available,
+                    Unknown
+                          )
 
-enum class ActionCallStatus : char
-{
-    Success,
-    InvalidCall,
-    InvalidParam,
-    ServiceUnavailable,
-    ReceiverBusy,
-    ReceiverUnavailable,
-    Timeout,
-    FailedUnknown
-};
-
-
-
+MC_MAF_STRINGIFYABLE_ENUM(ActionCallStatus, char,
+                    Success,
+                    InvalidCall,
+                    InvalidParam,
+                    ServiceUnavailable,
+                    ReceiverBusy,
+                    ReceiverUnavailable,
+                    Timeout,
+                    FailedUnknown)
+// clang-format on
 }
 }

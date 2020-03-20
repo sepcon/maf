@@ -1,6 +1,8 @@
 // NO INCLUDE GUARD
 #include "Internal/TplkdefEnd.mc.h"
 
+// clang-format off
+
 #    ifdef OBJECT
 #        undef OBJECT
 #    endif
@@ -22,3 +24,5 @@
 #        pragma pop_macro("ENDOBJECT")
 #        undef maf_restore_macro_END_OBJECT
 #    endif
+
+// clang-format on

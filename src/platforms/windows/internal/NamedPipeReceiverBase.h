@@ -1,93 +1,77 @@
 #pragma once
 
 #include "PipeShared.h"
-#include <maf/messaging/client-server/ipc/IPCReceiver.h>
-#include <maf/logging/Logger.h>
-#include <thread>
 #include <Windows.h>
-#include <string>
 #include <atomic>
+#include <maf/logging/Logger.h>
+#include <string>
+#include <thread>
 
-namespace maf { using logging::Logger;
+namespace maf {
+
 namespace messaging {
 namespace ipc {
 
-
-class NamedPipeReceiverBase : public IPCReceiver
-{
+class NamedPipeReceiverBase {
 public:
-    NamedPipeReceiverBase() :  _stopped(true){}
-    ~NamedPipeReceiverBase() override
-    {
-        if(!_stopped)
-        {
-            stopListening();
-        }
+  NamedPipeReceiverBase() : stopped_(true) {}
+  ~NamedPipeReceiverBase() {
+    if (!stopped_) {
+      stopListening();
+    }
 
-        if(_workerThread.joinable())
-        {
-            _workerThread.join();
-        }
+    if (workerThread_.joinable()) {
+      workerThread_.join();
     }
-    bool initConnection(const Address& address, bool isClientMode = false) override
-    {
-        _isClient = isClientMode;
-        if(isClientMode)
-        {
-            static std::atomic<uint16_t> receiverCount(0);
-            receiverCount += 1;
-            uint16_t randomPort = receiverCount;
-            _myaddr = Address(address.get_name() + std::to_string(GetCurrentProcessId()), randomPort);
-        }
-        else
-        {
-            _myaddr = std::move(address);
-        }
-        _pipeName = constructPipeName(_myaddr);
-        return true;
+  }
+  bool initConnection(const Address &address, bool isClientMode = false) {
+    isClient_ = isClientMode;
+    if (isClientMode) {
+      static std::atomic<uint16_t> receiverCount(0);
+      receiverCount += 1;
+      uint16_t randomPort = receiverCount;
+      myaddr_ =
+          Address(address.get_name() + std::to_string(GetCurrentProcessId()),
+                  randomPort);
+    } else {
+      myaddr_ = std::move(address);
     }
-    bool startListening() override
-    {
-        if(!listening())
-        {
-            _stopped.store(false, std::memory_order_release);
-            _workerThread = std::thread { &NamedPipeReceiverBase::listningThreadFunction, this };
-        }
-        return true;
+    pipeName_ = constructPipeName(myaddr_);
+    return true;
+  }
+  bool startListening() {
+    if (!listening()) {
+      stopped_.store(false, std::memory_order_release);
+      workerThread_ =
+          std::thread{&NamedPipeReceiverBase::listningThreadFunction, this};
     }
-    bool stopListening() override
-    {
-        _stopped.store(true, std::memory_order_release);
-        waitForWorkerThreadToStop();
-        return false;
-    }
-    bool listening() const override
-    {
-        return !_stopped.load(std::memory_order_acquire);
-    }
-    const Address& address() const override
-    {
-        return _myaddr;
-    }
+    return true;
+  }
+  bool stopListening() {
+    stopped_.store(true, std::memory_order_release);
+    waitForWorkerThreadToStop();
+    return false;
+  }
+  bool listening() const { return !stopped_.load(std::memory_order_acquire); }
+  const Address &address() const { return myaddr_; }
 
 protected:
-    virtual void listningThreadFunction() {
-        Logger::warn("listningThreadFunction must be overridden by derived class");
+  virtual void listningThreadFunction() {
+    MAF_LOGGER_WARN(
+        "listningThreadFunction must be overridden by derived class");
+  }
+  void waitForWorkerThreadToStop() {
+    if (workerThread_.joinable()) {
+      workerThread_.join();
     }
-    void waitForWorkerThreadToStop()
-    {
-        if(_workerThread.joinable())
-        {
-            _workerThread.join();
-        }
-    }
-    std::string _pipeName;
-    std::thread _workerThread;
-    Address _myaddr;
-    std::atomic_bool _stopped;
-    bool _isClient;
+  }
+  std::string pipeName_;
+  std::thread workerThread_;
+  Address myaddr_;
+  std::atomic_bool stopped_;
+  bool isClient_;
 };
 
-}
-}
-}
+} // namespace ipc
+} // namespace messaging
+} // namespace maf

@@ -5,13 +5,12 @@
 namespace maf {
 namespace srz {
 
-class SerializableInterface
-{
+class SerializableIF {
 public:
-    virtual ~SerializableInterface() = default;
-    virtual srz::ByteArray toBytes() = 0;
-    virtual void fromBytes(const srz::ByteArray& ba) = 0;
+  virtual ~SerializableIF() = default;
+  virtual srz::ByteArray toBytes() = 0;
+  virtual void fromBytes(const srz::ByteArray &ba) = 0;
 };
 
-} // srz
-} // maf
+} // namespace srz
+} // namespace maf
