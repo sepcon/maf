@@ -518,8 +518,11 @@ size_t ServiceRequesterImpl::removeRegEntry(RegEntriesMap &regInfoEntries,
 void ServiceRequesterImpl::removeRequestPromies(
     const std::shared_ptr<std::promise<CSMsgContentBasePtr>> &promise) {
   std::lock_guard lock(syncRequestPromises_);
-  syncRequestPromises_->erase(std::find(syncRequestPromises_->begin(),
-                                        syncRequestPromises_->end(), promise));
+  if (auto it = std::find(syncRequestPromises_->begin(),
+                          syncRequestPromises_->end(), promise);
+      it != syncRequestPromises_->end()) {
+    syncRequestPromises_->erase(it);
+  }
 }
 
 CSMsgContentBasePtr

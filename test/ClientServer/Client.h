@@ -144,18 +144,25 @@ public:
   void tryStopServer() {
     if (auto lastBootTime =
             proxy_->template sendRequest<boot_time_request::output>();
-        *lastBootTime) {
-      MAF_LOGGER_DEBUG("server life is ",
-                       lastBootTime->getOutput()->get_seconds());
-      if (lastBootTime->getOutput()->get_seconds() > 10) {
-        if (auto response = proxy_->template sendRequest<shutdown_request>()) {
-          if (response->isError()) {
-            MAF_LOGGER_DEBUG("Failed to shutdown server: ",
-                             response->getError()->description());
-          } else {
-            MAF_LOGGER_DEBUG("Server already shutdown!");
+        lastBootTime && lastBootTime->isOutput()) {
+      if (auto output = lastBootTime->getOutput()) {
+        MAF_LOGGER_DEBUG("server life is ",
+                         lastBootTime->getOutput()->get_seconds());
+        if (lastBootTime->getOutput()->get_seconds() > 10) {
+          if (auto response =
+                  proxy_->template sendRequest<shutdown_request>()) {
+            if (response->isError()) {
+              MAF_LOGGER_DEBUG("Failed to shutdown server: ",
+                               response->getError()->description());
+            } else {
+              MAF_LOGGER_DEBUG("Server already shutdown!");
+            }
           }
         }
+      } else if(auto error = lastBootTime->getError()) {
+          MAF_LOGGER_DEBUG("Got error from server: ", error->dump());
+      } else {
+          MAF_LOGGER_ERROR("Don't know why response contains nothing!");
       }
     }
     RunningComponent::post<EndOfRequestChainMsg>();

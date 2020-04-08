@@ -57,7 +57,7 @@ public:
                                this](ComponentMessage genericMsg) {
       try {
         callback(std::any_cast<Msg>(std::move(genericMsg)));
-      } catch (const std::bad_any_cast &e) {
+      } catch (const std::bad_any_cast&) {
         MAF_LOGGER_ERROR("Failed to CAST msg to type of ", typeid(Msg).name());
       }
     };
