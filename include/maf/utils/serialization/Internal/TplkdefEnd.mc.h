@@ -1,3 +1,4 @@
+// clang-format off
 // NO INCLUDE GUARD
 
 #    ifdef mc_maf_choose_correct_default_value_macro
@@ -225,3 +226,4 @@
 #        undef maf_restore_macro_mc_maf_tuple_value_at
 #    endif
 
+// clang-format on

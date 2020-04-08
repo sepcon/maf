@@ -1,113 +1,85 @@
 #include <maf/utils/serialization/MafObjectEnd.mc.h>
-#	ifdef ALIAS
-#		undef ALIAS
-#	endif
-#	ifdef maf_restore_macro_ALIAS
-#		pragma pop_macro("ALIAS")
-#		undef maf_restore_macro_ALIAS
-#	endif
-#	ifdef ENDPROPERTY
-#		undef ENDPROPERTY
+
+// clang-format off
+#	ifdef maf_restore_macro_ATTRIBUTES
+#		undef ATTRIBUTES
+#		pragma pop_macro("ATTRIBUTES")
+#		undef maf_restore_macro_ATTRIBUTES
 #	endif
 #	ifdef maf_restore_macro_ENDPROPERTY
+#		undef ENDPROPERTY
 #		pragma pop_macro("ENDPROPERTY")
 #		undef maf_restore_macro_ENDPROPERTY
 #	endif
-#	ifdef ENDREQUEST
-#		undef ENDREQUEST
-#	endif
 #	ifdef maf_restore_macro_ENDREQUEST
+#		undef ENDREQUEST
 #		pragma pop_macro("ENDREQUEST")
 #		undef maf_restore_macro_ENDREQUEST
 #	endif
-#	ifdef ENDSERVICE
-#		undef ENDSERVICE
-#	endif
 #	ifdef maf_restore_macro_ENDSERVICE
+#		undef ENDSERVICE
 #		pragma pop_macro("ENDSERVICE")
 #		undef maf_restore_macro_ENDSERVICE
 #	endif
-#	ifdef INPUT
-#		undef INPUT
+#	ifdef maf_restore_macro_ENDSIGNAL
+#		undef ENDSIGNAL
+#		pragma pop_macro("ENDSIGNAL")
+#		undef maf_restore_macro_ENDSIGNAL
 #	endif
 #	ifdef maf_restore_macro_INPUT
+#		undef INPUT
 #		pragma pop_macro("INPUT")
 #		undef maf_restore_macro_INPUT
 #	endif
-#	ifdef mc_maf_csc_declare_feature
-#		undef mc_maf_csc_declare_feature
-#	endif
 #	ifdef maf_restore_macro_mc_maf_csc_declare_feature
+#		undef mc_maf_csc_declare_feature
 #		pragma pop_macro("mc_maf_csc_declare_feature")
 #		undef maf_restore_macro_mc_maf_csc_declare_feature
 #	endif
-#	ifdef mc_maf_csc_function_params
-#		undef mc_maf_csc_function_params
-#	endif
 #	ifdef maf_restore_macro_mc_maf_csc_function_params
+#		undef mc_maf_csc_function_params
 #		pragma pop_macro("mc_maf_csc_function_params")
 #		undef maf_restore_macro_mc_maf_csc_function_params
 #	endif
-#	ifdef mc_maf_csc_function_params_empty
-#		undef mc_maf_csc_function_params_empty
-#	endif
-#	ifdef maf_restore_macro_mc_maf_csc_function_params_empty
-#		pragma pop_macro("mc_maf_csc_function_params_empty")
-#		undef maf_restore_macro_mc_maf_csc_function_params_empty
-#	endif
-#	ifdef OUTPUT
-#		undef OUTPUT
-#	endif
 #	ifdef maf_restore_macro_OUTPUT
+#		undef OUTPUT
 #		pragma pop_macro("OUTPUT")
 #		undef maf_restore_macro_OUTPUT
 #	endif
-#	ifdef PROPERTY
-#		undef PROPERTY
-#	endif
 #	ifdef maf_restore_macro_PROPERTY
+#		undef PROPERTY
 #		pragma pop_macro("PROPERTY")
 #		undef maf_restore_macro_PROPERTY
 #	endif
-#	ifdef REQUEST
-#		undef REQUEST
-#	endif
 #	ifdef maf_restore_macro_REQUEST
+#		undef REQUEST
 #		pragma pop_macro("REQUEST")
 #		undef maf_restore_macro_REQUEST
 #	endif
-#	ifdef SERVICE
-#		undef SERVICE
-#	endif
 #	ifdef maf_restore_macro_SERVICE
+#		undef SERVICE
 #		pragma pop_macro("SERVICE")
 #		undef maf_restore_macro_SERVICE
 #	endif
-#	ifdef STATUS
-#		undef STATUS
+#	ifdef maf_restore_macro_SIGNAL
+#		undef SIGNAL
+#		pragma pop_macro("SIGNAL")
+#		undef maf_restore_macro_SIGNAL
 #	endif
 #	ifdef maf_restore_macro_STATUS
+#		undef STATUS
 #		pragma pop_macro("STATUS")
 #		undef maf_restore_macro_STATUS
 #	endif
-#	ifdef VOID_INPUT
-#		undef VOID_INPUT
+#	ifdef maf_restore_macro_VOID_REQUEST
+#		undef VOID_REQUEST
+#		pragma pop_macro("VOID_REQUEST")
+#		undef maf_restore_macro_VOID_REQUEST
 #	endif
-#	ifdef maf_restore_macro_VOID_INPUT
-#		pragma pop_macro("VOID_INPUT")
-#		undef maf_restore_macro_VOID_INPUT
+#	ifdef maf_restore_macro_VOID_SIGNAL
+#		undef VOID_SIGNAL
+#		pragma pop_macro("VOID_SIGNAL")
+#		undef maf_restore_macro_VOID_SIGNAL
 #	endif
-#	ifdef VOID_OUTPUT
-#		undef VOID_OUTPUT
-#	endif
-#	ifdef maf_restore_macro_VOID_OUTPUT
-#		pragma pop_macro("VOID_OUTPUT")
-#		undef maf_restore_macro_VOID_OUTPUT
-#	endif
-#	ifdef VOID_STATUS
-#		undef VOID_STATUS
-#	endif
-#	ifdef maf_restore_macro_VOID_STATUS
-#		pragma pop_macro("VOID_STATUS")
-#		undef maf_restore_macro_VOID_STATUS
-#	endif
+
+// clang-format on

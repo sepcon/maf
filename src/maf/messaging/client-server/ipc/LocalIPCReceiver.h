@@ -1,27 +1,26 @@
 #pragma once
 
-#include <maf/messaging/client-server/ipc/IPCReceiver.h>
+#include "IPCReceiver.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-class LocalIPCReceiver : public IPCReceiver, BytesComeObserver
-{
+class LocalIPCReceiver : public IPCReceiver {
 public:
-    LocalIPCReceiver();
-    ~LocalIPCReceiver() override;
-    bool initConnection(const Address &address, bool isClientMode = false) override;
-    bool startListening() override;
-    bool stopListening() override;
-    bool listening() const override;
-    const Address& address() const override;
+  LocalIPCReceiver();
+  ~LocalIPCReceiver() override;
+  bool initConnection(const Address &address,
+                      bool isClientMode = false) override;
+  bool startListening() override;
+  bool stopListening() override;
+  bool listening() const override;
+  const Address &address() const override;
+  void registerObserver(BytesComeObserver *observer) override;
 
 private:
-    void onBytesCome(const std::shared_ptr<srz::ByteArray>& bytes) override;
-    std::unique_ptr<IPCReceiver> _impl;
+  std::unique_ptr<class LocalIPCReceiverImpl> _impl;
 };
-} // ipc
-} // messaging
-} // maf
-
+} // namespace ipc
+} // namespace messaging
+} // namespace maf

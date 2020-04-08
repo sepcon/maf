@@ -1,6 +1,7 @@
 #pragma once
 
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
+// clang-format off
 
 namespace maf {
 namespace messaging {
@@ -29,4 +30,5 @@ ENDOBJECT(Address)
 }// messaging
 }// maf
 
+// clang-format on
 #include <maf/utils/serialization/MafObjectEnd.mc.h>

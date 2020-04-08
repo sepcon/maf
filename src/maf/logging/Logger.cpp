@@ -1,60 +1,63 @@
+#include <atomic>
 #include <maf/logging/Logger.h>
-
 
 namespace maf {
 namespace logging {
 
-namespace
-{
-struct Statics
-{
-    Logger::LoggingFunctionType out = [](const std::string&) {};
-    Logger::LoggingFunctionType err = [](const std::string&) {};
-    LogLevels allowedLevels = LOG_LEVEL_SILENCE;
+namespace {
+
+struct Statics {
+  LoggingFunctionType out = [](const std::string &) {};
+  LoggingFunctionType err = [](const std::string &) {};
+  std::atomic<LogLevels> allowedLevels = LOG_LEVEL_SILENCE;
 };
 
-static Statics& statics()
-{
-    static Statics s;
-    return s;
+static Statics &statics() {
+  static Statics s;
+  return s;
 };
+
+} // namespace
+
+void init(LogLevels allowedLevels, LoggingFunctionType outLogFunc,
+          LoggingFunctionType errLogFunc) {
+  if (outLogFunc) {
+    statics().out = std::move(outLogFunc);
+  }
+  if (errLogFunc) {
+    statics().err = std::move(errLogFunc);
+  } else if (statics().out) {
+    statics().err = statics().out;
+  }
+
+  changeLogLevels(allowedLevels);
+}
+void stopLogging() { statics().allowedLevels = LOG_LEVEL_SILENCE; }
+
+void changeLogLevels(LogLevels allowedLevels) {
+  statics().allowedLevels = allowedLevels;
 }
 
-void Logger::init(LogLevels allowedLevels, LoggingFunctionType outLogFunc, LoggingFunctionType errLogFunc)
-{
-    if(outLogFunc)
-    {
-        statics().out = std::move(outLogFunc);
-    }
-    if(errLogFunc)
-    {
-        statics().err = std::move(errLogFunc);
-    }
-    else if(statics().out)
-    {
-        statics().err = statics().out;
-    }
-    statics().allowedLevels = allowedLevels;
+bool allowed(LogLevel level) {
+  return statics().allowedLevels.load(std::memory_order_relaxed) & level;
 }
 
-void Logger::logImpl(LogLevel filteredLevel, const std::string &msg)
-{
-    switch (filteredLevel)
-    {
-    case LOG_LEVEL_INFO:
-    case LOG_LEVEL_DEBUG:
-        statics().out(msg);
-        break;
-    default:
-        statics().err(msg);
-        break;
-    }
+void enable(LogLevel level) { statics().allowedLevels &= level; }
+
+void disable(LogLevel level) { statics().allowedLevels &= ~level; }
+
+void logImpl(LogLevel filteredLevel, const std::string &msg) {
+  switch (filteredLevel) {
+  case LOG_LEVEL_INFO:
+  case LOG_LEVEL_DEBUG:
+  case LOG_LEVEL_VERBOSE:
+    statics().out(msg);
+    break;
+  default:
+    statics().err(msg);
+    break;
+  }
 }
 
-bool Logger::allowed(LogLevel level)
-{
-    return statics().allowedLevels & level;
-}
-
-}
-}
+} // namespace logging
+} // namespace maf

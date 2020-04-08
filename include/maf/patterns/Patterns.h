@@ -6,52 +6,44 @@
 namespace maf {
 namespace pattern {
 
-
-class UnMovable
-{
+class UnMovable {
 public:
-    UnMovable(){}
-    ~UnMovable(){}
-    UnMovable(UnMovable&&) = delete;
-    UnMovable& operator=(UnMovable&&) = delete;
+  UnMovable() {}
+  ~UnMovable() {}
+  UnMovable(UnMovable &&) = delete;
+  UnMovable &operator=(UnMovable &&) = delete;
 };
 
-class UnCopyable
-{
+class UnCopyable {
 public:
-    UnCopyable(){}
-    ~UnCopyable(){}
+  UnCopyable() {}
+  ~UnCopyable() {}
 
-    UnCopyable(const UnCopyable&) = delete;
-    UnCopyable& operator=(const UnCopyable&) = delete;
+  UnCopyable(const UnCopyable &) = delete;
+  UnCopyable &operator=(const UnCopyable &) = delete;
 };
 
-
-class Unasignable
-{
+class Unasignable {
 public:
-    Unasignable() {}
-    ~Unasignable() {}
-    Unasignable(Unasignable&&) = delete;
-    Unasignable& operator=(Unasignable&&) = delete;
-    Unasignable(const Unasignable&) = delete;
-    Unasignable& operator=(const Unasignable&) = delete;
+  Unasignable() {}
+  ~Unasignable() {}
+  Unasignable(Unasignable &&) = delete;
+  Unasignable &operator=(Unasignable &&) = delete;
+  Unasignable(const Unasignable &) = delete;
+  Unasignable &operator=(const Unasignable &) = delete;
 };
 
-template <class ToBeSingleton>
-class SingletonObject : public Unasignable
-{
+template <class ToBeSingleton> class SingletonObject : public Unasignable {
 public:
-    static ToBeSingleton& instance()
-    {
-        static ToBeSingleton __instance(Invisible{});
-        return __instance;
-    }
+  static ToBeSingleton &instance() {
+    static ToBeSingleton __instance(Invisible{});
+    return __instance;
+  }
 
 protected:
-    struct Invisible{};
+  struct Invisible {};
 };
 
-} // pattern
-} // maf
+} // namespace pattern
+} // namespace maf
 #endif // PATTERNS_H

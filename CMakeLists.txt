@@ -10,7 +10,7 @@ set(MAF_ROOT_DIR .)
 set(MAF_LIB_INCLUDE_PATH ${MAF_ROOT_DIR}/include)
 
 include_directories(${MAF_LIB_INCLUDE_PATH})
-
+add_definitions(-DMAF_MIN_ALLOWED_LOG_LEVEL=1)
 # --> Collect platforms dependent sources/headers
 file(GLOB_RECURSE MAF_LIBRARY_SOURCES
     src/maf/*.cpp)
@@ -68,7 +68,11 @@ else()
     add_library(maf STATIC ${MAF_ALL_SOURCES})
 endif(MAF_ENABLE_SHARE)
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+if(
+    ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
+    OR
+    {CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"
+    )
     target_link_libraries(maf pthread)
 endif()
 
@@ -78,16 +82,18 @@ if(MAF_ENABLE_TEST)
     set(MAF_TEST_FOLDER_FILTER "Tests")
     add_subdirectory(test)
 endif(MAF_ENABLE_TEST)
-
+if(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+endif(MSVC)
 
 # Grouping sources/headers into tree layout for IDE browsing
-#if(ENABLE_SOURCE_GROUP)
+if(NOT DISABLE_SOURCE_GROUP)
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_SOURCES} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_SOURCES} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_PRIV_HEADERS} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_HEADERS} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/include PREFIX "include" FILES ${MAF_LIBRARY_HEADERS} )
-#endif(ENABLE_SOURCE_GROUP)
+endif(NOT DISABLE_SOURCE_GROUP)
 
 
 

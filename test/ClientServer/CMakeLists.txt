@@ -14,8 +14,8 @@ set(TEST_PROJECTS
     ${CLIENT_SERVER_PROJECT_NAME}
     ${IPC_CLIENT_PROJECT_NAME}
     ${IPC_SERVER_PROJECT_NAME}
-    TestServer
-    TestClient
+#    TestServer
+#    TestClient
     )
 
 
@@ -29,16 +29,15 @@ add_executable(${CLIENT_SERVER_PROJECT_NAME}
 
     Client.h
     Server.h
-    Contract.h
     )
 
-add_library(TestClient SHARED
-    TestClient.cpp
-    )
+#add_library(TestClient SHARED
+#    TestClient.cpp
+#    )
 
-add_library(TestServer SHARED
-    TestServer.cpp
-    )
+#add_library(TestServer SHARED
+#    TestServer.cpp
+#    )
 
 
 #set(LIBRARY_OUTPUT_PATH ${MAF_TEST_BINARY_PATH}/plugin)
@@ -53,9 +52,10 @@ add_executable(${IPC_SERVER_PROJECT_NAME}
 
 
 foreach(PRJ_ ${TEST_PROJECTS})
-    target_link_libraries(${PRJ_} maf)
 
-    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_link_libraries(${PRJ_} maf)
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+        message("Compiler is ${CMAKE_CXX_COMPILER_ID} then, must link ${PRJ_} with pthread library")
         target_link_libraries(${PRJ_} pthread)
     endif()
 

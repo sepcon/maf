@@ -4,42 +4,36 @@
 namespace maf {
 namespace threading {
 
-class Runnable
-{
+class Runnable {
 public:
-    virtual void run() = 0;
-    virtual void stop() { }
-    bool autoDelete() const { return _autoDeleted; }
-    void setAutoDeleted(bool value) { _autoDeleted = value; }
-    virtual ~Runnable() {}
+  virtual void run() = 0;
+  virtual void stop() {}
+  bool autoDelete() const { return _autoDeleted; }
+  void setAutoDeleted(bool value) { _autoDeleted = value; }
+  virtual ~Runnable() {}
+
 private:
-    bool _autoDeleted;
+  bool _autoDeleted;
 };
 
-inline void run(Runnable* runner)
-{
-    if(runner)
-    {
-        runner->run();
-    }
+inline void run(Runnable *runner) {
+  if (runner) {
+    runner->run();
+  }
 }
 
-inline void stop(Runnable* runner)
-{
-    if(runner)
-    {
-        runner->stop();
-    }
+inline void stop(Runnable *runner) {
+  if (runner) {
+    runner->stop();
+  }
 }
 
-inline void done(Runnable* runner)
-{
-    if(runner && runner->autoDelete())
-    {
-        delete runner;
-    }
+inline void done(Runnable *runner) {
+  if (runner && runner->autoDelete()) {
+    delete runner;
+  }
 }
 
-}
-}
+} // namespace threading
+} // namespace maf
 #endif // RUNNABLE_H

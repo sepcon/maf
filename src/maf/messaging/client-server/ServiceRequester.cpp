@@ -1,150 +1,90 @@
-#include <maf/messaging/client-server/ServiceRequester.h>
+#include "ServiceRequester.h"
 #include "ServiceRequesterImpl.h"
 
 namespace maf {
 namespace messaging {
 
-ServiceRequester::ServiceRequester(
-    const ServiceID& sid,
-    std::weak_ptr<ClientInterface> client
-    ): _pImpl {std::make_unique<ServiceRequesterImpl>(sid, std::move(client)) }
-{
-    setServiceID(sid);
+ServiceRequester::ServiceRequester(const ServiceID &sid,
+                                   std::weak_ptr<ClientIF> client)
+    : pImpl_{std::make_unique<ServiceRequesterImpl>(sid, std::move(client))} {
+  setServiceID(sid);
 }
 
 ServiceRequester::~ServiceRequester() = default;
 
-Availability ServiceRequester::serviceStatus() const
-{
-    return _pImpl->serviceStatus();
+Availability ServiceRequester::serviceStatus() const {
+  return pImpl_->serviceStatus();
 }
 
-RegID ServiceRequester::registerStatus(
-    const OpID& propertyID,
-    CSMessageContentHandlerCallback callback,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->registerStatus(
-        propertyID,
-        std::move(callback),
-        callStatus
-        );
+RegID ServiceRequester::registerStatus(const OpID &propertyID,
+                                       CSMessageContentHandlerCallback callback,
+                                       ActionCallStatus *callStatus) {
+  return pImpl_->registerStatus(propertyID, std::move(callback), callStatus);
 }
 
-RegID ServiceRequester::registerSignal(
-    const OpID& propertyID,
-    CSMessageContentHandlerCallback callback,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->registerSignal(
-        propertyID,
-        std::move(callback),
-        callStatus
-        );
+RegID ServiceRequester::registerSignal(const OpID &propertyID,
+                                       CSMessageContentHandlerCallback callback,
+                                       ActionCallStatus *callStatus) {
+  return pImpl_->registerSignal(propertyID, std::move(callback), callStatus);
 }
 
-ActionCallStatus ServiceRequester::unregisterBroadcast(const RegID& regID)
-{
-    return _pImpl->unregisterBroadcast(regID);
+ActionCallStatus ServiceRequester::unregisterBroadcast(const RegID &regID) {
+  return pImpl_->unregisterBroadcast(regID);
 }
 
-ActionCallStatus ServiceRequester::unregisterBroadcastAll(const OpID& propertyID)
-{
-    return _pImpl->unregisterBroadcastAll(propertyID);
+ActionCallStatus
+ServiceRequester::unregisterBroadcastAll(const OpID &propertyID) {
+  return pImpl_->unregisterBroadcastAll(propertyID);
 }
 
 RegID ServiceRequester::sendRequestAsync(
-    const OpID& opID,
-    const CSMsgContentBasePtr &msgContent,
-    CSMessageContentHandlerCallback callback,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->sendRequestAsync(
-        opID,
-        msgContent,
-        std::move(callback),
-        callStatus
-        );
+    const OpID &opID, const CSMsgContentBasePtr &msgContent,
+    CSMessageContentHandlerCallback callback, ActionCallStatus *callStatus) {
+  return pImpl_->sendRequestAsync(opID, msgContent, std::move(callback),
+                                  callStatus);
 }
 
-CSMsgContentBasePtr ServiceRequester::getStatus(
-    const OpID& propertyID,
-    RequestTimeoutMs timeout,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->getStatus(propertyID, timeout, callStatus);
+CSMsgContentBasePtr ServiceRequester::getStatus(const OpID &propertyID,
+                                                ActionCallStatus *callStatus,
+                                                RequestTimeoutMs timeout) {
+  return pImpl_->getStatus(propertyID, callStatus, timeout);
 }
 
-
-CSMsgContentBasePtr ServiceRequester::sendRequest(
-    const OpID& opID,
-    const CSMsgContentBasePtr &msgContent,
-    RequestTimeoutMs timeout,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->sendRequest(
-        opID,
-        msgContent,
-        timeout,
-        callStatus
-        );
+ActionCallStatus
+ServiceRequester::getStatus(const OpID &propertyID,
+                            CSMessageContentHandlerCallback callback) {
+  return pImpl_->getStatus(propertyID, std::move(callback));
 }
 
-void ServiceRequester::abortAction(
-    const RegID &regID,
-    ActionCallStatus* callStatus
-    )
-{
-    return _pImpl->abortAction(
-        regID,
-        callStatus
-        );
+CSMsgContentBasePtr ServiceRequester::sendRequest(const OpID &opID, const CSMsgContentBasePtr &msgContent, ActionCallStatus *callStatus,
+    RequestTimeoutMs timeout) {
+  return pImpl_->sendRequest(opID, msgContent, callStatus, timeout);
 }
 
-void ServiceRequester::addServiceStatusObserver(
-    std::weak_ptr<ServiceStatusObserverInterface> serviceStatusObserver
-    )
-{
-    _pImpl->addServiceStatusObserver(std::move(serviceStatusObserver));
+void ServiceRequester::abortAction(const RegID &regID,
+                                   ActionCallStatus *callStatus) {
+  return pImpl_->abortAction(regID, callStatus);
 }
 
-void ServiceRequester::removeServiceStatusObserver(
-    const std::weak_ptr<ServiceStatusObserverInterface> &serviceStatusObserver
-    )
-{
-    _pImpl->addServiceStatusObserver(serviceStatusObserver);
+void ServiceRequester::registerServiceStatusObserver(
+    std::weak_ptr<ServiceStatusObserverIF> serviceStatusObserver) {
+  pImpl_->registerServiceStatusObserver(std::move(serviceStatusObserver));
 }
 
-bool ServiceRequester::onIncomingMessage(const CSMessagePtr &csMsg)
-{
-    return _pImpl->onIncomingMessage(csMsg);
+void ServiceRequester::unregisterServiceStatusObserver(
+    const std::weak_ptr<ServiceStatusObserverIF> &serviceStatusObserver) {
+  pImpl_->unregisterServiceStatusObserver(serviceStatusObserver);
 }
 
-void ServiceRequester::onServerStatusChanged(
-    Availability oldStatus,
-    Availability newStatus
-    )
-{
-    _pImpl->onServerStatusChanged(
-        oldStatus,
-        newStatus
-        );
+bool ServiceRequester::onIncomingMessage(const CSMessagePtr &csMsg) {
+  return pImpl_->onIncomingMessage(csMsg);
 }
 
-void ServiceRequester::onServiceStatusChanged(
-    const ServiceID& sid,
-    Availability oldStatus,
-    Availability newStatus
-    )
-{
-    _pImpl->onServiceStatusChanged(sid, oldStatus, newStatus);
+void ServiceRequester::onServiceStatusChanged(const ServiceID &sid,
+                                              Availability oldStatus,
+                                              Availability newStatus) noexcept {
+  pImpl_->onServiceStatusChanged(sid, oldStatus, newStatus);
 }
 
-
-} // messaging
-} // maf
+} // namespace messaging
+} // namespace maf

@@ -1,109 +1,77 @@
 #pragma once
 
-#include "internal/cs_param.h"
 #include "BytesCarrier.h"
 #include "MessageTraitBase.h"
 #include <maf/logging/Logger.h>
 
-namespace maf { using logging::Logger;
+namespace maf {
+
 namespace messaging {
 
-
-class SerializableMessageTrait : public MessageTraitBase
-{
+class SerializableMessageTrait : public MessageTraitBase {
 public:
-    template<class ContractParam>
-    static constexpr OpIDConst getOperationID()
-    {
-        return ContractParam::operationID();
+  template <class Message> static constexpr OpIDConst getOperationID() {
+    return Message::operationID();
+  }
+
+  template <class Message> static OpID getOperationID(Message *msg) {
+    if (msg) {
+      return OpIDInvalid;
+    } else {
+      return msg->operationID();
+    }
+  }
+
+  template <class Message>
+  static std::shared_ptr<Message>
+  decode(const CSMsgContentBasePtr &csMsgContent,
+         CodecStatus *status = nullptr) {
+    if (!csMsgContent) {
+      assignCodecStatus(status, EmptyInput);
+      return {};
     }
 
-    template<class cs_param_type>
-    static std::shared_ptr<cs_param_type> decode(
-        const CSMsgContentBasePtr& csMsgContent,
-        CodecStatus* status = nullptr
-        )
-    {
-        if(!csMsgContent)
-        {
-            assignCodecStatus(status, EmptyInput);
-            return {};
-        }
+    try {
+      using MessagePureT = std::decay_t<Message>;
+      // Warning: avoid using dynamic_cast RTTI
+      // We asume that the implementer will send/receive the
+      // CSMsgContentBasePtr as std::shared_ptr of BytesCarrier
+      auto byteCarrier = std::static_pointer_cast<BytesCarrier>(csMsgContent);
+      std::shared_ptr<MessagePureT> dataCarrier;
+      if (!byteCarrier->payload().empty()) {
+        dataCarrier = std::make_shared<MessagePureT>();
+        dataCarrier->fromBytes(byteCarrier->payload());
+        assignCodecStatus(status, CodecStatus::Success);
+      } else {
+        assignCodecStatus(status, CodecStatus::EmptyInput);
+      }
+      return dataCarrier;
 
-        try
-        {
-            using cs_param_pure_type = std::decay_t<cs_param_type>;
-            // Warning: avoid using dynamic_cast RTTI
-            // We asume that the implementer will send/receive the
-            // CSMsgContentBasePtr as std::shared_ptr of BytesCarrier
-            auto byteCarrier = std::static_pointer_cast<BytesCarrier>(
-                csMsgContent
-                );
-            std::shared_ptr<cs_param_pure_type> dataCarrier;
-            if(!byteCarrier->payload().empty())
-            {
-                dataCarrier = std::make_shared<cs_param_pure_type>();
-                dataCarrier->fromBytes(byteCarrier->payload());
-                assignCodecStatus(status, CodecStatus::Success);
-            }
-            else
-            {
-                assignCodecStatus(status, CodecStatus::EmptyInput);
-            }
-            return dataCarrier;
-
-        }
-        catch(const std::exception& e)
-        {
-            assignCodecStatus(status, CodecStatus::MalformInput);
-            Logger::error(
-                "Could not decode message, exception details: ",
-                e.what()
-                );
-        }
-
-        return nullptr;
+    } catch (const std::exception &e) {
+      assignCodecStatus(status, CodecStatus::MalformInput);
+      MAF_LOGGER_ERROR("Could not decode message, exception details: ",
+                       e.what());
     }
 
-    template<class cs_param_type_base>
-    static CSMsgContentBasePtr encode(const std::shared_ptr<cs_param>& param)
-    {
-        using serializable_param_type
-            = serializable_cs_param_base<cs_param_type_base>;
-        auto sbParam = std::static_pointer_cast<serializable_param_type>(param);
-        auto bytesCarrier = std::make_shared<BytesCarrier>(sbParam->type());
-        bytesCarrier->setPayload(
-            sbParam->toBytes()
-            );
-        return std::move(bytesCarrier);
+    return nullptr;
+  }
 
+  template <class Message>
+  static CSMsgContentBasePtr encode(const std::shared_ptr<Message> &msg) {
+    auto bytesCarrier = std::make_shared<BytesCarrier>(msg->type());
+    bytesCarrier->setPayload(msg->toBytes());
+    return bytesCarrier;
+  }
+
+  template <class Message>
+  static std::string dump(const std::shared_ptr<Message> &msg) {
+    if (msg) {
+      return msg->dump();
+    } else {
+      return "Null";
     }
-
-//    static ContentErrorPtr decode(const CSMsgContentBasePtr& csMsgContent)
-//    {
-//        if(!csMsgContent)
-//        {
-//            return {};
-//        }
-
-//        auto byteCarrier = std::static_pointer_cast<BytesCarrier>(
-//            csMsgContent
-//            );
-//        srz::BADeserializer ds(byteCarrier->payload());
-
-//    }
-//    static CSMsgContentBasePtr encode(const ContentErrorPtr& error)
-//    {
-//        auto bytesCarrier = std::make_shared<BytesCarrier>();
-//        srz::BASerializer sr;
-//        sr << error->description() << error->code();
-//        bytesCarrier->setPayload(
-//            std::move(sr.mutableBytes())
-//            );
-//        return std::move(bytesCarrier);
-
-//    }
+  }
 };
 
-}
-}
+} // namespace messaging
+} // namespace maf

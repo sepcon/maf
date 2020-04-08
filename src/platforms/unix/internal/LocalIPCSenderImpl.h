@@ -1,28 +1,28 @@
 #pragma once
 
-#include <maf/messaging/client-server/ipc/IPCSender.h>
 #include "SocketShared.h"
+#include <maf/messaging/client-server/CSStatus.h>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-
-class  LocalIPCSenderImpl: public IPCSender
-{
+class LocalIPCSenderImpl {
 public:
-    LocalIPCSenderImpl();
-    ~LocalIPCSenderImpl() override;
-    ActionCallStatus send(const maf::srz::ByteArray &payload, const Address& destination) override;
-    bool initConnection(const Address&receiverAddr) override;
-    Availability checkReceiverStatus() const override;
-    const Address& receiverAddress() const override;
+  LocalIPCSenderImpl();
+  ~LocalIPCSenderImpl();
+  ActionCallStatus send(const maf::srz::ByteArray &payload,
+                        const Address &destination);
+  bool initConnection(const Address &receiverAddr);
+  Availability checkReceiverStatus() const;
+  const Address &receiverAddress() const;
 
 private:
-    Address _myReceiverAddr;
-    std::unique_ptr<SocketPath> _myReceiverSocketPath;
-    std::unique_ptr<sockaddr_un> _myReceiverSockAddr;
+  Address _myReceiverAddr;
+  std::unique_ptr<SocketPath> _myReceiverSocketPath;
+  std::unique_ptr<sockaddr_un> _myReceiverSockAddr;
 };
 
-}}}
-
+} // namespace ipc
+} // namespace messaging
+} // namespace maf

@@ -1,218 +1,194 @@
 #pragma once
 
-#include "maf/messaging/Timer.h"
-#include "maf/utils/TimeMeasurement.h"
-#include "maf/messaging/ExtensibleComponent.h"
-#include "maf/messaging/client-server/QueueingServiceProxy.h"
-#include "WeatherContract.h"
 #include <thread>
 
+#include "WeatherContract.h"
+#include "maf/messaging/AsyncCallbackExecutor.h"
+#include "maf/messaging/ExtensibleComponent.h"
+#include "maf/messaging/Timer.h"
+#include "maf/messaging/client-server/AsyncServiceStatusObserver.h"
+#include "maf/messaging/client-server/Proxy.h"
+#include "maf/utils/TimeMeasurement.h"
+
 using namespace std::chrono_literals;
+using namespace maf;
+using namespace maf::messaging;
 
-namespace maf
-{
-using namespace messaging;
+struct EndOfRequestChainMsg {};
 
-namespace test {
-
-using namespace weather_service;
-
-template<class MessageTrait>
-struct ClientComponent : public ExtensibleComponent
-{
-    using Proxy = QueueingServiceProxy<MessageTrait>;
-
-    template <class CSParam>
-    using ResponsePtr = typename Proxy::template ResponsePtrType<CSParam>;
-private:
-    std::shared_ptr<Proxy> _proxy;
-    std::future<void> _future;
-    Timer _timer;
+template <class Proxy> class ClientComponent : public ExtensibleComponent {
+  using ProxyPtr = std::shared_ptr<Proxy>;
+  template <class T>
+  using ResponsePtr = typename Proxy::template ResponsePtr<T>;
 
 public:
-    ClientComponent(std::shared_ptr<Proxy> proxy) : _proxy{std::move(proxy)} {}
+  ClientComponent(ProxyPtr proxy) : proxy_{std::move(proxy)} {
+    proxy_->setExecutor(asyncExecutor(component()));
+    proxy_->registerServiceStatusObserver(
+        statusObserver_ = asyncServiceStatusObserver(component()));
 
-    void startTest(
-        const ConnectionType& contype,
-        const Address& addr
-        )
+    // Try send first request when service is not available,
+    // with asumption that server started later than client
+    proxy_->template sendRequest<boot_time_request::output>(nullptr, 10s);
+
+    onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
+      if (msg.newStatus == Availability::Available) {
+        auto response =
+            proxy_->template sendRequest<unhandled_request>(nullptr, 10s);
+        MAF_LOGGER_DEBUG("Server already clear all status, then start jobs...");
+        registerStatuses();
+
+        proxy_->template sendRequestAsync<today_weather_request::output>(
+            today_weather_request::make_input("Client is client", 100),
+            [](const ResponsePtr<today_weather_request::output> &response) {
+              if (*response) {
+                MAF_LOGGER_DEBUG("Received output from server ",
+                                 response->getOutput()->get_your_command());
+              } else {
+                MAF_LOGGER_DEBUG("Error for request of today_weather: ",
+                                 response->getError()->description());
+              }
+            });
+
+        proxy_->template sendRequestAsync<update_status_request>();
+
+      } else {
+        MAF_LOGGER_DEBUG("Service is off for sometime, please wait for him "
+                         "to be available again!");
+      }
+    });
+  }
+
+  ~ClientComponent() {
+    for (auto &regid : regids_) {
+      if (auto callstatus = proxy_->unregisterBroadcast(regid);
+          callstatus != ActionCallStatus::Success) {
+        MAF_LOGGER_ERROR("Failed to unregister status: ", regid.opID,
+                         " with error: ", callstatus);
+      } else {
+        MAF_LOGGER_DEBUG("Successfully unregistered status ", regid.opID);
+      }
+    }
+
+    proxy_->unregisterServiceStatusObserver(statusObserver_);
+  }
+
+  template <typename Category> void sendSyncRequest() {
+    long long total = 0;
+    const int totalRequests = 5000;
     {
-        _proxy = Proxy::createProxy( contype, addr, "weather_service");
-        _timer.setCyclic(true);
-        _proxy->setMainComponent(component());
-        onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
-            if (msg.newStatus == Availability::Available) {
-                maf::Logger::debug("Client component recevies status update of service: " ,  msg.serviceID);
-                maf::Logger::debug("Sending requests to server");
+      util::TimeMeasurement tm{
+          [&total](util::TimeMeasurement::MicroSeconds elapsed) {
+            total += elapsed.count();
+          }};
+      for (int i = 0; i < totalRequests; ++i) {
+        proxy_->template sendRequest<struct Category::output>(
+            Category::make_input(), 500);
+      }
+    }
+    auto avarageTimePerRequest = static_cast<double>(total) / totalRequests;
+    MAF_LOGGER_DEBUG("Avarage time to send a request is: ",
+                     avarageTimePerRequest, " microseconds");
+  }
 
-                auto response = _proxy->template sendRequest<clear_all_status_request>(10000ms);
-                if(auto error = response->getError())
-                {
-                    Logger::error("Failed on request ",
-                                  update_status_request::ID,
-                                  ": ", error->description()
-                                  );
-                    RunningComponent::shared()->stop();
-                    return;
-                }
-                else
-                {
-                    auto output = response->getOutput();
-                    Logger::debug("Received response for id: ", output->ID);
-                }
+  void registerStatuses() {
+    registerStatus<compliance5_property::status>();
+    registerStatus<compliance4_property::status>();
+    registerStatus<compliance3_property::status>();
+    registerStatus<compliance2_property::status>();
+    registerStatus<compliance1_property::status>();
+  }
 
-                Logger::debug("Server already clear all status, then start jobs...");
-                registerStatus();
-                _proxy->template sendRequestAsync<update_status_request>();
-            }
-            else
-            {
-                maf::Logger::debug("Service is off for sometime, please wait for him to be available again!");
-            }
+  template <class Status> void registerStatus() {
+    auto dumpCallback = [this](const auto &status) {
+      MAF_LOGGER_DEBUG("Got status update from server[", status->operationID(),
+                       "]: ", status->get_updated_count());
+      if (status->operationID() == compliance1_property::ID) {
+        this->getStatuses();
+      }
+    };
+
+    ActionCallStatus callStatus;
+    RegID regid =
+        proxy_->template registerStatus<Status>(dumpCallback, &callStatus);
+    if (regid.valid()) {
+      regids_.push_back(std::move(regid));
+    } else {
+      MAF_LOGGER_ERROR("Failed to register property ", Status::operationID(),
+                       " with call status = ", callStatus);
+    }
+  }
+
+  void getStatuses() {
+    getStatus<compliance_property::status>();
+    getStatus<compliance5_property::status>();
+    getStatus<compliance1_property::status>();
+    registerSignal();
+  }
+
+  void registerSignal() {
+    proxy_->template registerSignal<server_request_signal>([]() {
+      MAF_LOGGER_DEBUG("Received ", server_request_signal::ID, " from server");
+    });
+
+    proxy_->template registerSignal<client_info_request_signal::attributes>(
+        [this](const auto &signal) {
+          MAF_LOGGER_DEBUG("Received signal ", client_info_request_signal::ID,
+                           "from server: ", signal->dump());
+
+          tryStopServer();
         });
 
-        _future = runAsync();
-    }
-    void stopTest()
-    {
-        stop();
-        _proxy.reset();
-        if(_future.valid())
-        {
-            _future.wait();
+    proxy_->template sendRequestAsync<broad_cast_signal_request>();
+  }
+  void tryStopServer() {
+    if (auto lastBootTime =
+            proxy_->template sendRequest<boot_time_request::output>();
+        *lastBootTime) {
+      MAF_LOGGER_DEBUG("server life is ",
+                       lastBootTime->getOutput()->get_seconds());
+      if (lastBootTime->getOutput()->get_seconds() > 10) {
+        if (auto response = proxy_->template sendRequest<shutdown_request>()) {
+          if (response->isError()) {
+            MAF_LOGGER_DEBUG("Failed to shutdown server: ",
+                             response->getError()->description());
+          } else {
+            MAF_LOGGER_DEBUG("Server already shutdown!");
+          }
         }
+      }
+    }
+    RunningComponent::post<EndOfRequestChainMsg>();
+  }
+  template <class Status> void getStatus() {
+    for (int i = 0; i < 10; ++i) {
+      auto compliance5 = proxy_->template getStatus<Status>();
+      if (compliance5) {
+        MAF_LOGGER_DEBUG(
+            "Got update from server, status id = ", Status::operationID(),
+            compliance5->get_updated_count());
+      } else {
+        MAF_LOGGER_DEBUG("Got empty status from server for status id ",
+                         Status::operationID());
+      }
     }
 
-    template <typename Category>
-    void sendSyncRequest()
-    {
-        long long total = 0;
-        const int totalRequests = 5000;
-        {
-            util::TimeMeasurement tm{[&total](util::TimeMeasurement::MicroSeconds elapsed) {
-                total += elapsed.count();
-            }};
-            for(int i = 0; i < totalRequests; ++i)
-            {
-                try
-                {
-                    _proxy->template sendRequest<struct Category::output>(Category::make_input(), 500);
-                }
-                catch(const std::exception& e)
-                {
-
-                }
-            }
-        }
-        auto avarageTimePerRequest = static_cast<double>(total) / totalRequests;
-        Logger::debug("Avarage time to send a request is: ",
-                      avarageTimePerRequest,
-                      " microseconds");
+    auto callstatus =
+        proxy_->template getStatus<Status>([](const auto &status) {
+          if (status) {
+            MAF_LOGGER_INFO("Get status async of `", Status::operationID(),
+                            "`: ", status->dump());
+          }
+        });
+    if (callstatus != ActionCallStatus::Success) {
+      MAF_LOGGER_INFO("Failed to get status async of `", Status::operationID(),
+                      "`: with callstatus = ", callstatus);
     }
+  }
 
-    void registerStatus()
-    {
-        auto dumpCallback = [this](const auto& status) {
-            Logger::debug("Got status update from server[",
-                          status->operationID(), "]: ", status->get_updated_count());
-            if(status->operationID() == compliance1::ID)
-            {
-                this->getStatuses();
-            }
-        };
-
-        _proxy->template registerStatus<compliance5::status>(dumpCallback);
-        _proxy->template registerStatus<compliance4::status>(dumpCallback);
-        _proxy->template registerStatus<compliance3::status>(dumpCallback);
-        _proxy->template registerStatus<compliance2::status>(dumpCallback);
-        _proxy->template registerStatus<compliance1::status>(dumpCallback);
-    }
-
-    void getStatuses()
-    {
-        getStatus<compliance::status>();
-        getStatus<compliance5::status>();
-        getStatus<compliance1::status>();
-        registerSignal();
-    }
-
-    void registerSignal()
-    {
-        _proxy->template registerSignal<server_request_signal>(
-            [](){
-                Logger::debug("Received ", server_request_signal::ID,
-                              " from server");
-            });
-
-        _proxy->template registerSignal<client_info_request::attributes>(
-            [this](const auto& signal){
-                Logger::debug("Received signal ", client_info_request::ID,
-                              "from server: ",
-                              signal->dump()
-                              );
-
-                tryStopServer();
-            });
-
-        _proxy->template sendRequestAsync<broad_cast_signal_request>();
-
-    }
-    void tryStopServer()
-    {
-        using namespace weather_service;
-		uint64_t bootTime = 0;
-		do
-		{
-			if (auto lastBootTime = _proxy->template getStatus<boot_time::status>())
-			{
-				Logger::debug("server life is ", lastBootTime->get_seconds());
-
-				if (auto response = _proxy->template sendRequest<shutdown>())
-				{
-					if (response->isError())
-					{
-						Logger::error("Failed to shutdown server: ", response->getError()->description());
-					}
-					else
-					{
-						Logger::debug("Server already shutdown!");
-						break;
-					}
-				}
-				std::this_thread::sleep_for(std::chrono::seconds(1));
-
-			}
-			else
-			{
-				Logger::debug("Server is not working now, then exit!");
-				break;
-			}
-		} while (bootTime < 10);
-		
-        stop();
-    }
-    template <class status>
-    void getStatus()
-    {
-        for(int i = 0; i < 10; ++i)
-        {
-            auto compliance5 = _proxy->template getStatus<status>();
-            if(compliance5)
-            {
-                maf::Logger::debug("Got update from server, status id = ",
-                                   status::operationID(),
-                                   compliance5->get_updated_count()
-                                   );
-            }
-            else
-            {
-                maf::Logger::error("Got empty status from server for status id ",
-                                   status::operationID());
-            }
-        }
-    }
-
+private:
+  std::shared_ptr<ServiceStatusObserverIF> statusObserver_;
+  std::shared_ptr<Proxy> proxy_;
+  std::vector<RegID> regids_;
+  ServiceID sid_;
 };
-
-}
-}

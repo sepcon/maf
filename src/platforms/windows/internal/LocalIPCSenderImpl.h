@@ -6,16 +6,17 @@ namespace maf {
 namespace messaging {
 namespace ipc {
 
-
-class  LocalIPCSenderImpl: public NamedPipeSenderBase
-{
+class LocalIPCSenderImpl : public NamedPipeSenderBase {
 public:
-    LocalIPCSenderImpl();
-    ~LocalIPCSenderImpl() override;
-    ActionCallStatus send(const maf::srz::ByteArray &ba, const Address& destination) override;
+  LocalIPCSenderImpl();
+  ~LocalIPCSenderImpl();
+  ActionCallStatus send(const maf::srz::ByteArray &ba,
+                        const Address &destination);
 
 private:
-    OVERLAPPED _oOverlap;
+  OVERLAPPED oOverlap_;
 };
 
-}}}
+} // namespace ipc
+} // namespace messaging
+} // namespace maf
