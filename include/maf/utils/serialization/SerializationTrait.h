@@ -401,7 +401,7 @@ struct SerializationTrait<StringDerived,
                           >
 {
     using SizeTypeSerializer = SerializationTrait<SizeType>;
-    using ValueType = ByteArray;
+    using ValueType = StringDerived;
     inline static SizeType contentSizeOf(const ValueType& s) noexcept
     {
         return static_cast<SizeType>( s.size() ) * sizeof (ValueType::value_type);

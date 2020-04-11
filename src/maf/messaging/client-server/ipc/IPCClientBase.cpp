@@ -14,7 +14,6 @@ IPCClientBase::IPCClientBase(IPCType type)
 bool IPCClientBase::init(const Address &serverAddress,
                          long long sersverMonitoringIntervalMs) {
   if (BytesCommunicator::init(serverAddress)) {
-    serverMonitorTimer_ = std::make_unique<SyncTimer>(true);
     monitorServerStatus(sersverMonitoringIntervalMs);
     return true;
   } else {
@@ -23,21 +22,27 @@ bool IPCClientBase::init(const Address &serverAddress,
 }
 
 bool IPCClientBase::deinit() {
-  if (serverMonitorTimer_) {
-    serverMonitorTimer_->stop();
+  {
+    std::lock_guard lock(mutex_);
+    if (!stopped_)
+      stopped_ = true;
+    stopCondition_.notify_one();
   }
+
   ClientBase::deinit();
   BytesCommunicator::deinit();
+
   if (serverMonitorThread_.joinable()) {
     serverMonitorThread_.join();
   }
+
   return true;
 }
 
 IPCClientBase::~IPCClientBase() { deinit(); }
 
 ActionCallStatus IPCClientBase::sendMessageToServer(const CSMessagePtr &msg) {
-  msg->setSourceAddress(_pReceiver->address());
+  msg->setSourceAddress(pReceiver_->address());
   return BytesCommunicator::send(std::static_pointer_cast<IPCMessage>(msg));
 }
 
@@ -58,21 +63,24 @@ void IPCClientBase::onServerStatusChanged(Availability oldStatus,
 }
 
 void IPCClientBase::monitorServerStatus(long long intervalMs) {
-  serverMonitorThread_ = std::thread{[this, intervalMs] {
+  serverMonitorThread_ = std::thread([this, intervalMs] {
+    std::unique_lock lock(mutex_);
     auto oldStatus = Availability::Unavailable;
-    auto checkAndNotifyServerStatus = [this, &oldStatus] {
-      auto newStatus = _pSender->checkReceiverStatus();
-      if (oldStatus != newStatus) {
-        onServerStatusChanged(oldStatus, newStatus);
+    auto tunnedInterval = decltype(intervalMs){0};
+    do {
+      if (auto newStatus = pSender_->checkReceiverStatus();
+          oldStatus != newStatus) {
+        tunnedInterval = intervalMs;
+        this->onServerStatusChanged(oldStatus, newStatus);
         oldStatus = newStatus;
+      } else if (newStatus == Availability::Unavailable) {
+        if (tunnedInterval < intervalMs) {
+          tunnedInterval += 10;
+        }
       }
-    };
-
-    // Check once at the begining
-    checkAndNotifyServerStatus();
-    serverMonitorTimer_->start(intervalMs,
-                               std::move(checkAndNotifyServerStatus));
-  }};
+      stopCondition_.wait_for(lock, std::chrono::milliseconds{tunnedInterval});
+    } while (!stopped_);
+  });
 }
 
 } // namespace ipc

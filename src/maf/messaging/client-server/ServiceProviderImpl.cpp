@@ -261,13 +261,14 @@ void ServiceProviderImpl::onAbortActionRequest(const CSMessagePtr &msg) {
 }
 
 void ServiceProviderImpl::onActionRequest(const CSMessagePtr &msg) {
-  auto request = saveRequestInfo(msg);
-  if (!invokeRequestHandlerCallback(request)) {
-    request->respond(std::make_shared<CSError>(
-        "Handler unavailable!", CSErrorCode::HandlerUnavailable));
-
+  if (auto handlerCallback = getRequestHandlerCallback(msg->operationID())) {
+    handlerCallback(saveRequestInfo(msg));
+  } else {
     MAF_LOGGER_ERROR("Not found handler for ActionRequest with OpID[",
                      msg->operationID(), "]");
+    msg->setContent(std::make_shared<CSError>("Handler unavailable!",
+                                              CSErrorCode::HandlerUnavailable));
+    sendBackMessageToClient(msg);
   }
 }
 
@@ -310,20 +311,15 @@ void ServiceProviderImpl::onStatusGetRequest(const CSMessagePtr &getMsg) {
   sendBackMessageToClient(getMsg);
 }
 
-bool ServiceProviderImpl::invokeRequestHandlerCallback(
-    const RequestPtr &request) {
-  auto opID = request->getOperationID();
-  std::unique_lock lock(requestHandlerMap_);
+RequestHandlerFunction
+ServiceProviderImpl::getRequestHandlerCallback(const OpID &opID) {
 
+  std::lock_guard lock(requestHandlerMap_);
   if (auto itHandler = requestHandlerMap_->find(opID);
       itHandler != requestHandlerMap_->end()) {
-    auto handlerFunction = itHandler->second;
-    lock.unlock();
-    handlerFunction(request);
-    return true;
+    return itHandler->second;
   }
-
-  return false;
+  return {};
 }
 
 } // namespace messaging

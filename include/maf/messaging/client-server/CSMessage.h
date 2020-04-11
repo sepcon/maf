@@ -44,12 +44,12 @@ public:
   MAF_EXPORT void setContent(CSMsgContentBasePtr content);
 
 protected:
-  ServiceID _serviceID = ServiceIDInvalid;
-  OpID _operationID = OpIDInvalid;
-  RequestID _requestID = RequestIDInvalid;
-  OpCode _operationCode = OpCode::Invalid;
-  CSMsgContentBasePtr _content;
-  Address _sourceAddress;
+  ServiceID serviceID_ = ServiceIDInvalid;
+  OpID operationID_ = OpIDInvalid;
+  RequestID requestID_ = RequestIDInvalid;
+  OpCode operationCode_ = OpCode::Invalid;
+  CSMsgContentBasePtr content_;
+  Address sourceAddress_;
 };
 
 class CSMessageContentBase {

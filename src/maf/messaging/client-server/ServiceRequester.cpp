@@ -28,13 +28,13 @@ RegID ServiceRequester::registerSignal(const OpID &propertyID,
   return pImpl_->registerSignal(propertyID, std::move(callback), callStatus);
 }
 
-ActionCallStatus ServiceRequester::unregisterBroadcast(const RegID &regID) {
-  return pImpl_->unregisterBroadcast(regID);
+ActionCallStatus ServiceRequester::unregister(const RegID &regID) {
+  return pImpl_->unregister(regID);
 }
 
 ActionCallStatus
-ServiceRequester::unregisterBroadcastAll(const OpID &propertyID) {
-  return pImpl_->unregisterBroadcastAll(propertyID);
+ServiceRequester::unregisterAll(const OpID &propertyID) {
+  return pImpl_->unregisterAll(propertyID);
 }
 
 RegID ServiceRequester::sendRequestAsync(
@@ -56,8 +56,9 @@ ServiceRequester::getStatus(const OpID &propertyID,
   return pImpl_->getStatus(propertyID, std::move(callback));
 }
 
-CSMsgContentBasePtr ServiceRequester::sendRequest(const OpID &opID, const CSMsgContentBasePtr &msgContent, ActionCallStatus *callStatus,
-    RequestTimeoutMs timeout) {
+CSMsgContentBasePtr ServiceRequester::sendRequest(
+    const OpID &opID, const CSMsgContentBasePtr &msgContent,
+    ActionCallStatus *callStatus, RequestTimeoutMs timeout) {
   return pImpl_->sendRequest(opID, msgContent, callStatus, timeout);
 }
 

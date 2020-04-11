@@ -17,98 +17,93 @@ public:
   using value_type = typename QueueClass::value_type;
   using ApplyAction = std::function<void(value_type &)>;
 
-  ThreadSafeQueue() : _closed(false) {}
+  ThreadSafeQueue() : closed_(false) {}
   ~ThreadSafeQueue() { close(); }
-  bool empty() { return _queue.atomic()->empty(); }
+  bool empty() { return queue_.atomic()->empty(); }
   void push(const value_type &data) {
     if (!isClosed()) {
-      std::lock_guard lock(_queue);
-      _queue->push(data);
-      _condVar.notify_one();
+      std::lock_guard lock(queue_);
+      queue_->push(data);
+      queueNotEmpty_.notify_one();
     }
   }
   void push(value_type &&data) {
     if (!isClosed()) {
-      std::lock_guard lock(_queue);
-      _queue->emplace(data);
-      _condVar.notify_one();
+      std::lock_guard lock(queue_);
+      queue_->emplace(std::move(data));
+      queueNotEmpty_.notify_one();
     }
   }
 
-  bool waitFor(value_type &value, long milliseconds) {
-    std::unique_lock lock(_queue);
-    std::cv_status waitResult = std::cv_status::no_timeout;
-    if (!isClosed() && _queue->empty()) {
-      if (!_condVar.wait_for(lock, std::chrono::milliseconds(milliseconds),
-                             [this] { return !_queue->empty(); })) {
-        return false;
-      }
-    }
-
-    if (waitResult == std::cv_status::no_timeout && !isClosed()) {
-      value = _queue->front();
-      _queue->pop();
-      return true;
-    } else {
+  template <class std_chrono_duration>
+  bool waitFor(value_type &value, std_chrono_duration interval) {
+    std::unique_lock lock(queue_);
+    if (!queueNotEmpty_.wait_for(lock, interval,
+                           [this] { return !queue_->empty() || isClosed(); })) {
       return false;
+    } else if (!isClosed()) {
+      value = std::move(queue_->front());
+      queue_->pop();
+      return true;
     }
+    return false;
+  }
+
+  bool waitFor(value_type& value, long long ms) {
+      return waitFor(value, std::chrono::milliseconds{ms});
   }
 
   bool wait(value_type &value) {
-    std::unique_lock lock(_queue);
-    while (!isClosed() && _queue->empty()) {
-      _condVar.wait(lock);
-    }
+    std::unique_lock lock(queue_);
+    queueNotEmpty_.wait(lock, [this] { return !queue_->empty() || isClosed(); });
     if (!isClosed()) {
-      value = std::move(_queue->front());
-      _queue->pop();
+      value = std::move(queue_->front());
+      queue_->pop();
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   bool tryPop(value_type &value) {
-    std::lock_guard lock(_queue);
-    if (!isClosed() && !_queue->empty()) {
-      value = _queue->front();
-      _queue->pop();
+    std::lock_guard lock(queue_);
+    if (!queue_->empty() && !isClosed()) {
+      value = queue_->front();
+      queue_->pop();
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
   void close() {
     if (!isClosed()) {
-      _closed.store(true, std::memory_order_release);
-      _condVar.notify_all();
+      closed_.store(true, std::memory_order_release);
+      queueNotEmpty_.notify_all();
     }
   }
 
-  bool isClosed() const { return _closed.load(std::memory_order_acquire); }
+  bool isClosed() const { return closed_.load(std::memory_order_acquire); }
 
   void clear(ApplyAction onClearCallback = nullptr) {
-    std::lock_guard lock(_queue);
+    std::lock_guard lock(queue_);
     if (onClearCallback) {
-      while (!_queue->empty()) {
-        auto v = _queue->front();
+      while (!queue_->empty()) {
+        auto v = queue_->front();
         onClearCallback(v);
-        _queue->pop();
+        queue_->pop();
       }
     } else {
-      while (!_queue->empty()) {
-        _queue->pop();
+      while (!queue_->empty()) {
+        queue_->pop();
       }
     }
   }
 
-  size_t size() { return _queue.atomic()->size(); }
+  size_t size() { return queue_.atomic()->size(); }
 
 private:
-  Lockable<QueueClass> _queue;
-  std::condition_variable_any _condVar;
-  std::atomic_bool _closed;
+  Lockable<QueueClass> queue_;
+  std::condition_variable_any queueNotEmpty_;
+  std::atomic_bool closed_;
 };
 
 } // namespace threading

@@ -1,16 +1,15 @@
-#include <chrono>
-#include <functional>
+#include <fstream>
 #include <iostream>
-#include <memory>
-#include <string>
-
+#include <maf/utils/serialization/BASerializer.h>
+#include <maf/utils/serialization/StreamSerializer.h>
 #include <map>
 #include <set>
+#include <string>
 
 #include <maf/utils/serialization/MafObjectBegin.mc.h>
 
 OBJECT(Header)
-  MEMBERS((std::string, index), (std::string, name))
+    MEMBERS((std::string, index), (std::string, name))
 ENDOBJECT(Header)
 
 using HeaderMap = std::map<std::string, Header>;
@@ -20,19 +19,18 @@ using SpecialMap =
 using IntIntMap = std::map<int, int>;
 
 OBJECT(SecurityScanRequestMsg)
-  MEMBERS(
-  (int64_t, index, 100),
-  (std::string, name),
-  (HeaderMap, headers),
-  (std::vector<std::string>, custom_list),
-  (double, double_value),
-  (SpecialMap, special_map)
-  )
+    MEMBERS
+    (
+        (int64_t, index, 100),
+        (std::string, name),
+        (HeaderMap, headers),
+        (std::vector<std::string>, custom_list),
+        (double, double_value),
+        (SpecialMap, special_map)
+    )
 ENDOBJECT(SecurityScanRequestMsg)
 
 #include <maf/utils/serialization/MafObjectEnd.mc.h>
-
-#include <maf/utils/serialization/BASerializer.h>
 
 static void serializeTest(maf::srz::Serializer &srz) {
   SecurityScanRequestMsg s;
@@ -76,9 +74,6 @@ static void testBASerializer() {
   maf::srz::BADeserializer dszr{srz.mutableBytes()};
   deserializeTest(dszr);
 }
-
-#include <fstream>
-#include <maf/utils/serialization/StreamSerializer.h>
 
 static void testStreamSerializer() {
   std::string path = "helloworld.dat";

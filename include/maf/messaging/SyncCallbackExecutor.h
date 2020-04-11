@@ -3,12 +3,13 @@
 
 #include "CallbackExecutorIF.h"
 #include <maf/logging/Logger.h>
+#include <maf/patterns/Patterns.h>
 #include <memory>
 
 namespace maf {
 namespace messaging {
 
-class SyncCallbackExecutor : public CallbackExecutorIF {
+class SyncCallbackExecutor : public CallbackExecutorIF, pattern::Unasignable {
 public:
   virtual bool execute(CallbackType callback) noexcept override {
     if (callback) {
@@ -26,9 +27,10 @@ public:
 };
 
 inline std::shared_ptr<CallbackExecutorIF> syncExecutor() {
-  return std::shared_ptr<SyncCallbackExecutor>(new SyncCallbackExecutor{});
+  static std::shared_ptr<CallbackExecutorIF> executor{
+      new SyncCallbackExecutor{}};
+  return executor;
 }
-
 
 } // namespace messaging
 } // namespace maf

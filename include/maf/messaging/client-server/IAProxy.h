@@ -1,18 +1,16 @@
 #pragma once
 
-#include "DefaultMessageTrait.h"
+#include "DefaultParamTrait.h"
 #include "Proxy.h"
 
 namespace maf {
 namespace messaging {
 namespace inapp {
 
-using Proxy = Proxy<DefaultMessageTrait>;
+using Proxy = Proxy<DefaultParamTrait>;
 using ProxyPtr = std::shared_ptr<Proxy>;
 
-template <class CSParam> using ResponseType = Proxy::ResponseType<CSParam>;
-
-template <class CSParam> using ResponsePtr = Proxy::ResponsePtr<CSParam>;
+template <class CSParam> using Response = Proxy::Response<CSParam>;
 
 using ExecutorPtr = Proxy::ExecutorPtr;
 using SVStatusObsvWptr = Proxy::SVStatusObsvWptr;

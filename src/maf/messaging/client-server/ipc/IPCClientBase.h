@@ -4,6 +4,7 @@
 #include "BytesCommunicator.h"
 #include "IPCTypes.h"
 #include <thread>
+#include <condition_variable>
 
 namespace maf {
 namespace messaging {
@@ -30,7 +31,9 @@ public:
 protected:
   void monitorServerStatus(long long intervalMs);
   std::thread serverMonitorThread_;
-  std::unique_ptr<SyncTimer> serverMonitorTimer_;
+  std::condition_variable stopCondition_;
+  std::mutex mutex_;
+  bool stopped_ = false;
 };
 
 } // namespace ipc

@@ -25,8 +25,8 @@ public:
                        CSMessageContentHandlerCallback callback,
                        ActionCallStatus *callStatus) override;
 
-  ActionCallStatus unregisterBroadcast(const RegID &regID) override;
-  ActionCallStatus unregisterBroadcastAll(const OpID &propertyID) override;
+  ActionCallStatus unregister(const RegID &regID) override;
+  ActionCallStatus unregisterAll(const OpID &propertyID) override;
 
   RegID sendRequestAsync(const OpID &opID,
                          const CSMsgContentBasePtr &msgContent,

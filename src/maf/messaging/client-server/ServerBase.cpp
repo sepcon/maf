@@ -9,12 +9,10 @@ namespace messaging {
 
 bool ServerBase::registerServiceProvider(const ServiceProviderIFPtr &provider) {
   if (provider) {
-    std::unique_lock lock(providers_);
     auto [itInsertedPos, inserted] =
-        providers_->try_emplace(provider->serviceID(), provider);
+        providers_.atomic()->try_emplace(provider->serviceID(), provider);
 
     if (inserted) {
-      lock.unlock();
       MAF_LOGGER_INFO("New Service provider was successfully registered, "
                       "service id = ",
                       provider->serviceID());
@@ -22,6 +20,9 @@ bool ServerBase::registerServiceProvider(const ServiceProviderIFPtr &provider) {
                                   Availability::Unavailable,
                                   Availability::Available);
       return true;
+    } else {
+      MAF_LOGGER_ERROR("Service provider of `", provider->serviceID(),
+                       "` has already been registered!");
     }
   }
 

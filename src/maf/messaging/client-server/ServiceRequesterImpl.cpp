@@ -3,24 +3,20 @@
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSError.h>
 #include <maf/messaging/client-server/ClientIF.h>
-
-#define SET_PTR_VALUE(pErrorStore, errorValue)                                 \
-  if (pErrorStore) {                                                           \
-    *pErrorStore = errorValue;                                                 \
-  }                                                                            \
-  static_cast<void *>(nullptr)
+#include <maf/utils/Pointers.h>
 
 #define SET_ERROR_AND_RETURN_IF(condition, pErrorStore, errorValue,            \
                                 returnedValue)                                 \
   if (condition) {                                                             \
-    SET_PTR_VALUE(pErrorStore, errorValue);                                    \
+    assign_ptr(pErrorStore, errorValue);                                       \
     return returnedValue;                                                      \
   }                                                                            \
   static_cast<void *>(nullptr)
 
 namespace maf {
-
 namespace messaging {
+
+using util::assign_ptr;
 
 bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg) {
   bool handled = true;
@@ -109,7 +105,7 @@ void ServiceRequesterImpl::abortAction(const RegID &regID,
       RegID::reclaimID(regID, idMgr_);
     }
 
-    SET_PTR_VALUE(callStatus, status);
+    assign_ptr(callStatus, status);
   }
 }
 
@@ -205,15 +201,15 @@ ServiceRequesterImpl::sendMessageSync(const OpID &operationID, OpCode opCode,
 
           abortAction(regID, nullptr);
 
-          SET_PTR_VALUE(callStatus, ActionCallStatus::Timeout);
+          assign_ptr(callStatus, ActionCallStatus::Timeout);
         }
       }
     } catch (const std::exception &e) {
-      SET_PTR_VALUE(callStatus, ActionCallStatus::FailedUnknown);
+      assign_ptr(callStatus, ActionCallStatus::FailedUnknown);
       MAF_LOGGER_ERROR(
           "Error while waiting for result from server(Exception): ", e.what());
     } catch (...) {
-      SET_PTR_VALUE(callStatus, ActionCallStatus::FailedUnknown);
+      assign_ptr(callStatus, ActionCallStatus::FailedUnknown);
       MAF_LOGGER_ERROR("Unknown exception when sending sync request to server");
     }
   } else // failed to send request to server
@@ -275,12 +271,12 @@ RegID ServiceRequesterImpl::registerNotification(
       regID.clear();
     }
 
-    SET_PTR_VALUE(callStatus, status);
+    assign_ptr(callStatus, status);
   } else if (opCode == OpCode::StatusRegister) {
     if (auto cachedProperty = getCachedProperty(opID)) {
       callback(cachedProperty);
     }
-    SET_PTR_VALUE(callStatus, ActionCallStatus::Success);
+    assign_ptr(callStatus, ActionCallStatus::Success);
   }
 
   return regID;
@@ -314,7 +310,7 @@ RegID ServiceRequesterImpl::registerSignal(
                               std::move(callback), callStatus);
 }
 
-ActionCallStatus ServiceRequesterImpl::unregisterBroadcast(const RegID &regID) {
+ActionCallStatus ServiceRequesterImpl::unregister(const RegID &regID) {
   auto callstatus = ActionCallStatus::Success;
 
   if (serviceUnavailable()) {
@@ -337,7 +333,7 @@ ActionCallStatus ServiceRequesterImpl::unregisterBroadcast(const RegID &regID) {
 }
 
 ActionCallStatus
-ServiceRequesterImpl::unregisterBroadcastAll(const OpID &propertyID) {
+ServiceRequesterImpl::unregisterAll(const OpID &propertyID) {
   auto callstatus = ActionCallStatus::Success;
   if (serviceUnavailable()) {
     callstatus = ActionCallStatus::ServiceUnavailable;
@@ -479,7 +475,7 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
     regID.clear();
   }
 
-  SET_PTR_VALUE(callStatus, status);
+  assign_ptr(callStatus, status);
 
   return regID;
 }
@@ -487,7 +483,7 @@ RegID ServiceRequesterImpl::storeAndSendRequestToServer(
 size_t ServiceRequesterImpl::storeRegEntry(
     RegEntriesMap &regInfoEntries, const OpID &propertyID,
     CSMessageContentHandlerCallback callback, RegID &regID) {
-  regID.requestID = idMgr_.allocateNewID();
+  RegID::allocateUniqueID(regID, idMgr_);
   regID.opID = propertyID;
 
   std::lock_guard lock(regInfoEntries);

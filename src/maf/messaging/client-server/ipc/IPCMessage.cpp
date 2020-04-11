@@ -30,13 +30,13 @@ srz::ByteArray IPCMessage::toBytes() {
   BASerializer sr;
 
   sr << serviceID() << operationID() << operationCode() << requestID()
-     << sourceAddress() << (content() ? content()->type() : ContentType::NA);
+     << sourceAddress() << (content_ ? content_->type() : ContentType::NA);
 
-  if (content()) {
-    if (content()->type() == ContentType::Error) {
-      encodeAsError(sr, content());
-    } else if (content()->type() != ContentType::NA) {
-      auto ipcContent = static_cast<BytesCarrier *>(content().get());
+  if (content_) {
+    if (content_->type() == ContentType::Error) {
+      encodeAsError(sr, content_);
+    } else if (content_->type() != ContentType::NA) {
+      auto ipcContent = static_cast<BytesCarrier *>(content_.get());
 
       sr << ipcContent->payload();
     } else {
@@ -54,8 +54,8 @@ bool IPCMessage::fromBytes(
   BADeserializer ds(*bytes);
   try {
     ContentType contentType = ContentType::NA;
-    ds >> _serviceID >> _operationID >> _operationCode >> _requestID >>
-        _sourceAddress >> contentType;
+    ds >> serviceID_ >> operationID_ >> operationCode_ >> requestID_ >>
+        sourceAddress_ >> contentType;
 
     if (contentType == ContentType::Error) {
       auto error = std::make_shared<CSError>();
@@ -70,7 +70,7 @@ bool IPCMessage::fromBytes(
     return true;
   } catch (const std::exception &e) {
     MAF_LOGGER_ERROR(
-        "Error occurred when trying to decode IPCMessage from bytes: ",
+        "Error occurred when trying to translate IPCMessage from bytes: ",
         e.what());
   }
 

@@ -2,7 +2,7 @@
 #define CSCONTRACTDEFINESBEGIN_MC_H
 
 #include <maf/messaging/client-server/CSTypes.h>
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
+#include <maf/messaging/client-server/SerializableParamTrait.h>
 #include <maf/messaging/client-server/internal/cs_param.h>
 
 #endif // CSCONTRACTDEFINESBEGIN_MC_H
@@ -150,5 +150,4 @@ public:                                                                        \
     return ptr;                                                                \
   }
 
-#define ALIAS(NewType, OldType, ...) using NewType = OldType __VA_ARGS__;
 

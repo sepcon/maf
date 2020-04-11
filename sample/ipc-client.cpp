@@ -1,12 +1,12 @@
 #include <maf/messaging/client-server/ipc/LocalIPCProxy.h>
 #include <maf/utils/TimeMeasurement.h>
-#include "../Client.h"
+#include "Client.h"
 #include <iostream>
 
 using namespace maf::messaging::ipc;
 using namespace maf;
 
-static const auto serverAddress = Address{SERVER_NAME, WEATHER_SERVER_PORT};
+static const auto SERVER_ADDRESS = Address{SERVER_NAME, WEATHER_SERVER_PORT};
 
 int main() {
   logging::init(
@@ -21,7 +21,7 @@ int main() {
 
   MAF_LOGGER_DEBUG("Client is starting up!");
 
-  ClientComponent{local::createProxy(serverAddress, SID_WeatherService)}
+  ClientComponent{local::createProxy(SERVER_ADDRESS, SID_WeatherService)}
       .onMessage<EndOfRequestChainMsg>([](auto) { RunningComponent::stop(); })
       .run();
 

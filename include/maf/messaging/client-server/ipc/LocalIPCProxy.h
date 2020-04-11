@@ -1,22 +1,19 @@
 #pragma once
 
 #include <maf/messaging/client-server/Proxy.h>
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
+#include <maf/messaging/client-server/SerializableParamTrait.h>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 namespace local {
 
-using Proxy = Proxy<SerializableMessageTrait>;
+using Proxy = Proxy<SerializableParamTrait>;
 using ProxyPtr = std::shared_ptr<Proxy>;
-
-template <class CSParam> using ResponseType = Proxy::ResponseType<CSParam>;
-
-template <class CSParam> using ResponsePtr = Proxy::ResponsePtr<CSParam>;
-
 using ExecutorPtr = Proxy::ExecutorPtr;
 using SVStatusObsvWptr = Proxy::SVStatusObsvWptr;
+template <class CSParam> using Response = Proxy::Response<CSParam>;
+
 
 inline ProxyPtr createProxy(const Address &addr, const ServiceID &sid,
                             ExecutorPtr executor = {},

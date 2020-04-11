@@ -43,7 +43,7 @@ if(MAF_PLATFORM_NAME)
     include_directories(${MAF_PLATFORM_DIR})
 endif(MAF_PLATFORM_NAME)
 
-if(MAF_ENABLE_SHARE)
+if(BUILD_SHARED_LIBS)
     add_definitions(-DMAF_SHARED_LIBRARY)
 else()
     add_definitions(-DMAF_STATIC_LIBRARY)
@@ -62,11 +62,11 @@ set( MAF_ALL_SOURCES
 
 set(MAF_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-if(MAF_ENABLE_SHARE)
+if(BUILD_SHARED_LIBS)
     add_library(maf SHARED ${MAF_ALL_SOURCES})
 else()
     add_library(maf STATIC ${MAF_ALL_SOURCES})
-endif(MAF_ENABLE_SHARE)
+endif(BUILD_SHARED_LIBS)
 
 if(
     ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
@@ -77,11 +77,11 @@ if(
 endif()
 
 
-# specify variable MAF_ENABLE_TEST to disable building test programs
-if(MAF_ENABLE_TEST)
-    set(MAF_TEST_FOLDER_FILTER "Tests")
-    add_subdirectory(test)
-endif(MAF_ENABLE_TEST)
+# specify variable MAF_BUILD_SAMPLE to disable building test programs
+if(MAF_BUILD_SAMPLE)
+    add_subdirectory("sample/")
+endif(MAF_BUILD_SAMPLE)
+
 if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
 endif(MSVC)

@@ -43,8 +43,10 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba,
       } else if (GetLastError() == ERROR_PIPE_BUSY) {
         std::this_thread::sleep_for(
             std::chrono::milliseconds(std::rand() % 100));
-        MAF_LOGGER_WARN("Retry to send ", ba.size(), " bytes ", ++retryTimes,
-                        " times to address ", pipeName_);
+        MAF_LOGGER_WARN(
+            "Retry to send ", ba.size(), " bytes ", ++retryTimes,
+            " times to address ",
+            (destination.valid() ? destination : receiverAddress_).dump());
       } else {
         MAF_LOGGER_ERROR("Connect pipe with error: ", GetLastError());
         break;
@@ -64,9 +66,10 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba,
   } else {
     // errCode = ActionCallStatus::ReceiverUnavailable;
     // dont need to set here, it must be default failed
-    MAF_LOGGER_WARN("Receiver is not available for receiving message, "
-                    "receiver's address = ",
-                    pipeName_);
+    MAF_LOGGER_WARN(
+        "Receiver is not available for receiving message, "
+        "receiver's address = ",
+        (destination.valid() ? destination : receiverAddress_).dump());
   }
 
   return errCode;

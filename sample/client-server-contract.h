@@ -19,6 +19,14 @@ constexpr auto SERVER_TOTAL_UPDATES_PER_REQUEST = 10000000;
 // clang-format off
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 
+REQUEST(get_pid)
+    OUTPUT((int, pid))
+ENDREQUEST()
+
+REQUEST(kill_process)
+    INPUT((int, pid))
+ENDREQUEST()
+
 REQUEST(today_weather)
     using StringList = std::vector<std::string>;
     OUTPUT
@@ -44,25 +52,6 @@ VOID_REQUEST(update_status)
 VOID_REQUEST(broad_cast_signal)
 
 VOID_REQUEST(shutdown)
-
-
-REQUEST(today_weather1)
-    using  StringList = std::vector<std::string>;;
-    OUTPUT
-        (
-            (int, place_id, -1),
-            (std::string, the_status, "It is going to rain now!"),
-            (StringList, list_of_places),
-            (StringList, shared_list_of_places)
-            )
-    INPUT
-        (
-            (std::string, client_name, "This s client"),
-            (uint32_t, command, 0)
-            )
-
-ENDREQUEST(today_weather1)
-
 
 PROPERTY(simple)
     using CustomHeader = std::map<std::string, std::string>;
@@ -98,8 +87,8 @@ STATUS
 ENDPROPERTY(compliance1)
 
 PROPERTY(compliance2)
-STATUS
-    (
+    STATUS
+        (
         (bool, compliant, true),
         (bool, critical, false),
         (int, updated_count, 0),
@@ -152,6 +141,12 @@ ENDSIGNAL(client_info_request)
 
 VOID_REQUEST(unhandled)
 
+REQUEST(implicitly_response)
+    INPUT
+    (
+        (std::string, client_name)
+    )
+ENDREQUEST(implicitly_response)
 // clang-format on
 
 #include <maf/messaging/client-server/CSContractDefinesEnd.mc.h>

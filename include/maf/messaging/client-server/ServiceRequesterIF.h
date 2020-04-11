@@ -11,6 +11,7 @@ namespace maf {
 namespace messaging {
 
 using RequestTimeoutMs = std::chrono::milliseconds;
+constexpr auto InfiniteWait = RequestTimeoutMs::max();
 
 class ServiceRequesterIF : public ServiceMessageReceiver,
                            public ServiceStatusObserverIF {
@@ -23,8 +24,8 @@ public:
                                CSMessageContentHandlerCallback callback,
                                ActionCallStatus *callStatus) = 0;
 
-  virtual ActionCallStatus unregisterBroadcast(const RegID &regID) = 0;
-  virtual ActionCallStatus unregisterBroadcastAll(const OpID &propertyID) = 0;
+  virtual ActionCallStatus unregister(const RegID &regID) = 0;
+  virtual ActionCallStatus unregisterAll(const OpID &propertyID) = 0;
 
   virtual RegID sendRequestAsync(const OpID &opID,
                                  const CSMsgContentBasePtr &msgContent,

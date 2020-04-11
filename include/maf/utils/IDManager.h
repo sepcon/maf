@@ -46,10 +46,12 @@ public:
   static constexpr const IDType INVALID_ID = static_cast<IDType>(-1);
   IDManager() : idCounter_(0) {}
   IDType allocateNewID() {
-    auto id = idCounter_.fetch_add(1, std::memory_order_relaxed);
-    if (id == INVALID_ID) {
+    auto id = INVALID_ID;
+    do {
+      // loop until getting a non invalid id
       id = idCounter_.fetch_add(1, std::memory_order_relaxed);
-    }
+    } while (id == INVALID_ID);
+
     return id;
   }
   void reclaimUsedID(IDType /*id*/) {}

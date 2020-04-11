@@ -1,33 +1,23 @@
 #pragma once
 
 #include "BytesCarrier.h"
-#include "MessageTraitBase.h"
+#include "ParamTranslatingStatus.h"
+#include "ParamTraitBase.h"
+#include <maf/utils/Pointers.h>
 #include <maf/logging/Logger.h>
 
 namespace maf {
-
 namespace messaging {
 
-class SerializableMessageTrait : public MessageTraitBase {
+using util::assign_ptr;
+class SerializableParamTrait : public ParamTraitBase {
 public:
-  template <class Message> static constexpr OpIDConst getOperationID() {
-    return Message::operationID();
-  }
-
-  template <class Message> static OpID getOperationID(Message *msg) {
-    if (msg) {
-      return OpIDInvalid;
-    } else {
-      return msg->operationID();
-    }
-  }
-
   template <class Message>
   static std::shared_ptr<Message>
-  decode(const CSMsgContentBasePtr &csMsgContent,
-         CodecStatus *status = nullptr) {
+  translate(const CSMsgContentBasePtr &csMsgContent,
+         TranslationStatus *status = nullptr) {
     if (!csMsgContent) {
-      assignCodecStatus(status, EmptyInput);
+      assign_ptr(status, TranslationStatus::NoSource);
       return {};
     }
 
@@ -41,15 +31,15 @@ public:
       if (!byteCarrier->payload().empty()) {
         dataCarrier = std::make_shared<MessagePureT>();
         dataCarrier->fromBytes(byteCarrier->payload());
-        assignCodecStatus(status, CodecStatus::Success);
+        assign_ptr(status, TranslationStatus::Success);
       } else {
-        assignCodecStatus(status, CodecStatus::EmptyInput);
+        assign_ptr(status, TranslationStatus::NoSource);
       }
       return dataCarrier;
 
     } catch (const std::exception &e) {
-      assignCodecStatus(status, CodecStatus::MalformInput);
-      MAF_LOGGER_ERROR("Could not decode message, exception details: ",
+      assign_ptr(status, TranslationStatus::DestSrcMismatch);
+      MAF_LOGGER_ERROR("Could not translate message, exception details: ",
                        e.what());
     }
 
@@ -57,19 +47,10 @@ public:
   }
 
   template <class Message>
-  static CSMsgContentBasePtr encode(const std::shared_ptr<Message> &msg) {
+  static CSMsgContentBasePtr translate(const std::shared_ptr<Message> &msg) {
     auto bytesCarrier = std::make_shared<BytesCarrier>(msg->type());
     bytesCarrier->setPayload(msg->toBytes());
     return bytesCarrier;
-  }
-
-  template <class Message>
-  static std::string dump(const std::shared_ptr<Message> &msg) {
-    if (msg) {
-      return msg->dump();
-    } else {
-      return "Null";
-    }
   }
 };
 

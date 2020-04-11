@@ -28,10 +28,10 @@ public:
 
 protected:
   void onBytesCome(const std::shared_ptr<srz::ByteArray> &bytes) override;
-  std::unique_ptr<IPCSender> _pSender;
-  std::unique_ptr<IPCReceiver> _pReceiver;
-  CSMessageReceiverIF *_ipcMsgReceiver;
-  bool _isClient = false;
+  std::unique_ptr<IPCSender> pSender_;
+  std::unique_ptr<IPCReceiver> pReceiver_;
+  CSMessageReceiverIF *ipcMsgReceiver_;
+  bool isClient_ = false;
 };
 
 } // namespace ipc

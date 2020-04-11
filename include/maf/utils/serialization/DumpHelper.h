@@ -12,7 +12,7 @@ namespace maf {
 namespace srz {
 
 using namespace nstl;
-
+constexpr inline size_t IndentSize = 2;
 inline int nextLevel(int currentLevel)
 {
     if(currentLevel < 0)
@@ -29,13 +29,13 @@ inline std::string getIndent(int indentLevel, bool newLine = false)
     if(indentLevel < 0) { return ""; }
     if(newLine)
     {
-        auto str = std::string(static_cast<size_t>(indentLevel * 4) + 1, ' ');
+        auto str = std::string(static_cast<size_t>(indentLevel * IndentSize) + 1, ' ');
         str[0] = '\n';
         return str;
     }
     else
     {
-        return std::string(static_cast<size_t>(indentLevel * 4), ' ');
+        return std::string(static_cast<size_t>(indentLevel * IndentSize), ' ');
     }
 }
 

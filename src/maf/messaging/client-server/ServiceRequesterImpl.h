@@ -49,9 +49,9 @@ struct ServiceRequesterImpl {
   ServiceStatusObservers serviceStatusObservers_;
   CSMsgContentMap propertiesCache_;
   std::weak_ptr<ClientIF> client_;
-  util::IDManager idMgr_;
+  CSIDManager idMgr_;
   ServiceID sid_;
-  std::atomic<Availability> serviceStatus_;
+  std::atomic<Availability> serviceStatus_ = Availability::Unavailable;
 
   ServiceRequesterImpl(const ServiceID &sid, std::weak_ptr<ClientIF> client);
   ~ServiceRequesterImpl();
@@ -67,8 +67,8 @@ struct ServiceRequesterImpl {
                        CSMessageContentHandlerCallback callback,
                        ActionCallStatus *callStatus);
 
-  ActionCallStatus unregisterBroadcast(const RegID &regID);
-  ActionCallStatus unregisterBroadcastAll(const OpID &propertyID);
+  ActionCallStatus unregister(const RegID &regID);
+  ActionCallStatus unregisterAll(const OpID &propertyID);
 
   RegID sendRequestAsync(const OpID &opID,
                          const CSMsgContentBasePtr &msgContent,

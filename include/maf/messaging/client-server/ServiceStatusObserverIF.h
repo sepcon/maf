@@ -8,6 +8,7 @@ namespace messaging {
 
 class ServiceStatusObserverIF {
 public:
+  virtual ~ServiceStatusObserverIF() = default;
   virtual void onServiceStatusChanged(const ServiceID &sid,
                                       Availability oldStatus,
                                       Availability newStatus) noexcept = 0;

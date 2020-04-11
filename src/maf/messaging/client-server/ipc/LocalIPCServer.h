@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IPCServerBase.h"
-#include <maf/messaging/client-server/SerializableMessageTrait.h>
+#include <maf/messaging/client-server/SerializableParamTrait.h>
 #include <maf/patterns/Patterns.h>
 
 namespace maf {

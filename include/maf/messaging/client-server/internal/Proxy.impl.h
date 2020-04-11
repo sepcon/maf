@@ -7,23 +7,25 @@
 
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSManager.h>
-#include <maf/messaging/client-server/MessageTraitBase.h>
+#include <maf/messaging/client-server/ParamTraitBase.h>
+#include <maf/utils/Pointers.h>
 
 namespace maf {
 namespace messaging {
 
-template <class MTrait>
-std::shared_ptr<Proxy<MTrait>>
-Proxy<MTrait>::createProxy(const ConnectionType &contype, const Address &addr,
+template <class PTrait>
+std::shared_ptr<Proxy<PTrait>>
+Proxy<PTrait>::createProxy(const ConnectionType &contype, const Address &addr,
                            const ServiceID &sid, ExecutorPtr executor,
                            SVStatusObsvWptr statusObsv) noexcept {
   if (auto requester =
           CSManager::instance().getServiceRequester(contype, addr, sid)) {
-    auto proxy = std::shared_ptr<Proxy<MTrait>>{
-        new Proxy<MTrait>(requester, std::move(executor))};
 
-    requester->registerServiceStatusObserver(std::move(statusObsv));
+    auto proxy = std::shared_ptr<Proxy<PTrait>>{
+        new Proxy<PTrait>(std::move(requester), std::move(executor))};
+    proxy->registerServiceStatusObserver(std::move(statusObsv));
     return proxy;
+
   } else {
     MAF_LOGGER_FATAL("Failed to get Client with connection type: ", contype,
                      " and address: ", addr.dump(-1));
@@ -31,38 +33,38 @@ Proxy<MTrait>::createProxy(const ConnectionType &contype, const Address &addr,
   return {};
 }
 
-template <class MTrait>
-Proxy<MTrait>::Proxy(RequesterPtr requester, ExecutorPtr executor) noexcept
+template <class PTrait>
+Proxy<PTrait>::Proxy(RequesterPtr requester, ExecutorPtr executor) noexcept
     : requester_{std::move(requester)}, executor_{std::move(executor)} {}
 
-template <class MTrait> const ServiceID &Proxy<MTrait>::serviceID() const {
+template <class PTrait> const ServiceID &Proxy<PTrait>::serviceID() const {
   return requester_->serviceID();
 }
 
-template <class MTrait> Availability Proxy<MTrait>::serviceStatus() const {
+template <class PTrait> Availability Proxy<PTrait>::serviceStatus() const {
   return requester_->serviceStatus();
 }
 
-template <class MTrait>
-void Proxy<MTrait>::registerServiceStatusObserver(SVStatusObsvWptr observer) {
+template <class PTrait>
+void Proxy<PTrait>::registerServiceStatusObserver(SVStatusObsvWptr observer) {
   requester_->registerServiceStatusObserver(std::move(observer));
 }
 
-template <class MTrait>
-void Proxy<MTrait>::unregisterServiceStatusObserver(
+template <class PTrait>
+void Proxy<PTrait>::unregisterServiceStatusObserver(
     const SVStatusObsvWptr &observer) {
   requester_->unregisterServiceStatusObserver(observer);
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class CSParam>
-CSMessageContentHandlerCallback Proxy<MTrait>::createResponseMsgHandlerCallback(
+CSMessageContentHandlerCallback Proxy<PTrait>::createResponseMsgHandlerCallback(
     ResponseProcessingCallback<CSParam> callback) {
   if (callback) {
     if (executor_) {
       return [callback = std::move(callback), executor = this->executor_](
                  const CSMsgContentBasePtr &msgContent) {
-        auto operationID = MTrait::template getOperationID<CSParam>();
+        auto operationID = getOpID<CSParam>();
 
         executor->execute([msgContent, callback = std::move(callback)] {
           // getResposne must be called on thread of executor
@@ -80,17 +82,16 @@ CSMessageContentHandlerCallback Proxy<MTrait>::createResponseMsgHandlerCallback(
   return {};
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class CSParam>
-CSMessageContentHandlerCallback Proxy<MTrait>::createUpdateMsgHandlerCallback(
+CSMessageContentHandlerCallback Proxy<PTrait>::createUpdateMsgHandlerCallback(
     UpdateProcessingCallback<CSParam> callback) {
   if (callback) {
     if (executor_) {
       return [callback = std::move(callback), executor = this->executor_](
                  const CSMsgContentBasePtr &msgContent) {
         executor->execute([msgContent, callback = std::move(callback)] {
-          auto output = getOutput<CSParam>(msgContent);
-          callback(output);
+          callback(getOutput<CSParam>(msgContent));
         });
       };
     } else {
@@ -102,52 +103,46 @@ CSMessageContentHandlerCallback Proxy<MTrait>::createUpdateMsgHandlerCallback(
   return {};
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class CSParam>
-typename Proxy<MTrait>::template ResponsePtr<CSParam>
-Proxy<MTrait>::getResposne(const CSMsgContentBasePtr &msgContent) {
+typename Proxy<PTrait>::template Response<CSParam>
+Proxy<PTrait>::getResposne(const CSMsgContentBasePtr &msgContent) {
+  using ResponseType = Response<CSParam>;
   if (!msgContent) {
-    return std::make_shared<ResponseType<CSParam>>(std::shared_ptr<CSParam>{});
+    return ResponseType{};
   }
 
   if (msgContent->type() == CSMessageContentBase::Type::Error) {
     auto err = std::static_pointer_cast<CSError>(msgContent);
-    MAF_LOGGER_ERROR("Got response error of request `",
-                     MTrait::template getOperationID<CSParam>(),
+    MAF_LOGGER_ERROR("Got response error of request `", getOpID<CSParam>(),
                      "`: ", err->dump());
-    return std::make_shared<ResponseType<CSParam>>(std::move(err));
+    return ResponseType{std::move(err)};
   }
 
-  if constexpr (!MTrait::template encodable<CSParam>()) {
-    return std::make_shared<ResponseType<CSParam>>(std::shared_ptr<CSParam>{});
+  if constexpr (!PTrait::template encodable<CSParam>()) {
+    return ResponseType{};
   }
 
-  auto output = getOutput<CSParam>(msgContent);
-
-  MAF_LOGGER_INFO(MTrait::template getOperationID<CSParam>(), "'s output:\n",
-                  MTrait::template dump<CSParam>(output));
-
-  return std::make_shared<ResponseType<CSParam>>(std::move(output));
+  return ResponseType{getOutput<CSParam>(msgContent)};
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class CSParam>
 std::shared_ptr<CSParam>
-Proxy<MTrait>::getOutput(const CSMsgContentBasePtr &msgContent) {
-  if constexpr (!MTrait::template encodable<CSParam>()) {
+Proxy<PTrait>::getOutput(const CSMsgContentBasePtr &msgContent) {
+  if constexpr (!PTrait::template encodable<CSParam>()) {
     return {};
   } else if (msgContent &&
              msgContent->type() != CSMessageContentBase::Type::Error) {
-    MessageTraitBase::CodecStatus decodeStatus;
-    auto output = MTrait::template decode<CSParam>(msgContent, &decodeStatus);
+    TranslationStatus decodeStatus;
+    auto output = translate<CSParam>(msgContent, &decodeStatus);
 
-    if (decodeStatus != MessageTraitBase::MalformInput) {
-      MAF_LOGGER_INFO(MTrait::template getOperationID<CSParam>(),
-                      "'s output:\n", MTrait::template dump<CSParam>(output));
+    if (decodeStatus != TranslationStatus::DestSrcMismatch) {
+      MAF_LOGGER_VERBOSE(getOpID<CSParam>(), "'s output:\n",
+                         PTrait::template dump<CSParam>(output));
       return output;
     } else {
-      MAF_LOGGER_WARN("Failed to get status of [",
-                      MTrait::template getOperationID<CSParam>(),
+      MAF_LOGGER_WARN("Failed to decode response of [", getOpID<CSParam>(),
                       "] "
                       "from server");
     }
@@ -155,16 +150,17 @@ Proxy<MTrait>::getOutput(const CSMsgContentBasePtr &msgContent) {
 
   return {};
 }
-template <class MTrait>
-template <class Status, AllowOnlyStatusT<MTrait, Status>>
-RegID Proxy<MTrait>::registerStatus(UpdateProcessingCallback<Status> callback,
+template <class PTrait>
+template <class Status, AllowOnlyStatusT<PTrait, Status>>
+RegID Proxy<PTrait>::registerStatus(UpdateProcessingCallback<Status> callback,
                                     ActionCallStatus *callStatus) {
-  auto propertyID = MTrait::template getOperationID<Status>();
-  if (callback) {
-    return requester_->registerStatus(
-        propertyID, createUpdateMsgHandlerCallback(std::move(callback)),
-        callStatus);
+  auto propertyID = getOpID<Status>();
+  if (auto translatorCallback =
+          createUpdateMsgHandlerCallback(std::move(callback))) {
+    return requester_->registerStatus(propertyID, std::move(translatorCallback),
+                                      callStatus);
   } else {
+    util::assign_ptr(callStatus, ActionCallStatus::InvalidParam);
     MAF_LOGGER_ERROR("Registering status id[ ", propertyID,
                      "] "
                      "failed, Please provide non-empty callback");
@@ -172,28 +168,31 @@ RegID Proxy<MTrait>::registerStatus(UpdateProcessingCallback<Status> callback,
   return {};
 }
 
-template <class MTrait>
-template <class Attributes, AllowOnlyAttributesT<MTrait, Attributes>>
-RegID Proxy<MTrait>::registerSignal(
+template <class PTrait>
+template <class Attributes, AllowOnlyAttributesT<PTrait, Attributes>>
+RegID Proxy<PTrait>::registerSignal(
     UpdateProcessingCallback<Attributes> callback,
     ActionCallStatus *callStatus) {
-  auto signalID = MTrait::template getOperationID<Attributes>();
-  if (callback) {
-    return requester_->registerSignal(
-        signalID, createUpdateMsgHandlerCallback(std::move(callback)),
-        callStatus);
+
+  auto signalID = getOpID<Attributes>();
+  if (auto translatedCallback =
+          createUpdateMsgHandlerCallback(std::move(callback))) {
+    return requester_->registerSignal(signalID, std::move(translatedCallback),
+                                      callStatus);
   } else {
-    MAF_LOGGER_ERROR("Registering signal id[, ", signalID,
-                     "] failed, Please provide non-empty callback");
+    util::assign_ptr(callStatus, ActionCallStatus::InvalidParam);
+    MAF_LOGGER_ERROR("Failed to create translater callback for processing "
+                     "signal `",
+                     signalID, "`");
   }
   return {};
 }
 
-template <class MTrait>
-template <class Signal, AllowOnlySignalT<MTrait, Signal>>
-RegID Proxy<MTrait>::registerSignal(std::function<void()> callback,
+template <class PTrait>
+template <class Signal, AllowOnlySignalT<PTrait, Signal>>
+RegID Proxy<PTrait>::registerSignal(std::function<void()> callback,
                                     ActionCallStatus *callStatus) {
-  auto signalID = MTrait::template getOperationID<Signal>();
+  auto signalID = getOpID<Signal>();
   if (callback) {
     if (executor_) {
       auto asyncHandler = [signalID, callback = std::move(callback),
@@ -216,21 +215,21 @@ RegID Proxy<MTrait>::registerSignal(std::function<void()> callback,
   return {};
 }
 
-template <class MTrait>
-ActionCallStatus Proxy<MTrait>::unregisterBroadcast(const RegID &regID) {
-  return requester_->unregisterBroadcast(regID);
+template <class PTrait>
+ActionCallStatus Proxy<PTrait>::unregister(const RegID &regID) {
+  return requester_->unregister(regID);
 }
 
-template <class MTrait>
-ActionCallStatus Proxy<MTrait>::unregisterBroadcastAll(const OpID &propertyID) {
-  return requester_->unregisterBroadcastAll(propertyID);
+template <class PTrait>
+ActionCallStatus Proxy<PTrait>::unregisterAll(const OpID &propertyID) {
+  return requester_->unregisterAll(propertyID);
 }
 
-template <class MTrait>
-template <class Status, AllowOnlyStatusT<MTrait, Status>>
-std::shared_ptr<Status> Proxy<MTrait>::getStatus(ActionCallStatus *callStatus,
+template <class PTrait>
+template <class Status, AllowOnlyStatusT<PTrait, Status>>
+std::shared_ptr<Status> Proxy<PTrait>::getStatus(ActionCallStatus *callStatus,
                                                  RequestTimeoutMs timeout) {
-  auto propertyID = MTrait::template getOperationID<Status>();
+  auto propertyID = getOpID<Status>();
   if (auto msgContent =
           requester_->getStatus(propertyID, callStatus, timeout)) {
     return getOutput<Status>(msgContent);
@@ -239,68 +238,73 @@ std::shared_ptr<Status> Proxy<MTrait>::getStatus(ActionCallStatus *callStatus,
   }
 }
 
-template <class MTrait>
-template <class Status, AllowOnlyStatusT<MTrait, Status>>
+template <class PTrait>
+template <class Status, AllowOnlyStatusT<PTrait, Status>>
 ActionCallStatus
-Proxy<MTrait>::getStatus(UpdateProcessingCallback<Status> onStatusCallback) {
-  return requester_->getStatus(
-      MTrait::template getOperationID<Status>(),
-      createUpdateMsgHandlerCallback(std::move(onStatusCallback)));
+Proxy<PTrait>::getStatus(UpdateProcessingCallback<Status> onStatusCallback) {
+  if (auto translatorCallback =
+          createUpdateMsgHandlerCallback(std::move(onStatusCallback))) {
+    return requester_->getStatus(getOpID<Status>(),
+                                 std::move(translatorCallback));
+  } else {
+    return ActionCallStatus::InvalidParam;
+  }
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class RequestOrOutput, class Input,
-          AllowOnlyRequestOrOutputT<MTrait, RequestOrOutput>,
-          AllowOnlyInputT<MTrait, Input>>
-RegID Proxy<MTrait>::sendRequestAsync(
+          AllowOnlyRequestOrOutputT<PTrait, RequestOrOutput>,
+          AllowOnlyInputT<PTrait, Input>>
+RegID Proxy<PTrait>::sendRequestAsync(
     const std::shared_ptr<Input> &input,
     ResponseProcessingCallback<RequestOrOutput> callback,
     ActionCallStatus *callStatus) {
+  static_assert(getOpID<RequestOrOutput>() == getOpID<Input>(),
+                "Input and Request/Output must have same OpID");
   return requester_->sendRequestAsync(
-      MTrait::template getOperationID<RequestOrOutput>(),
-      MTrait::template encode(input),
+      getOpID<RequestOrOutput>(), translate(input),
       createResponseMsgHandlerCallback(std::move(callback)), callStatus);
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class RequestOrOutput,
-          AllowOnlyRequestOrOutputT<MTrait, RequestOrOutput>>
-RegID Proxy<MTrait>::sendRequestAsync(
+          AllowOnlyRequestOrOutputT<PTrait, RequestOrOutput>>
+RegID Proxy<PTrait>::sendRequestAsync(
     ResponseProcessingCallback<RequestOrOutput> callback,
     ActionCallStatus *callStatus) {
   return requester_->sendRequestAsync(
-      MTrait::template getOperationID<RequestOrOutput>(), {},
+      getOpID<RequestOrOutput>(), {},
       createResponseMsgHandlerCallback(std::move(callback)), callStatus);
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class RequestOrOutput, class Input,
-          AllowOnlyRequestOrOutputT<MTrait, RequestOrOutput>,
-          AllowOnlyInputT<MTrait, Input>>
-typename Proxy<MTrait>::template ResponsePtr<RequestOrOutput>
-Proxy<MTrait>::sendRequest(const std::shared_ptr<Input> &input,
+          AllowOnlyRequestOrOutputT<PTrait, RequestOrOutput>,
+          AllowOnlyInputT<PTrait, Input>>
+typename Proxy<PTrait>::template Response<RequestOrOutput>
+Proxy<PTrait>::sendRequest(const std::shared_ptr<Input> &input,
                            ActionCallStatus *callStatus,
                            RequestTimeoutMs timeout) {
-  return sendRequest<RequestOrOutput>(
-      MTrait::template getOperationID<RequestOrOutput>(),
-      MTrait::template encode(input), callStatus, timeout);
+  static_assert(getOpID<RequestOrOutput>() == getOpID<Input>(),
+                "Input and Output/Request must have same OpID");
+  return sendRequest<RequestOrOutput>(getOpID<RequestOrOutput>(),
+                                      translate(input), callStatus, timeout);
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class RequestOrOutput,
-          AllowOnlyRequestOrOutputT<MTrait, RequestOrOutput>>
-typename Proxy<MTrait>::template ResponsePtr<RequestOrOutput>
-Proxy<MTrait>::sendRequest(ActionCallStatus *callStatus,
+          AllowOnlyRequestOrOutputT<PTrait, RequestOrOutput>>
+typename Proxy<PTrait>::template Response<RequestOrOutput>
+Proxy<PTrait>::sendRequest(ActionCallStatus *callStatus,
                            RequestTimeoutMs timeout) {
-  return sendRequest<RequestOrOutput>(
-      MTrait::template getOperationID<RequestOrOutput>(), {}, callStatus,
-      timeout);
+  return sendRequest<RequestOrOutput>(getOpID<RequestOrOutput>(), {},
+                                      callStatus, timeout);
 }
 
-template <class MTrait>
+template <class PTrait>
 template <class RequestOrOutput>
-typename Proxy<MTrait>::template ResponsePtr<RequestOrOutput>
-Proxy<MTrait>::sendRequest(OpID actionID,
+typename Proxy<PTrait>::template Response<RequestOrOutput>
+Proxy<PTrait>::sendRequest(const OpID &actionID,
                            const CSMsgContentBasePtr &requestInput,
                            ActionCallStatus *callStatus,
                            RequestTimeoutMs timeout) {
@@ -321,14 +325,25 @@ Proxy<MTrait>::sendRequest(OpID actionID,
   }
 }
 
-template <class MTrait> void Proxy<MTrait>::setExecutor(ExecutorPtr executor) {
+template <class PTrait> void Proxy<PTrait>::setExecutor(ExecutorPtr executor) {
   executor_ = std::move(executor);
 }
 
-template <class MTrait>
-typename Proxy<MTrait>::ExecutorPtr
-Proxy<MTrait>::getExecutor() const noexcept {
+template <class PTrait>
+typename Proxy<PTrait>::ExecutorPtr
+Proxy<PTrait>::getExecutor() const noexcept {
   return executor_;
+}
+
+template <class PTrait>
+std::shared_ptr<Proxy<PTrait>>
+Proxy<PTrait>::with(Proxy::ExecutorPtr executor) {
+  assert(executor && "custom executor must not be null");
+  if (executor) {
+    return std::shared_ptr<Proxy>(
+        new Proxy{this->requester_, std::move(executor)});
+  }
+  return {};
 }
 
 } // namespace messaging

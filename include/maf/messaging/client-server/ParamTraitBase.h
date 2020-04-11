@@ -5,8 +5,7 @@
 namespace maf {
 namespace messaging {
 
-struct MessageTraitBase {
-  enum CodecStatus { Success, EmptyInput, MalformInput };
+struct ParamTraitBase {
 
   template <typename T>
   static constexpr bool IsStatus = std::is_base_of_v<cs_status, T>;
@@ -34,11 +33,29 @@ struct MessageTraitBase {
            std::is_base_of_v<cs_outputbase, T>;
   }
 
-  static void assignCodecStatus(CodecStatus *output, CodecStatus status) {
-    if (output) {
-      *output = status;
+
+  template <class Message> static constexpr OpIDConst getOperationID() {
+    return Message::operationID();
+  }
+
+  template <class Message> static OpID getOperationID(Message *msg) {
+    if (msg) {
+      return OpIDInvalid;
+    } else {
+      return msg->operationID();
     }
   }
+
+  template <class Message>
+  static std::string dump(const std::shared_ptr<Message> &msg) {
+    if (msg) {
+      return msg->dump();
+    } else {
+      return "Null";
+    }
+    //    return "Not Dumpable!";
+  }
+
 };
 } // namespace messaging
 } // namespace maf

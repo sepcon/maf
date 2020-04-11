@@ -1,6 +1,5 @@
 #pragma once
 
-#include <maf/utils/IDManager.h>
 #include <maf/utils/StringifyableEnum.h>
 #include <stdint.h>
 #include <string>
@@ -14,7 +13,7 @@ using OpID              = std::string;
 using OpIDConst         = const char*;
 using ServiceID         = std::string;
 using ServiceIDConst    = const char*;
-using RequestID         = util::IDManager::IDType;
+using RequestID         = uint64_t;
 using ConnectionType    = std::string;
 
 
@@ -35,7 +34,7 @@ MC_MAF_STRINGIFYABLE_ENUM(OpCode, char,
 
 constexpr OpIDConst         OpIDInvalid      = "";
 constexpr ServiceIDConst    ServiceIDInvalid = "";
-constexpr RequestID         RequestIDInvalid = util::IDManager::INVALID_ID;
+constexpr RequestID         RequestIDInvalid = static_cast<RequestID>(-1);
 constexpr OpIDConst OpID_ServiceAvailable    = "service_available.property";
 constexpr OpIDConst OpID_ServiceUnavailable  = "service_unavailable.property";
 

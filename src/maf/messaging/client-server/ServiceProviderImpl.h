@@ -6,6 +6,7 @@
 #include <maf/threading/Lockable.h>
 #include <map>
 #include <set>
+#include <atomic>
 
 namespace maf {
 namespace messaging {
@@ -81,7 +82,7 @@ struct ServiceProviderImpl {
   void onActionRequest(const CSMessagePtr &msg);
   void updateLatestStatus(const CSMessagePtr &registerMsg);
   void onStatusGetRequest(const CSMessagePtr &getMsg);
-  bool invokeRequestHandlerCallback(const RequestPtr &request);
+  RequestHandlerFunction getRequestHandlerCallback(const OpID &opID);
 
   bool registerRequestHandler(const OpID &opID,
                               RequestHandlerFunction handlerFunction);

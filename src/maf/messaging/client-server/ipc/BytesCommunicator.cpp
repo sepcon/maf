@@ -13,39 +13,39 @@ BytesCommunicator::~BytesCommunicator() { deinit(); }
 BytesCommunicator::BytesCommunicator(IPCType type,
                                      CSMessageReceiverIF *receiver,
                                      bool isClient)
-    : _pSender{CommunicatorFactory::createSender(type)},
-      _pReceiver{CommunicatorFactory::createReceiver(type)},
-      _ipcMsgReceiver(receiver), _isClient(isClient) {}
+    : pSender_{CommunicatorFactory::createSender(type)},
+      pReceiver_{CommunicatorFactory::createReceiver(type)},
+      ipcMsgReceiver_(receiver), isClient_(isClient) {}
 
 bool BytesCommunicator::init(const Address &serverAddress) {
   bool success = true;
-  _pReceiver->registerObserver(this);
-  success &= _pSender->initConnection(serverAddress);
-  success &= _pReceiver->initConnection(serverAddress, _isClient);
-  success &= _pReceiver->startListening();
+  pReceiver_->registerObserver(this);
+  success &= pSender_->initConnection(serverAddress);
+  success &= pReceiver_->initConnection(serverAddress, isClient_);
+  success &= pReceiver_->startListening();
   return success;
 }
 
 bool BytesCommunicator::deinit() {
   if (isWaiting()) {
-    _pReceiver->stopListening();
+    pReceiver_->stopListening();
   }
   return true;
 }
 
 bool BytesCommunicator::isWaiting() const {
-  return (_pReceiver && _pReceiver->listening());
+  return (pReceiver_ && pReceiver_->listening());
 }
 
 ActionCallStatus BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg,
                                          const Address &recvAddr) {
   assert(msg != nullptr);
-  if (_pSender) {
+  if (pSender_) {
     try {
       if (recvAddr.valid()) {
-        return _pSender->send(msg->toBytes(), recvAddr);
+        return pSender_->send(msg->toBytes(), recvAddr);
       } else {
-        return _pSender->send(msg->toBytes(), {});
+        return pSender_->send(msg->toBytes(), {});
       }
     } catch (const std::bad_alloc &e) {
       MAF_LOGGER_ERROR("Message is too large to be serialized: ", e.what());
@@ -62,10 +62,10 @@ void BytesCommunicator::onBytesCome(
     const std::shared_ptr<srz::ByteArray> &bytes) {
   std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
   if (csMsg->fromBytes(bytes)) {
-    if (_isClient && csMsg->sourceAddress().valid()) {
-      assert(csMsg->sourceAddress() == _pReceiver->address());
+    if (isClient_ && csMsg->sourceAddress().valid()) {
+      assert(csMsg->sourceAddress() == pReceiver_->address());
     }
-    _ipcMsgReceiver->onIncomingMessage(csMsg);
+    ipcMsgReceiver_->onIncomingMessage(csMsg);
   } else {
     MAF_LOGGER_ERROR("incoming message is not wellformed", "\n:The bytes are:[",
                      bytes->size(), "] ", *bytes);

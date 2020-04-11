@@ -1,14 +1,12 @@
 #pragma once
 
-#include <thread>
-
-#include "WeatherContract.h"
+#include "client-server-contract.h"
 #include "maf/messaging/AsyncCallbackExecutor.h"
 #include "maf/messaging/ExtensibleComponent.h"
-#include "maf/messaging/Timer.h"
 #include "maf/messaging/client-server/AsyncServiceStatusObserver.h"
 #include "maf/messaging/client-server/Proxy.h"
 #include "maf/utils/TimeMeasurement.h"
+#include <thread>
 
 using namespace std::chrono_literals;
 using namespace maf;
@@ -18,8 +16,7 @@ struct EndOfRequestChainMsg {};
 
 template <class Proxy> class ClientComponent : public ExtensibleComponent {
   using ProxyPtr = std::shared_ptr<Proxy>;
-  template <class T>
-  using ResponsePtr = typename Proxy::template ResponsePtr<T>;
+  template <class T> using Response = typename Proxy::template Response<T>;
 
 public:
   ClientComponent(ProxyPtr proxy) : proxy_{std::move(proxy)} {
@@ -33,20 +30,27 @@ public:
 
     onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
       if (msg.newStatus == Availability::Available) {
-        auto response =
-            proxy_->template sendRequest<unhandled_request>(nullptr, 10s);
+        proxy_->template sendRequest<unhandled_request>(nullptr, 10s);
+        proxy_->template sendRequestAsync<implicitly_response_request>(
+            [](auto response) {
+              assert(response.isError());
+              auto err = response.getError();
+              MAF_LOGGER_DEBUG("Got implicit response from server ",
+                               err->dump());
+            });
+
         MAF_LOGGER_DEBUG("Server already clear all status, then start jobs...");
         registerStatuses();
 
         proxy_->template sendRequestAsync<today_weather_request::output>(
             today_weather_request::make_input("Client is client", 100),
-            [](const ResponsePtr<today_weather_request::output> &response) {
-              if (*response) {
+            [](Response<today_weather_request::output> response) {
+              if (response.isOutput()) {
                 MAF_LOGGER_DEBUG("Received output from server ",
-                                 response->getOutput()->get_your_command());
+                                 response.getOutput()->get_your_command());
               } else {
                 MAF_LOGGER_DEBUG("Error for request of today_weather: ",
-                                 response->getError()->description());
+                                 response.getError()->description());
               }
             });
 
@@ -61,7 +65,7 @@ public:
 
   ~ClientComponent() {
     for (auto &regid : regids_) {
-      if (auto callstatus = proxy_->unregisterBroadcast(regid);
+      if (auto callstatus = proxy_->unregister(regid);
           callstatus != ActionCallStatus::Success) {
         MAF_LOGGER_ERROR("Failed to unregister status: ", regid.opID,
                          " with error: ", callstatus);
@@ -142,27 +146,27 @@ public:
     proxy_->template sendRequestAsync<broad_cast_signal_request>();
   }
   void tryStopServer() {
-    if (auto lastBootTime =
+    if (auto response =
             proxy_->template sendRequest<boot_time_request::output>();
-        lastBootTime && lastBootTime->isOutput()) {
-      if (auto output = lastBootTime->getOutput()) {
+        response.isOutput()) {
+      if (auto output = response.getOutput()) {
         MAF_LOGGER_DEBUG("server life is ",
-                         lastBootTime->getOutput()->get_seconds());
-        if (lastBootTime->getOutput()->get_seconds() > 10) {
-          if (auto response =
-                  proxy_->template sendRequest<shutdown_request>()) {
-            if (response->isError()) {
-              MAF_LOGGER_DEBUG("Failed to shutdown server: ",
-                               response->getError()->description());
-            } else {
-              MAF_LOGGER_DEBUG("Server already shutdown!");
-            }
+                         response.getOutput()->get_seconds());
+
+        if (response.getOutput()->get_seconds() > 10) {
+          auto shutdownRequestResponse =
+              proxy_->template sendRequest<shutdown_request>();
+          if (shutdownRequestResponse.isError()) {
+            MAF_LOGGER_DEBUG("Failed to shutdown server: ",
+                             shutdownRequestResponse.getError()->description());
+          } else {
+            MAF_LOGGER_DEBUG("Server already shutdown!");
           }
         }
-      } else if(auto error = lastBootTime->getError()) {
-          MAF_LOGGER_DEBUG("Got error from server: ", error->dump());
+      } else if (auto error = response.getError()) {
+        MAF_LOGGER_DEBUG("Got error from server: ", error->dump());
       } else {
-          MAF_LOGGER_ERROR("Don't know why response contains nothing!");
+        MAF_LOGGER_ERROR("Server might respond nothing!");
       }
     }
     RunningComponent::post<EndOfRequestChainMsg>();

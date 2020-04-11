@@ -5,46 +5,46 @@ namespace messaging {
 
 CSMessage::CSMessage(ServiceID sid, OpID opID, OpCode opCode, RequestID reqID,
                      CSMsgContentBasePtr msgContent, Address sourceAddr)
-    : _serviceID(std::move(sid)), _operationID(std::move(opID)),
-      _requestID(std::move(reqID)), _operationCode(std::move(opCode)),
-      _content(std::move(msgContent)), _sourceAddress(std::move(sourceAddr)) {}
+    : serviceID_(std::move(sid)), operationID_(std::move(opID)),
+      requestID_(std::move(reqID)), operationCode_(std::move(opCode)),
+      content_(std::move(msgContent)), sourceAddress_(std::move(sourceAddr)) {}
 
 CSMessage::~CSMessage() {}
 
-const ServiceID &CSMessage::serviceID() const { return _serviceID; }
+const ServiceID &CSMessage::serviceID() const { return serviceID_; }
 
 void CSMessage::setServiceID(ServiceID serviceID) {
-  _serviceID = std::move(serviceID);
+  serviceID_ = std::move(serviceID);
 }
 
-const OpID &CSMessage::operationID() const { return _operationID; }
+const OpID &CSMessage::operationID() const { return operationID_; }
 
 void CSMessage::setOperationID(OpID operationID) {
-  _operationID = std::move(operationID);
+  operationID_ = std::move(operationID);
 }
 
-OpCode CSMessage::operationCode() const { return _operationCode; }
+OpCode CSMessage::operationCode() const { return operationCode_; }
 
 void CSMessage::setOperationCode(OpCode operationCode) {
-  _operationCode = std::move(operationCode);
+  operationCode_ = std::move(operationCode);
 }
 
-RequestID CSMessage::requestID() const { return _requestID; }
+RequestID CSMessage::requestID() const { return requestID_; }
 
 void CSMessage::setRequestID(RequestID requestID) {
-  _requestID = std::move(requestID);
+  requestID_ = std::move(requestID);
 }
 
-const Address &CSMessage::sourceAddress() const { return _sourceAddress; }
+const Address &CSMessage::sourceAddress() const { return sourceAddress_; }
 
 void CSMessage::setSourceAddress(Address sourceAddress) {
-  _sourceAddress = std::move(sourceAddress);
+  sourceAddress_ = std::move(sourceAddress);
 }
 
-CSMsgContentBasePtr CSMessage::content() const { return _content; }
+CSMsgContentBasePtr CSMessage::content() const { return content_; }
 
 void CSMessage::setContent(CSMsgContentBasePtr content) {
-  _content = std::move(content);
+  content_ = std::move(content);
 }
 
 // Section of CSMessageContentBase

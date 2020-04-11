@@ -7,25 +7,27 @@
 namespace maf {
 namespace messaging {
 
+using CSIDManager = util::IDManagerT<RequestID>;
+
 struct RegID {
-  using RequestIDType = util::IDManager::IDType;
-  static void allocateUniqueID(RegID &regid, util::IDManager &idmgr) {
+  using RequestIDType = CSIDManager::IDType;
+  static void allocateUniqueID(RegID &regid, CSIDManager &idmgr) {
     regid.requestID = idmgr.allocateNewID();
   }
-  static void reclaimID(const RegID &regid, util::IDManager &idmgr) {
+  static void reclaimID(const RegID &regid, CSIDManager &idmgr) {
     idmgr.reclaimUsedID(regid.requestID);
   }
 
   bool valid() const {
-    return util::IDManager::isValidID(requestID) && opID != OpIDInvalid;
+    return CSIDManager::isValidID(requestID) && opID != OpIDInvalid;
   }
 
   void clear() {
-    requestID = util::IDManager::INVALID_ID;
+    requestID = CSIDManager::INVALID_ID;
     opID = OpIDInvalid;
   }
 
-  RequestIDType requestID = util::IDManager::INVALID_ID;
+  RequestIDType requestID = CSIDManager::INVALID_ID;
   OpID opID = OpIDInvalid;
 };
 

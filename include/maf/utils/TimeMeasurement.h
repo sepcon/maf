@@ -14,6 +14,11 @@ public:
       : _onReportCallback(std::move(onReportCallback)) {
     _startTime = std::chrono::system_clock::now();
   }
+  TimeMeasurement(TimeMeasurement&&) = default;
+  TimeMeasurement& operator=(TimeMeasurement&&) = default;
+  TimeMeasurement(const TimeMeasurement&) = delete;
+  TimeMeasurement& operator=(const TimeMeasurement&) = delete;
+
   ~TimeMeasurement() { stop(); }
 
   MicroSeconds elapsedTime() const {

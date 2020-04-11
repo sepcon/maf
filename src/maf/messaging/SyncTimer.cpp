@@ -44,8 +44,8 @@ void SyncTimer::start(std::chrono::milliseconds milliseconds,
     d_->running = true;
 
     do {
-      if (d_->timeoutCondition.wait_for(lock, milliseconds) ==
-          std::cv_status::timeout) {
+      if (!d_->timeoutCondition.wait_for(lock, milliseconds,
+                                         [this] { return !d_->running; })) {
         if (executor) {
           executor->execute(d_->cyclic ? callback : std::move(callback));
         } else {

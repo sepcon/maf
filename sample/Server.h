@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WeatherContract.h"
+#include "client-server-contract.h"
 #include <chrono>
 #include <maf/messaging/AsyncCallbackExecutor.h>
 #include <maf/messaging/ExtensibleComponent.h>
@@ -53,28 +53,35 @@ inline auto createBigStringList(const std::string &item = "hello world",
 
 template <class Stub>
 class ServerComponent : public maf::messaging::ExtensibleComponent {
-  template <class Input>
-  using RequestPtr = typename Stub::template RequestPtr<Input>;
+  template <class Input> using Request = typename Stub::template Request<Input>;
 
 public:
   ServerComponent(std::shared_ptr<Stub> stub) : stub_{std::move(stub)} {
     stub_->setExecutor(asyncExecutor(component()));
     MAF_LOGGER_DEBUG("Service id is: ", stub_->serviceID());
+
+    stub_->template registerRequestHandler<implicitly_response_request::input>(
+        [this](const auto &) {
+          MAF_LOGGER_DEBUG("Do nothing with request of ",
+                           implicitly_response_request::ID,
+                           " to indicate implicit response!");
+        });
+
     stub_->template registerRequestHandler<clear_all_status_request>(
-        [this](const auto &request) {
+        [this](Request<clear_all_status_request> request) {
           MAF_LOGGER_DEBUG("Received clear status request....");
           this->resetAllStatuses();
-          //            request->error("Some error occurred while clearing
+          //            request.error("Some error occurred while clearing
           //            statuses!");
-          request->respond();
+          request.respond();
         });
 
     auto success =
         stub_->template registerRequestHandler<update_status_request>(
-            [this](const auto &request) {
+            [this](auto request) {
               MAF_LOGGER_DEBUG("Received status update request....");
               this->setStatus();
-              request->respond();
+              request.respond();
 
               for (int i = 0; i < 10; ++i) {
                 maf::util::TimeMeasurement tm{[](auto elapsedMcs) {
@@ -95,55 +102,54 @@ public:
     }
 
     stub_->template registerRequestHandler<broad_cast_signal_request>(
-        [this](const RequestPtr<broad_cast_signal_request> &request) {
-          request->respond();
+        [this](Request<broad_cast_signal_request> request) {
+          request.respond();
           MAF_LOGGER_DEBUG("Received broad cast signal request....");
           this->broadcastSignal();
         });
 
     stub_->template registerRequestHandler<boot_time_request>(
-        [this](const auto &request) {
+        [this](auto request) {
           using namespace std::chrono;
           MAF_LOGGER_DEBUG("Received boot_time status get request....");
-          request->template respond<boot_time_request::output>(
+          request.template respond<boot_time_request::output>(
               duration_cast<seconds>(system_clock::now() - this->_bootTime)
                   .count());
         });
 
-    stub_->template registerRequestHandler<shutdown_request>(
-        [this](const auto &request) {
-          static auto retried = 0;
+    stub_->template registerRequestHandler<shutdown_request>([this](
+                                                                 auto request) {
+      static auto retried = 0;
 
-          MAF_LOGGER_DEBUG("Recevied shutdown request from client!");
-          if (++retried == 10) {
-            MAF_LOGGER_DEBUG(
-                "Shutdown server due to many requests from client!");
-            request->respond();
-            stop();
-          } else {
-            request->error("Client is not allowed to shutdown server",
-                           CSErrorCode::RequestRejected);
-          }
-        });
+      MAF_LOGGER_DEBUG("Recevied shutdown request from client!");
+      if (++retried == 20) {
+        MAF_LOGGER_DEBUG("Shutdown server due to many requests from client!");
+        request.respond();
+        stop();
+      } else {
+        request.error("Client is not allowed to shutdown server",
+                      CSErrorCode::RequestRejected);
+      }
+    });
 
     stub_->template registerRequestHandler<today_weather_request::input>(
-        [](const RequestPtr<today_weather_request::input> &request) {
-          if (auto input = request->getInput()) {
+        [](Request<today_weather_request::input> request) {
+          if (auto input = request.getInput()) {
             MAF_LOGGER_DEBUG("Got today_weather request from client: ",
                              input->dump());
             if (input->get_pid() == -1) {
-              request->error("Invalid pid", CSErrorCode::InvalidParam);
+              request.error("Invalid pid", CSErrorCode::InvalidParam);
             } else if (input->get_pid() % 2 == 0) {
-              request->error("Doesn't support request with even pid value",
-                             CSErrorCode::InvalidParam);
+              request.error("Doesn't support request with even pid value",
+                            CSErrorCode::InvalidParam);
             } else {
               auto output = today_weather_request::make_output();
               output->set_list_of_places(createBigStringList());
-              request->respond(std::move(output));
+              request.respond(std::move(output));
             }
           } else {
-            request->error("Request contains no input",
-                           CSErrorCode::InvalidParam);
+            request.error("Request contains no input",
+                          CSErrorCode::InvalidParam);
           }
         });
 
