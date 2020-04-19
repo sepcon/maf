@@ -13,7 +13,7 @@ namespace messaging {
 using namespace paco;
 
 template <class PTrait, class Input> class RequestT {
-  template <class MT> friend class Stub;
+  template <class MT> friend class BasicStub;
 
 #define mc_maf_reqt_assert_is_output(Output)                                   \
   static_assert(IsOutput<PTrait, Output>,                                      \

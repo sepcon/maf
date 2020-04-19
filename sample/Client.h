@@ -1,10 +1,9 @@
 #pragma once
 
 #include "client-server-contract.h"
-#include "maf/messaging/AsyncCallbackExecutor.h"
-#include "maf/messaging/ExtensibleComponent.h"
+#include <maf/Messaging.h>
 #include "maf/messaging/client-server/AsyncServiceStatusObserver.h"
-#include "maf/messaging/client-server/Proxy.h"
+#include "maf/messaging/client-server/BasicProxy.h"
 #include "maf/utils/TimeMeasurement.h"
 #include <thread>
 

@@ -14,13 +14,13 @@ namespace messaging {
 
 using namespace paco;
 
-template <class PTrait> class Stub : public pattern::Unasignable {
-  using StubPtr = std::shared_ptr<Stub>;
+template <class PTrait> class BasicStub : public pattern::Unasignable {
+  using StubPtr = std::shared_ptr<BasicStub>;
 
 public:
   template <typename InputType> using Request = RequestT<PTrait, InputType>;
 
-  template <typename InputType = std::nullptr_t>
+  template <typename InputType>
   using RequestHandlerFunction = std::function<void(Request<InputType>)>;
 
   using ExecutorPtr = std::shared_ptr<CallbackExecutorIF>;
@@ -66,10 +66,10 @@ public:
 
   void setExecutor(ExecutorPtr executor);
   ExecutorPtr getExecutor() const;
-  std::shared_ptr<Stub<PTrait>> with(ExecutorPtr executor);
+  std::shared_ptr<BasicStub<PTrait>> with(ExecutorPtr executor);
 
 private:
-  Stub(ProviderPtr provider, ExecutorPtr executor);
+  BasicStub(ProviderPtr provider, ExecutorPtr executor);
 
   ProviderPtr provider_;
   ExecutorPtr executor_;
@@ -79,7 +79,7 @@ private:
 } // namespace maf
 
 #ifndef MAF_MESSAGING_CLIENT_SERVER_STUB_IMPL_H
-#include "internal/Stub.impl.h"
+#include "BasicStub.impl.h"
 #endif
 
 #endif

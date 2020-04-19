@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SocketShared.h"
+#include <maf/utils/serialization/ByteArray.h>
 #include <future>
 
 namespace maf {
@@ -8,7 +9,7 @@ namespace messaging {
 namespace ipc {
 
 using ByteArrayPtr = std::shared_ptr<srz::ByteArray>;
-using BytesComeCallback = std::function<void(const ByteArrayPtr &)>;
+using BytesComeCallback = std::function<void(srz::ByteArray &&)>;
 
 class LocalIPCReceiverImpl {
 public:

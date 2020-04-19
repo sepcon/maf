@@ -2,6 +2,7 @@
 
 #include "SocketShared.h"
 #include <maf/messaging/client-server/CSStatus.h>
+#include <maf/utils/serialization/BASerializer.h>
 
 namespace maf {
 namespace messaging {

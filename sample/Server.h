@@ -5,7 +5,7 @@
 #include <maf/messaging/AsyncCallbackExecutor.h>
 #include <maf/messaging/ExtensibleComponent.h>
 #include <maf/messaging/Timer.h>
-#include <maf/messaging/client-server/Stub.h>
+#include <maf/messaging/client-server/BasicStub.h>
 #include <maf/utils/TimeMeasurement.h>
 
 using namespace maf::messaging;

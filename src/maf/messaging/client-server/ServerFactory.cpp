@@ -23,9 +23,9 @@ public:
   }
 
   std::shared_ptr<ServerIF> makeServer(const ConnectionType &connectionType) {
-    if (connectionType == "app_internal") {
+    if (connectionType == "ithc.messaging.maf") {
       return IAMessageRouter::instance();
-    } else if (connectionType == "local_ipc") {
+    } else if (connectionType == "local.ipc.messaging.maf") {
       return std::make_shared<ipc::LocalIPCServer>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
@@ -41,8 +41,11 @@ public:
     if ((server = util::find(*serverMap_, connectionType, addr));
         server == nullptr) {
       if ((server = makeServer(connectionType))) {
-        (*serverMap_)[connectionType].emplace(addr, server);
-        server->init(addr);
+        if (server->init(addr)) {
+          (*serverMap_)[connectionType].emplace(addr, server);
+        } else {
+          server.reset();
+        }
       } else {
         MAF_LOGGER_FATAL("Could not get and create server of type ",
                          connectionType, " and addr = ", addr.dump(-1));

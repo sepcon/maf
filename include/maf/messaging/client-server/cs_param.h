@@ -1,8 +1,8 @@
 #pragma once
 
+#include <cassert>
 #include <maf/messaging/client-server/CSMessage.h>
-#include <maf/utils/cppextension/TypeInfo.h>
-#include <maf/utils/serialization/BASerializer.h>
+#include <maf/utils/serialization/SerializableIF.h>
 
 namespace maf {
 namespace messaging {
@@ -15,7 +15,7 @@ struct cs_operation
 
 struct cs_param             : public CSMessageContentBase
 {
-    cs_param() { setType(Type::Data); }
+    cs_param(): CSMessageContentBase(Type::Data){ }
     std::string dump() { return "cs_param"; }
 };
 
@@ -34,19 +34,12 @@ struct cs_attributes        : public cs_outputbase  {};
 
 // clang-format on
 
-template <class cs_param_type>
-struct serializable_cs_param_base : public cs_param_type {
-  using cs_param_type::cs_param_type;
-  virtual maf::srz::ByteArray toBytes() { return "''"; }
-  virtual void fromBytes(const maf::srz::ByteArray &) {}
-};
-
 template <class SerializableCSParamClass, class cs_param_type>
-struct serializable_cs_param_t
-    : public serializable_cs_param_base<cs_param_type> {
+struct serializable_cs_param_t : public cs_param_type,
+                                 public srz::SerializableIF {
   bool equal(const CSMessageContentBase *other) const override {
-    util::debugAssertTypesEqual(this, other);
     if (other && (this->type() == other->type())) {
+      assert(typeid(*this) == typeid(*other));
       auto Other = static_cast<const SerializableCSParamClass *>(other);
       auto This = static_cast<const SerializableCSParamClass *>(this);
       return *Other == *This;
@@ -59,15 +52,16 @@ struct serializable_cs_param_t
         *static_cast<const SerializableCSParamClass *>(this));
   }
 
-  maf::srz::ByteArray toBytes() override {
-    maf::srz::BASerializer sr;
-    sr << *static_cast<SerializableCSParamClass *>(this);
-    return std::move(sr.mutableBytes());
+  bool serialize(srz::OByteStream &os) const override {
+    maf::srz::SR sr(os);
+    sr << *static_cast<const SerializableCSParamClass *>(this);
+    return !os.fail();
   }
 
-  void fromBytes(const maf::srz::ByteArray &bytes) override {
-    maf::srz::BADeserializer ds(bytes);
+  bool deserialize(srz::IByteStream &is) override {
+    maf::srz::DSR ds(is);
     ds >> *static_cast<SerializableCSParamClass *>(this);
+    return !is.fail();
   }
 };
 

@@ -16,22 +16,24 @@ public:
   template <typename T,
             std::enable_if_t<std::is_same_v<Output, T>, bool> = true>
   ResponseT(std::shared_ptr<T> response = {}) noexcept
-      : _response(std::move(response)) {}
+      : response_(std::move(response)) {}
 
   ResponseT(std::shared_ptr<CSError> error) noexcept
-      : _response(std::move(error)) {}
+      : response_(std::move(error)) {}
 
-  ResponseT() noexcept : _response{NoValue{}} {}
+  ResponseT() noexcept : response_{NoValue{}} {}
   //  ResponseT(const ResponseT &) = default;
   //  ResponseT(ResponseT &&) = default;
   //  ResponseT &operator=(ResponseT &&) = default;
 
+  ~ResponseT(){} // Avoid VC-C2644 warning
+
   OutputPtr getOutput() const noexcept {
-    return isOutput() ? std::get<OutputPtr>(_response) : nullptr;
+    return isOutput() ? std::get<OutputPtr>(response_) : nullptr;
   }
 
   ErrorPtr getError() const noexcept {
-    return isError() ? std::get<ErrorPtr>(_response) : nullptr;
+    return isError() ? std::get<ErrorPtr>(response_) : nullptr;
   }
 
   bool isError() const noexcept { return has<ErrorPtr>(); }
@@ -41,13 +43,13 @@ public:
 private:
   // clang-format off
   template<class T>
-  bool has() const noexcept { return std::holds_alternative<T>(_response); }
+  bool has() const noexcept { return std::holds_alternative<T>(response_); }
 
   std::variant<
     std::shared_ptr<Output>,
     std::shared_ptr<CSError>,
     NoValue
-  > _response;
+  > response_;
 
   // clang-format on
 };

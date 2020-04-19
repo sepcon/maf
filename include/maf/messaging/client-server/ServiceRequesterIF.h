@@ -5,7 +5,7 @@
 #include "RegID.h"
 #include "ServiceMessageReceiver.h"
 #include "ServiceStatusObserverIF.h"
-#include "internal/CSShared.h"
+#include "CSShared.h"
 
 namespace maf {
 namespace messaging {

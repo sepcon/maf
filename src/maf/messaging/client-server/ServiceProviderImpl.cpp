@@ -4,6 +4,7 @@
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSError.h>
 #include <maf/messaging/client-server/ServerIF.h>
+#include <cassert>
 
 namespace maf {
 namespace messaging {

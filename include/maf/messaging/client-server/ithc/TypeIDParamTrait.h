@@ -1,7 +1,7 @@
 #ifndef TYPEIDPARAMTRAIT_H
 #define TYPEIDPARAMTRAIT_H
 
-#include "internal/CSShared.h"
+#include "CSShared.h"
 #include <type_traits>
 #include <typeinfo>
 

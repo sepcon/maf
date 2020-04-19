@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/messaging/client-server/RequestIF.h>
-#include <maf/messaging/client-server/internal/CSShared.h>
+#include <maf/messaging/client-server/CSShared.h>
 #include <maf/patterns/Patterns.h>
 #include <mutex>
 

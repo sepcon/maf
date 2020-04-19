@@ -1,10 +1,9 @@
 #include "Server.h"
-#include <maf/messaging/client-server/ipc/LocalIPCStub.h>
+#include <maf/LocalIPCStub.h>
 #include <maf/utils/TimeMeasurement.h>
 #include <iostream>
 
-using namespace maf::messaging::ipc;
-using namespace maf::messaging;
+using namespace maf;
 
 int main() {
   std::cout.sync_with_stdio(false);
@@ -22,7 +21,7 @@ int main() {
   std::vector<std::future<void>> serverWaiters;
 
   MAF_LOGGER_DEBUG("Server is starting up!");
-  ServerComponent server(local::createStub({SERVER_NAME, WEATHER_SERVER_PORT},
+  ServerComponent server(localipc::createStub({SERVER_NAME, WEATHER_SERVER_PORT},
                                            SID_WeatherService));
 
   for (int i = 0; i < 3; ++i) {

@@ -10,9 +10,6 @@
 #include <memory>
 
 namespace maf {
-namespace srz {
-struct ByteArray;
-}
 namespace messaging {
 namespace ipc {
 
@@ -21,13 +18,12 @@ public:
   BytesCommunicator(IPCType type, CSMessageReceiverIF *receiver, bool isClient);
   bool init(const Address &serverAddress);
   bool deinit();
-  bool isWaiting() const;
   ActionCallStatus send(const std::shared_ptr<IPCMessage> &msg,
                         const Address &recvAddr = {});
   ~BytesCommunicator() override; // Not allow to make instance of this class
 
 protected:
-  void onBytesCome(const std::shared_ptr<srz::ByteArray> &bytes) override;
+  void onBytesCome(srz::ByteArray &&bytes) override;
   std::unique_ptr<IPCSender> pSender_;
   std::unique_ptr<IPCReceiver> pReceiver_;
   CSMessageReceiverIF *ipcMsgReceiver_;

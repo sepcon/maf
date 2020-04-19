@@ -2,6 +2,7 @@
 
 #include "CSMessage.h"
 #include "CSStatus.h"
+#include <functional>
 
 namespace maf {
 namespace messaging {

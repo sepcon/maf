@@ -144,7 +144,6 @@
 /// ----------------------------------------------------------------------------
 #define mc_maf_tuple_like_object_(ClassName)                                   \
   struct ClassName : public maf::srz::TupleLikeBase<ClassName> {               \
-    friend struct maf::srz::SerializationTrait<ClassName>;                     \
     mc_maf_define_constructors_(ClassName)
 
 #define mc_maf_tuple_like_object_end(ClassName)                                \
@@ -167,7 +166,6 @@ public:                                                                        \
                   "The class `" #BaseClassName                                 \
                   "` which is specified as base of `" #ClassName               \
                   "` must be has default constructor");                        \
-    friend struct maf::srz::SerializationTrait<ClassName>;                     \
     mc_maf_define_constructors_(ClassName)
 
 #define mc_maf_tuple_like_object_has_base_end_(ClassName)                      \
@@ -375,4 +373,3 @@ public:                                                                        \
   friend bool operator!=(const ClassName &lhs, const ClassName &rhs) {         \
     return rhs._data != lhs._data;                                             \
   }
-

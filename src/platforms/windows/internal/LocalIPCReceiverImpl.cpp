@@ -98,8 +98,8 @@ static void disablePermissionRestriction(HANDLE hPipe) {
         _countof(
             explicit_access_list), // Size of array passed in the next argument
         explicit_access_list,      // Pointer to array that describe the access
-                              // control information
-        pACL,    // Pointer to existing ACL
+                                   // control information
+        pACL,                      // Pointer to existing ACL
         &pNewACL // Pointer that receives a pointer to the new ACL
     );
 
@@ -141,8 +141,16 @@ bool LocalIPCReceiverImpl::stopListening() {
   return true;
 }
 
-void LocalIPCReceiverImpl::registerObserver(BytesComeCallback callback) {
+void LocalIPCReceiverImpl::registerObserver(BytesComeCallback &&callback) {
   _bytesComeCallback = std::move(callback);
+}
+
+bool LocalIPCReceiverImpl::initConnection(const Address &address,
+                                          bool isClientMode) {
+  if (NamedPipeReceiverBase::initConnection(address, isClientMode)) {
+    return initPipes();
+  }
+  return false;
 }
 
 bool LocalIPCReceiverImpl::initPipes() {
@@ -202,8 +210,6 @@ bool LocalIPCReceiverImpl::initPipes() {
 
 void LocalIPCReceiverImpl::listningThreadFunction() {
   DWORD dwWait;
-
-  initPipes();
   while (listening()) {
     dwWait = WaitForMultipleObjects(
         static_cast<DWORD>(_hEvents.size()), // number of event objects
@@ -225,8 +231,7 @@ void LocalIPCReceiverImpl::listningThreadFunction() {
 
     size_t index = static_cast<size_t>(i);
     if (readOnPipe(index)) {
-      _bytesComeCallback(std::make_shared<srz::ByteArray>(
-          std::move(_pipeInstances[index]->ba)));
+      _bytesComeCallback(std::move(_pipeInstances[index]->ba));
     } else {
       MAF_LOGGER_WARN("Read nothing, GLE = ", GetLastError(), "-->",
                       _pipeInstances[index]->ba, "<--");
@@ -251,7 +256,7 @@ bool LocalIPCReceiverImpl::readOnPipe(size_t index) {
       incommingBA.resize(totalComingBytes);
       bytesRead = fillbuffer(_pipeInstances[index]->hPipeInst,
                              _pipeInstances[index]->oOverlap,
-                             incommingBA.firstpos(), incommingBA.size());
+                             incommingBA.data(), incommingBA.size());
       fSuccess = (incommingBA.size() == bytesRead);
     }
   }

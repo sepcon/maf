@@ -14,7 +14,7 @@ namespace messaging {
 
 using namespace paco;
 
-template <class PTrait> class Proxy : public pattern::Unasignable {
+template <class PTrait> class BasicProxy : public pattern::Unasignable {
 public:
   template <class CSParam> using Response = ResponseT<CSParam>;
 
@@ -29,7 +29,7 @@ public:
   using SVStatusObsvWptr = std::weak_ptr<ServiceStatusObserverIF>;
   using RequesterPtr = std::shared_ptr<ServiceRequesterIF>;
 
-  static std::shared_ptr<Proxy>
+  static std::shared_ptr<BasicProxy>
   createProxy(const ConnectionType &contype, const Address &addr,
               const ServiceID &sid, ExecutorPtr executor = {},
               SVStatusObsvWptr statusObsv = {}) noexcept;
@@ -92,10 +92,10 @@ public:
 
   void setExecutor(ExecutorPtr executor);
   ExecutorPtr getExecutor() const noexcept;
-  std::shared_ptr<Proxy> with(ExecutorPtr executor);
+  std::shared_ptr<BasicProxy> with(ExecutorPtr executor);
 
 private:
-  Proxy(RequesterPtr requester, ExecutorPtr executor) noexcept;
+  BasicProxy(RequesterPtr requester, ExecutorPtr executor) noexcept;
 
   template <class CSParam>
   CSMessageContentHandlerCallback
@@ -139,7 +139,7 @@ private:
 } // namespace maf
 
 #ifndef MAF_MESSAGING_CLIENT_SERVER_PROXY_IMPL_H
-#include "internal/Proxy.impl.h"
+#include "BasicProxy.impl.h"
 #endif
 
 #endif

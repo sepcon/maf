@@ -2,11 +2,9 @@
 
 #include <maf/messaging/client-server/Address.h>
 #include <maf/messaging/client-server/CSStatus.h>
+#include <maf/utils/serialization/ByteArray.h>
 
 namespace maf {
-namespace srz {
-struct ByteArray;
-}
 namespace messaging {
 namespace ipc {
 

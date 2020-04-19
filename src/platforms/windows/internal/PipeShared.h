@@ -1,6 +1,7 @@
 #pragma once
 
 #include <maf/messaging/client-server/Address.h>
+#include <maf/utils/serialization/ByteArray.h>
 #include <windows.h>
 
 namespace maf {

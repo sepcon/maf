@@ -4,7 +4,6 @@
 #include <maf/logging/Logger.h>
 
 namespace maf {
-
 namespace messaging {
 namespace ipc {
 
@@ -18,23 +17,18 @@ BytesCommunicator::BytesCommunicator(IPCType type,
       ipcMsgReceiver_(receiver), isClient_(isClient) {}
 
 bool BytesCommunicator::init(const Address &serverAddress) {
-  bool success = true;
   pReceiver_->registerObserver(this);
-  success &= pSender_->initConnection(serverAddress);
-  success &= pReceiver_->initConnection(serverAddress, isClient_);
-  success &= pReceiver_->startListening();
-  return success;
+  return pSender_->initConnection(serverAddress) &&
+         pReceiver_->initConnection(serverAddress, isClient_) &&
+         pReceiver_->startListening();
+  return false;
 }
 
 bool BytesCommunicator::deinit() {
-  if (isWaiting()) {
+  if (pReceiver_->listening()) {
     pReceiver_->stopListening();
   }
   return true;
-}
-
-bool BytesCommunicator::isWaiting() const {
-  return (pReceiver_ && pReceiver_->listening());
 }
 
 ActionCallStatus BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg,
@@ -58,17 +52,15 @@ ActionCallStatus BytesCommunicator::send(const std::shared_ptr<IPCMessage> &msg,
   }
 }
 
-void BytesCommunicator::onBytesCome(
-    const std::shared_ptr<srz::ByteArray> &bytes) {
+void BytesCommunicator::onBytesCome(srz::ByteArray &&bytes) {
   std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
-  if (csMsg->fromBytes(bytes)) {
+  if (csMsg->fromBytes(std::move(bytes))) {
     if (isClient_ && csMsg->sourceAddress().valid()) {
       assert(csMsg->sourceAddress() == pReceiver_->address());
     }
     ipcMsgReceiver_->onIncomingMessage(csMsg);
   } else {
-    MAF_LOGGER_ERROR("incoming message is not wellformed", "\n:The bytes are:[",
-                     bytes->size(), "] ", *bytes);
+    MAF_LOGGER_ERROR("incoming message is not wellformed");
   }
 }
 

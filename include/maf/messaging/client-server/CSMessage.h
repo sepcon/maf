@@ -2,12 +2,13 @@
 
 #include "Address.h"
 #include "CSTypes.h"
+#include "CSMessageContentBase.h"
 #include <maf/export/MafExport_global.h>
 
 namespace maf {
 namespace messaging {
 
-using CSMsgContentBasePtr = std::shared_ptr<class CSMessageContentBase>;
+using CSMsgContentBasePtr = std::shared_ptr<CSMessageContentBase>;
 using CSMessagePtr = std::shared_ptr<class CSMessage>;
 
 class CSMessage {
@@ -50,20 +51,6 @@ protected:
   OpCode operationCode_ = OpCode::Invalid;
   CSMsgContentBasePtr content_;
   Address sourceAddress_;
-};
-
-class CSMessageContentBase {
-public:
-  enum class Type : char { Data, Error, NA };
-
-  MAF_EXPORT virtual ~CSMessageContentBase();
-  MAF_EXPORT Type type() const;
-  MAF_EXPORT void setType(Type t);
-  virtual bool equal(const CSMessageContentBase *other) const = 0;
-  virtual CSMessageContentBase *clone() const = 0;
-
-private:
-  Type _type = Type::NA;
 };
 
 template <class CSMessageDerived = CSMessage>

@@ -4,7 +4,6 @@
 #include <maf/messaging/SyncTimer.h>
 
 namespace maf {
-
 namespace messaging {
 namespace ipc {
 

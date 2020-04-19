@@ -1,6 +1,6 @@
 #pragma once
 
-#include "internal/cs_param.h"
+#include "cs_param.h"
 
 namespace maf {
 namespace messaging {

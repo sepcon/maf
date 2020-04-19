@@ -1,5 +1,5 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef MAF_MESSAGING_TIMER_H
+#define MAF_MESSAGING_TIMER_H
 
 #include "CallbackExecutorIF.h"
 #include <chrono>
@@ -33,4 +33,4 @@ private:
 
 } // namespace messaging
 } // namespace maf
-#endif // TIMER_H
+#endif // MAF_MESSAGING_TIMER_H

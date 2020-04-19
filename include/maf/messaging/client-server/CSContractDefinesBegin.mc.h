@@ -2,8 +2,7 @@
 #define CSCONTRACTDEFINESBEGIN_MC_H
 
 #include <maf/messaging/client-server/CSTypes.h>
-#include <maf/messaging/client-server/SerializableParamTrait.h>
-#include <maf/messaging/client-server/internal/cs_param.h>
+#include <maf/messaging/client-server/cs_param.h>
 
 #endif // CSCONTRACTDEFINESBEGIN_MC_H
 
@@ -90,7 +89,7 @@
 #	endif
 // clang-format on
 
-#include <maf/utils/serialization/MafObjectBegin.mc.h>
+#include <maf/utils/serialization/SerializableObjectBegin.mc.h>
 
 // Service declarations
 #define SERVICE(service)                                                       \

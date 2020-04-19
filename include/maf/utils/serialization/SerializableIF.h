@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ByteArray.h"
+#include "OByteStream.h"
+#include "IByteStream.h"
 
 namespace maf {
 namespace srz {
@@ -8,8 +9,8 @@ namespace srz {
 class SerializableIF {
 public:
   virtual ~SerializableIF() = default;
-  virtual srz::ByteArray toBytes() = 0;
-  virtual void fromBytes(const srz::ByteArray &ba) = 0;
+  virtual bool serialize(OByteStream &) const = 0;
+  virtual bool deserialize(IByteStream &) = 0;
 };
 
 } // namespace srz

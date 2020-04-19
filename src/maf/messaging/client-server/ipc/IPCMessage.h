@@ -2,6 +2,7 @@
 #define IPCMESSAGE_H
 
 #include <maf/messaging/client-server/CSMessage.h>
+#include <maf/utils/serialization/ByteArray.h>
 
 namespace maf {
 namespace messaging {
@@ -11,7 +12,7 @@ class IPCMessage : public CSMessage {
 public:
   using CSMessage::CSMessage;
   srz::ByteArray toBytes();
-  bool fromBytes(const std::shared_ptr<srz::ByteArray> &bytes) noexcept;
+  bool fromBytes(srz::ByteArray&& bytes) noexcept;
 };
 
 } // namespace ipc

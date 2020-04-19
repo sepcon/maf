@@ -1,7 +1,8 @@
 #ifndef SERVICESTATUSSIGNAL_H
 #define SERVICESTATUSSIGNAL_H
 
-#include "Proxy.h"
+#include "BasicProxy.h"
+#include <condition_variable>
 #include <mutex>
 
 namespace maf {
@@ -9,24 +10,24 @@ namespace messaging {
 
 class ServiceStatusSignal : public ServiceStatusObserverIF {
 public:
-    bool waitTill(const Availability expectedStatus) {
-        std::unique_lock lock(m_);
-        statusChanged_.wait(
-            lock, [this, expectedStatus] { return expectedStatus == currentStatus_ || stopped_; });
-        if (!stopped_) {
-          return true;
-        }
-        return false;
+  bool waitTill(const Availability expectedStatus) {
+    std::unique_lock lock(m_);
+    statusChanged_.wait(lock, [this, expectedStatus] {
+      return expectedStatus == currentStatus_ || stopped_;
+    });
+    if (!stopped_) {
+      return true;
     }
+    return false;
+  }
 
-
-  bool waitTill(const Availability status, long long ms) {
-    return waitTill(status, std::chrono::milliseconds{ms});
+  bool waitTill(const Availability expectedStatus, long long ms) {
+    return waitTill(expectedStatus, std::chrono::milliseconds{ms});
   }
 
   template <typename Rep, typename Period>
   bool waitTill(const Availability expectedStatus,
-               const std::chrono::duration<Rep, Period> interval) {
+                const std::chrono::duration<Rep, Period> interval) {
     std::unique_lock lock(m_);
     if (statusChanged_.wait_for(lock, interval, [this, expectedStatus] {
           return expectedStatus == currentStatus_ || stopped_;
@@ -64,14 +65,18 @@ private:
   bool stopped_ = false;
 };
 
-template <class PTrait>
+template <class ProxyType>
 std::shared_ptr<ServiceStatusSignal>
-serviceStatusSignal(const std::shared_ptr<Proxy<PTrait>> &proxy = {}) {
-  auto waiter = std::make_shared<ServiceStatusSignal>();
+serviceStatusSignal(const std::shared_ptr<ProxyType> &proxy = {}) {
+  auto waiter = serviceStatusSignal();
   if (proxy) {
     proxy->registerServiceStatusObserver(waiter);
   }
   return waiter;
+}
+
+std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
+  return std::shared_ptr<ServiceStatusSignal>{new ServiceStatusSignal{}};
 }
 
 } // namespace messaging

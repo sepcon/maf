@@ -34,11 +34,12 @@ public:
           Address(address.get_name() + std::to_string(GetCurrentProcessId()),
                   randomPort);
     } else {
-      myaddr_ = std::move(address);
+      myaddr_ = address;
     }
     pipeName_ = constructPipeName(myaddr_);
     return true;
   }
+
   bool startListening() {
     if (!listening()) {
       stopped_.store(false, std::memory_order_release);
@@ -69,7 +70,7 @@ protected:
   std::thread workerThread_;
   Address myaddr_;
   std::atomic_bool stopped_;
-  bool isClient_;
+  bool isClient_ = false;
 };
 
 } // namespace ipc

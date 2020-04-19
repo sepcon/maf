@@ -168,11 +168,10 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock) {
         if (auto bytesRead = read(sd, reinterpret_cast<char *>(&messageLength),
                                   sizeof(SizeType));
             bytesRead == sizeof(SizeType)) {
-          auto payload = std::make_shared<srz::ByteArray>(messageLength);
-          payload->resize(messageLength);
+          auto payload = srz::ByteArray{};
+          payload.resize(messageLength);
           while (totalRead < messageLength) {
-            if (bytesRead =
-                    read(sd, payload->data() + totalRead, messageLength);
+            if (bytesRead = read(sd, payload.data() + totalRead, messageLength);
                 bytesRead != -1) {
               totalRead += bytesRead;
             } else {
@@ -182,7 +181,7 @@ bool LocalIPCReceiverImpl::listeningThreadFunc(int fdMySock) {
             }
           }
           if (totalRead == messageLength) {
-            bytesComeCallback_(payload);
+            bytesComeCallback_(std::move(payload));
             failed = false;
           }
         }

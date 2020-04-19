@@ -1,8 +1,7 @@
 #include <iostream>
+#include <maf/IThCProxy.h>
+#include <maf/IThCStub.h>
 #include <maf/logging/Logger.h>
-#include <maf/messaging/ExtensibleComponent.h>
-#include <maf/messaging/client-server/IAProxy.h>
-#include <maf/messaging/client-server/IAStub.h>
 #include <maf/utils/TimeMeasurement.h>
 
 #include "Client.h"
@@ -10,7 +9,7 @@
 #include <string>
 
 int main() {
-  using namespace maf::messaging;
+  using namespace maf;
   maf::logging::init(
       maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_FROM_INFO,
       [](const std::string &msg) { std::cout << msg << std::endl; },
@@ -21,11 +20,11 @@ int main() {
                      "ms");
   });
 
-  auto proxy = inapp::createProxy("helloworld");
-  auto stub = inapp::createStub("helloworld");
+  auto proxy = ithc::createProxy("helloworld");
+  auto stub = ithc::createStub("helloworld");
 
-  ServerComponent<inapp::Stub> server{stub};
-  std::vector<std::unique_ptr<ClientComponent<inapp::Proxy>>> clients;
+  ServerComponent<ithc::Stub> server{stub};
+  std::vector<std::unique_ptr<ClientComponent<ithc::Proxy>>> clients;
   auto serverFuture = server.runAsync();
   auto client = ClientComponent{proxy};
   client

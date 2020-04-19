@@ -3,14 +3,11 @@
 #include "../ClientBase.h"
 #include "BytesCommunicator.h"
 #include "IPCTypes.h"
-#include <thread>
 #include <condition_variable>
+#include <thread>
 
 namespace maf {
 namespace messaging {
-
-class SyncTimer;
-
 namespace ipc {
 
 class IPCClientBase : public ClientBase, public BytesCommunicator {

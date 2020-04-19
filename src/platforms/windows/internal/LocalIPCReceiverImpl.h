@@ -10,17 +10,18 @@ struct PipeInstance {
   srz::ByteArray ba;
   OVERLAPPED oOverlap;
   HANDLE hPipeInst;
-  bool fPendingIO;
+  bool fPendingIO = false;
 };
 
-using BytesComeCallback = std::function<void(const ByteArrayPtr &)>;
+using BytesComeCallback = std::function<void(srz::ByteArray &&)>;
 class LocalIPCReceiverImpl : public NamedPipeReceiverBase {
 public:
   using PipeInstances = std::vector<std::unique_ptr<PipeInstance>>;
   using Handles = std::vector<HANDLE>;
   LocalIPCReceiverImpl();
   bool stopListening();
-  void registerObserver(BytesComeCallback);
+  void registerObserver(BytesComeCallback &&);
+  bool initConnection(const Address &address, bool isClientMode = false);
 
 private:
   bool initPipes();

@@ -15,7 +15,7 @@ bool LocalIPCSender::initConnection(const Address &addr) {
   return _pImpl->initConnection(addr);
 }
 
-ActionCallStatus LocalIPCSender::send(const maf::srz::ByteArray &ba,
+ActionCallStatus LocalIPCSender::send(const srz::ByteArray &ba,
                                       const Address &destination) {
   return _pImpl->send(ba, destination);
 }

@@ -1,4 +1,4 @@
-#include <maf/utils/serialization/MafObjectEnd.mc.h>
+#include <maf/utils/serialization/SerializableObjectEnd.mc.h>
 
 // clang-format off
 #	ifdef maf_restore_macro_ATTRIBUTES

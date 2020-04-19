@@ -1,5 +1,5 @@
 // NO INCLUDE GUARD
-#include "Internal/TplkdefEnd.mc.h"
+#include "Internal/SerializableObjectEnd.mc.h"
 
 // clang-format off
 

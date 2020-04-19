@@ -25,9 +25,9 @@ public:
   }
 
   std::shared_ptr<ClientIF> makeClient(const ConnectionType &connectionType) {
-    if (connectionType == "app_internal") {
+    if (connectionType == "ithc.messaging.maf") {
       return IAMessageRouter::instance();
-    } else if (connectionType == "local_ipc") {
+    } else if (connectionType == "local.ipc.messaging.maf") {
       return std::make_shared<ipc::LocalIPCClient>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",

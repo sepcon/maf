@@ -47,12 +47,5 @@ void CSMessage::setContent(CSMsgContentBasePtr content) {
   content_ = std::move(content);
 }
 
-// Section of CSMessageContentBase
-CSMessageContentBase::~CSMessageContentBase() = default;
-
-CSMessageContentBase::Type CSMessageContentBase::type() const { return _type; }
-
-void CSMessageContentBase::setType(Type t) { _type = std::move(t); }
-
 } // namespace messaging
 } // namespace maf

@@ -34,16 +34,16 @@
  *
  * */
 
-#ifndef MAFOBJECTBEGIN_MC_H
-#define MAFOBJECTBEGIN_MC_H
-#   include "Serializer.h"
+#ifndef MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
+#define MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
+#   include "Serializer1.h"
 #   include "DumpHelper.h"
-#endif // MAFOBJECTBEGIN_MC_H
+#endif // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 
 // The rest of this file must be putted outside include guard
 // Make it to be use with multiple files
 
-#include "Internal/TplkdefBegin.mc.h"
+#include "Internal/SerializableObjectBegin.mc.h"
 
 #    ifdef OBJECT
 #        pragma push_macro("OBJECT")

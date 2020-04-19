@@ -1,5 +1,4 @@
 #include <maf/messaging/client-server/CSError.h>
-#include <maf/utils/serialization/MafObjectBegin.mc.h>
 #include <sstream>
 
 namespace maf {
@@ -11,9 +10,8 @@ struct CSErrorDataPrv {
 };
 
 CSError::CSError(Description desc, ErrorCode code)
-    : d_{new CSErrorDataPrv{std::move(desc), code}} {
-  setType(Type::Error);
-}
+    : CSMessageContentBase(Type::Error), d_{new CSErrorDataPrv{std::move(desc),
+                                                               code}} {}
 
 CSError::~CSError() { delete d_; }
 

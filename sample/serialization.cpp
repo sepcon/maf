@@ -1,15 +1,14 @@
 #include <fstream>
 #include <iostream>
-#include <maf/utils/serialization/BASerializer.h>
-#include <maf/utils/serialization/StreamSerializer.h>
+#include <maf/utils/serialization/SerializableObjectBegin.mc.h>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
-
-#include <maf/utils/serialization/MafObjectBegin.mc.h>
+#include <vector>
 
 OBJECT(Header)
-    MEMBERS((std::string, index), (std::string, name))
+MEMBERS((std::string, index), (std::string, name))
 ENDOBJECT(Header)
 
 using HeaderMap = std::map<std::string, Header>;
@@ -19,20 +18,15 @@ using SpecialMap =
 using IntIntMap = std::map<int, int>;
 
 OBJECT(SecurityScanRequestMsg)
-    MEMBERS
-    (
-        (int64_t, index, 100),
-        (std::string, name),
-        (HeaderMap, headers),
-        (std::vector<std::string>, custom_list),
-        (double, double_value),
-        (SpecialMap, special_map)
-    )
+MEMBERS((int64_t, index, 100), (std::string, name), (HeaderMap, headers),
+        (std::vector<std::string>, custom_list), (double, double_value),
+        (SpecialMap, special_map))
 ENDOBJECT(SecurityScanRequestMsg)
 
-#include <maf/utils/serialization/MafObjectEnd.mc.h>
+#include <maf/utils/serialization/SerializableObjectEnd.mc.h>
 
-static void serializeTest(maf::srz::Serializer &srz) {
+template <class OStream> static void serializeTest(OStream &os) {
+  maf::srz::SR<OStream> srz{os};
   SecurityScanRequestMsg s;
   s.get_special_map()["hello"]["bello"].push_back(
       {1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4});
@@ -45,8 +39,8 @@ static void serializeTest(maf::srz::Serializer &srz) {
   std::cout << "After cleared: " << s.dump() << std::endl;
 }
 
-static void deserializeTest(maf::srz::Deserializer &dsrz) {
-
+template <class IStream> static void deserializeTest(IStream &is) {
+  maf::srz::DSR<IStream> dsrz{is};
   SecurityScanRequestMsg s;
   dsrz >> s;
 
@@ -68,27 +62,78 @@ static void deserializeTest(maf::srz::Deserializer &dsrz) {
   }
 }
 
-static void testBASerializer() {
-  maf::srz::BASerializer srz;
-  serializeTest(srz);
-  maf::srz::BADeserializer dszr{srz.mutableBytes()};
-  deserializeTest(dszr);
+static void testStringStreamSerializer() {
+  std::ostringstream oss;
+  serializeTest(oss);
+  std::istringstream is{oss.str()};
+  deserializeTest(is);
 }
 
-static void testStreamSerializer() {
+static void testFileStreamSerializer() {
   std::string path = "helloworld.dat";
   std::ofstream ofs(path);
-  maf::srz::StreamSerializer srz(ofs);
-  serializeTest(srz);
-  srz.flush();
+  serializeTest(ofs);
+  ofs.close();
 
   std::ifstream ifs(path);
-  maf::srz::StreamDeserializer dszr{ifs};
-  deserializeTest(dszr);
+  deserializeTest(ifs);
 }
 
+#include <maf/utils/serialization/OByteStream.h>
+#include <maf/utils/serialization/IByteStream.h>
+#include <maf/utils/TimeMeasurement.h>
+
 int main() {
-  testBASerializer();
-  testStreamSerializer();
+//  testStringStreamSerializer();
+//  testFileStreamSerializer();
+
+    using namespace maf::srz;
+    using namespace maf::util;
+    std::vector<std::string> vec = {"hello world", "hello world", "hello world", "hello world", "hello world"};
+    for(int i = 0; i < 100000; ++i)
+        vec.push_back("hallu world");
+    int x = 100;
+    double d = 10000;
+    std::string s = "hallu";
+    std::wstring ws = L"hallu";
+
+    OByteStream obs;
+    {
+        TimeMeasurement tm{[](auto elapsed) {
+                std::cout << "time to serialize = " << elapsed.count() << std::endl;
+            }};
+        SR<OByteStream> sr{obs};
+        for(int i = 0; i < 100; ++i)
+        {
+            sr.serializeBatch(vec, d, x, s, ws);
+        }
+    }
+
+    {
+        TimeMeasurement tm{[](auto elapsed) {
+                std::cout << "time to serialize = " << elapsed.count() << std::endl;
+            }};
+
+        IByteStream is{obs.bytes()};
+        DSR<IByteStream> sr{is};
+        for(int i = 0; i < 100; ++i)
+        {
+            sr >> vec >> d >> x >> s >> ws;
+        }
+    }
+
+    {
+        TimeMeasurement tm{[](auto elapsed) {
+                std::cout << "time to serialize = " << elapsed.count() << std::endl;
+            }};
+        IByteStream is{obs.bytes()};
+        DSR<IByteStream> ds{is};
+
+        for(int i = 0; i < 100; ++i)
+        {
+            ds.deserializeBatch(vec, d, x, s, ws);
+        }
+    }
+
   return 0;
 }

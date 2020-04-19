@@ -26,7 +26,7 @@ const Address &LocalIPCReceiver::address() const { return _impl->address(); }
 
 void LocalIPCReceiver::registerObserver(BytesComeObserver *observer) {
   _impl->registerObserver(
-      [observer](const auto &bytes) { observer->onBytesCome(bytes); });
+      [observer](auto &&bytes) { observer->onBytesCome(std::move(bytes)); });
 }
 
 } // namespace ipc

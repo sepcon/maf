@@ -4,7 +4,7 @@
 #include <maf/messaging/client-server/RegID.h>
 #include <maf/messaging/client-server/ServiceRequesterIF.h>
 #include <maf/messaging/client-server/ServiceStatusObserverIF.h>
-#include <maf/messaging/client-server/internal/CSShared.h>
+#include <maf/messaging/client-server/CSShared.h>
 #include <maf/threading/Lockable.h>
 
 #include <future>

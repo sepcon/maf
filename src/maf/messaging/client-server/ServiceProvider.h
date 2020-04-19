@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/messaging/client-server/ServiceProviderIF.h>
-#include <maf/messaging/client-server/internal/CSShared.h>
+#include <maf/messaging/client-server/CSShared.h>
 
 namespace maf {
 namespace messaging {

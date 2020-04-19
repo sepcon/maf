@@ -2,7 +2,7 @@
 #include <list>
 #include <maf/messaging/client-server/CSStatus.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
-#include <maf/messaging/client-server/internal/CSShared.h>
+#include <maf/messaging/client-server/CSShared.h>
 #include <maf/threading/Lockable.h>
 #include <map>
 #include <set>

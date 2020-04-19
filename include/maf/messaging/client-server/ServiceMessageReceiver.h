@@ -2,6 +2,7 @@
 
 #include "CSMessage.h"
 #include "CSMessageReceiverIF.h"
+#include <functional>
 
 namespace maf {
 namespace messaging {

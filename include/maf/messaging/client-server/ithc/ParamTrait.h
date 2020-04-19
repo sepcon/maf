@@ -1,13 +1,13 @@
 #pragma once
 
-#include "CSMessage.h"
-#include "ParamTraitBase.h"
-#include "ParamTranslatingStatus.h"
+#include <maf/messaging/client-server/CSMessage.h>
+#include <maf/messaging/client-server/ParamTraitBase.h>
+#include <maf/messaging/client-server/ParamTranslatingStatus.h>
 
 namespace maf {
 namespace messaging {
 
-class DefaultParamTrait : public ParamTraitBase {
+class ParamTrait : public ParamTraitBase {
 public:
   template <class Message>
   static std::shared_ptr<Message>
@@ -27,9 +27,6 @@ public:
       // cloned instead of sharing by reference/pointer
       auto cloned = std::make_shared<Message>(*msg);
       return std::static_pointer_cast<CSMessageContentBase>(cloned);
-      //      return CSMsgContentBasePtr{
-      //          static_cast<const CSMessageContentBase
-      //          *>(msg.get())->clone()};
     } else {
       return {};
     }

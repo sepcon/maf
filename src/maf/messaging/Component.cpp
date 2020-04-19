@@ -1,3 +1,4 @@
+#include <cassert>
 #include <maf/logging/Logger.h>
 #include <maf/messaging/BasicMessages.h>
 #include <maf/messaging/Component.h>
@@ -47,10 +48,11 @@ void Component::run(std::function<void()> onEntry,
 
   ComponentMessage msg;
   while (d_->msgq.wait(msg)) {
+    auto &msgType = msg.type();
     GenericMsgHandlerFunction handlerFunc;
     {
       std::lock_guard lock(d_->handlers);
-      auto itHandler = d_->handlers->find(msg.type());
+      auto itHandler = d_->handlers->find(msgType);
       if (itHandler != d_->handlers->end()) {
         handlerFunc = itHandler->second;
       }
@@ -58,17 +60,17 @@ void Component::run(std::function<void()> onEntry,
 
     if (handlerFunc) {
       try {
-        handlerFunc(std::move(msg));
+        handlerFunc(msg);
       } catch (const std::exception &e) {
         MAF_LOGGER_ERROR("Exception occurred while executing "
-                         "messageHandler function: ",
-                         e.what());
+                         "messageHandler function of msg `",
+                         msgType.name(), "`: ", e.what());
       } catch (...) {
         MAF_LOGGER_ERROR("Unknown exception occurred while executing"
                          " messageHandler function: ");
       }
     } else {
-      MAF_LOGGER_WARN("There's no handler for message ", msg.type().name());
+      MAF_LOGGER_WARN("There's no handler for message ", msgType.name());
     }
   }
 
@@ -88,6 +90,7 @@ void Component::stop() { d_->msgq.close(); }
 
 bool Component::post(ComponentMessage &&msg) {
   try {
+    assert(msg.type() != typeid(nullptr_t));
     d_->msgq.push(std::move(msg));
     return true;
   } catch (const std::bad_alloc &ba) {

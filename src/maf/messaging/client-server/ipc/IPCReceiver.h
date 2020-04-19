@@ -2,19 +2,17 @@
 #define IPCRECEIVER_H
 
 #include <maf/messaging/client-server/Address.h>
+#include <maf/utils/serialization/ByteArray.h>
 #include <memory>
 
 namespace maf {
-namespace srz {
-struct ByteArray;
-}
 namespace messaging {
 namespace ipc {
 
 class BytesComeObserver {
 public:
   virtual ~BytesComeObserver() = default;
-  virtual void onBytesCome(const std::shared_ptr<srz::ByteArray> &bytes) = 0;
+  virtual void onBytesCome(srz::ByteArray &&bytes) = 0;
 };
 
 class IPCReceiver {

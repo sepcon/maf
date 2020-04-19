@@ -34,7 +34,7 @@ ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba,
         if ((success = writeToPipe(pipeHandle, oOverlap_,
                                    reinterpret_cast<const char *>(&baSize),
                                    sizeof(baSize)))) {
-          if ((success = writeToPipe(pipeHandle, oOverlap_, ba.firstpos(),
+          if ((success = writeToPipe(pipeHandle, oOverlap_, ba.data(),
                                      ba.size()))) {
             FlushFileBuffers(pipeHandle);
             break;
