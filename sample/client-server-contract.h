@@ -1,6 +1,5 @@
 #pragma once
-#ifndef WEATHER_CONTRACT_H
-#define WEATHER_CONTRACT_H
+
 #include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/Address.h>
 
@@ -150,5 +149,3 @@ ENDREQUEST(implicitly_response)
 // clang-format on
 
 #include <maf/messaging/client-server/CSContractDefinesEnd.mc.h>
-
-#endif

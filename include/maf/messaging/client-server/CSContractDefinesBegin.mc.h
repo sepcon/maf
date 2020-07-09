@@ -4,7 +4,7 @@
 #include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/cs_param.h>
 
-#endif // CSCONTRACTDEFINESBEGIN_MC_H
+#endif  // CSCONTRACTDEFINESBEGIN_MC_H
 
 // clang-format off
 #	ifdef ATTRIBUTES
@@ -92,20 +92,20 @@
 #include <maf/utils/serialization/SerializableObjectBegin.mc.h>
 
 // Service declarations
-#define SERVICE(service)                                                       \
-  namespace service##_service {                                                \
+#define SERVICE(service)        \
+  namespace service##_service { \
     using namespace maf::messaging;
 
-#define ENDSERVICE(service)                                                    \
-  }                                                                            \
+#define ENDSERVICE(service) \
+  }                         \
   ;
 
 // Request declarations
 #define REQUEST(name) mc_maf_csc_declare_feature(request, name)
 #define INPUT(...) mc_maf_csc_function_params(input, __VA_ARGS__)
 #define OUTPUT(...) mc_maf_csc_function_params(output, __VA_ARGS__)
-#define ENDREQUEST(...)                                                        \
-  }                                                                            \
+#define ENDREQUEST(...) \
+  }                     \
   ;
 
 #define VOID_REQUEST(name) REQUEST(name) ENDREQUEST()
@@ -113,40 +113,44 @@
 // Property declarations
 #define PROPERTY(name) mc_maf_csc_declare_feature(property, name)
 #define STATUS(...) mc_maf_csc_function_params(status, __VA_ARGS__)
-#define ENDPROPERTY(...)                                                       \
-  }                                                                            \
+#define ENDPROPERTY(...) \
+  }                      \
   ;
 
 #define SIGNAL(name) mc_maf_csc_declare_feature(signal, name)
 #define ATTRIBUTES(...) mc_maf_csc_function_params(attributes, __VA_ARGS__)
-#define ENDSIGNAL(...)                                                         \
-  }                                                                            \
+#define ENDSIGNAL(...) \
+  }                    \
   ;
 #define VOID_SIGNAL(name) SIGNAL(name) ENDSIGNAL()
 
 // Implementations
-#define mc_maf_csc_declare_feature(type, name)                                 \
-  struct name##_##type : public maf::messaging::cs_##type {                    \
-    static constexpr maf::messaging::OpIDConst ID = #name "." #type;           \
-    static constexpr maf::messaging::OpIDConst operationID() { return ID; }
+#define mc_maf_csc_declare_feature(type, name)                          \
+  struct name##_##type : public maf::messaging::cs_##type {             \
+    static constexpr maf::messaging::OpIDConst ID = #name "." #type;    \
+    static constexpr maf::messaging::OpIDConst operationID() noexcept { \
+      return ID;                                                        \
+    }
 
-#define mc_maf_csc_function_params(type, ...)                                  \
-private:                                                                       \
-  template <class sb_param_type>                                               \
-  using my_sb_param##type =                                                    \
-      maf::messaging::serializable_cs_param_t<sb_param_type,                   \
-                                              maf::messaging::cs_##type>;      \
-                                                                               \
-public:                                                                        \
-  OBJECT(type, my_sb_param##type<type>)                                        \
-  static constexpr maf::messaging::OpIDConst operationID() { return ID; }      \
-  MEMBERS(__VA_ARGS__)                                                         \
-  }                                                                            \
-  ;                                                                            \
-  using type##_ptr = std::shared_ptr<type>;                                    \
-  template <typename... Args> static type##_ptr make_##type(Args &&... args) { \
-    type##_ptr ptr{new type{std::forward<Args>(args)...}};                     \
-    return ptr;                                                                \
+#define mc_maf_csc_function_params(type, ...)                             \
+ private:                                                                 \
+  template <class sb_param_type>                                          \
+  using my_sb_param##type =                                               \
+      maf::messaging::serializable_cs_param_t<sb_param_type,              \
+                                              maf::messaging::cs_##type>; \
+                                                                          \
+ public:                                                                  \
+  OBJECT(type, my_sb_param##type<type>)                                   \
+  static constexpr maf::messaging::OpIDConst operationID() noexcept {     \
+    return ID;                                                            \
+  }                                                                       \
+  MEMBERS(__VA_ARGS__)                                                    \
+  }                                                                       \
+  ;                                                                       \
+  using type##_ptr = std::shared_ptr<type>;                               \
+  using type##_cptr = std::shared_ptr<const type>;                        \
+  template <typename... Args>                                             \
+  static type##_ptr make_##type(Args &&... args) {                        \
+    type##_ptr ptr{new type{std::forward<Args>(args)...}};                \
+    return ptr;                                                           \
   }
-
-

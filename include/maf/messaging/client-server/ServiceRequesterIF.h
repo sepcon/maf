@@ -2,48 +2,51 @@
 
 #include <chrono>
 
-#include "RegID.h"
-#include "ServiceMessageReceiver.h"
-#include "ServiceStatusObserverIF.h"
+#include "CSMessageReceiverIF.h"
 #include "CSShared.h"
+#include "RegID.h"
+#include "ServiceStatusObserverIF.h"
 
 namespace maf {
 namespace messaging {
 
 using RequestTimeoutMs = std::chrono::milliseconds;
-constexpr auto InfiniteWait = RequestTimeoutMs::max();
+inline constexpr auto InfiniteWait = RequestTimeoutMs::max();
 
-class ServiceRequesterIF : public ServiceMessageReceiver,
-                           public ServiceStatusObserverIF {
-public:
+class MAF_EXPORT ServiceRequesterIF : public CSMessageReceiverIF,
+                                      public ServiceStatusObserverIF {
+ public:
+  using ServiceStatusObserverPtr = std::shared_ptr<ServiceStatusObserverIF>;
+
+  virtual const ServiceID &serviceID() const = 0;
+
   virtual RegID registerStatus(const OpID &propertyID,
-                               CSMessageContentHandlerCallback callback,
+                               CSPayloadProcessCallback callback,
                                ActionCallStatus *callStatus) = 0;
 
   virtual RegID registerSignal(const OpID &propertyID,
-                               CSMessageContentHandlerCallback callback,
+                               CSPayloadProcessCallback callback,
                                ActionCallStatus *callStatus) = 0;
 
   virtual ActionCallStatus unregister(const RegID &regID) = 0;
   virtual ActionCallStatus unregisterAll(const OpID &propertyID) = 0;
 
   virtual RegID sendRequestAsync(const OpID &opID,
-                                 const CSMsgContentBasePtr &msgContent,
-                                 CSMessageContentHandlerCallback callback,
+                                 const CSPayloadIFPtr &msgContent,
+                                 CSPayloadProcessCallback callback,
                                  ActionCallStatus *callStatus) = 0;
 
-  virtual CSMsgContentBasePtr getStatus(const OpID &propertyID,
-                                        ActionCallStatus *callStatus,
-                                        RequestTimeoutMs timeout) = 0;
+  virtual CSPayloadIFPtr getStatus(const OpID &propertyID,
+                                   ActionCallStatus *callStatus,
+                                   RequestTimeoutMs timeout) = 0;
 
-  virtual ActionCallStatus
-  getStatus(const OpID &propertyID,
-            CSMessageContentHandlerCallback callback) = 0;
+  virtual ActionCallStatus getStatus(const OpID &propertyID,
+                                     CSPayloadProcessCallback callback) = 0;
 
-  virtual CSMsgContentBasePtr sendRequest(const OpID &opID,
-                                          const CSMsgContentBasePtr &msgContent,
-                                          ActionCallStatus *callStatus,
-                                          RequestTimeoutMs timeout) = 0;
+  virtual CSPayloadIFPtr sendRequest(const OpID &opID,
+                                     const CSPayloadIFPtr &msgContent,
+                                     ActionCallStatus *callStatus,
+                                     RequestTimeoutMs timeout) = 0;
 
   virtual void abortAction(const RegID &regID,
                            ActionCallStatus *callStatus) = 0;
@@ -51,13 +54,13 @@ public:
   virtual Availability serviceStatus() const = 0;
 
   virtual void registerServiceStatusObserver(
-      std::weak_ptr<ServiceStatusObserverIF> pServiceStatusObserver) = 0;
+      ServiceStatusObserverPtr observer) = 0;
 
   virtual void unregisterServiceStatusObserver(
-      const std::weak_ptr<ServiceStatusObserverIF> &pServiceStatusObserver) = 0;
+      const ServiceStatusObserverPtr &observer) = 0;
 
   virtual ~ServiceRequesterIF() = default;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

@@ -1,5 +1,4 @@
-#ifndef LOGGABLEENUM_H
-#define LOGGABLEENUM_H
+#pragma once
 
 #include "cppextension/Loop.mc.h"
 #include <ostream>
@@ -62,5 +61,3 @@
       "Max enum value of " #TheEnum " must equal to number of its values, "    \
       "Because StringifyableEnum doesnot "                                     \
       "support Enum with custom values");
-
-#endif // LOGGABLEENUM_H

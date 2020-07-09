@@ -1,14 +1,16 @@
 #pragma once
 
-#include "ServiceMessageReceiver.h"
+#include "CSMessageReceiverIF.h"
 #include "ServiceProviderShared.h"
 
 namespace maf {
 namespace messaging {
 
-class ServiceProviderIF : public ServiceMessageReceiver {
+class MAF_EXPORT ServiceProviderIF : public CSMessageReceiverIF {
 public:
   virtual ~ServiceProviderIF() = default;
+
+  virtual const ServiceID &serviceID() const = 0;
 
   virtual Availability availability() const = 0;
 
@@ -24,12 +26,12 @@ public:
 
   virtual ActionCallStatus respondToRequest(const CSMessagePtr &csMsg) = 0;
   virtual ActionCallStatus setStatus(const OpID &propertyID,
-                                     const CSMsgContentBasePtr &property) = 0;
+                                     const CSPayloadIFPtr &property) = 0;
 
-  virtual ActionCallStatus
-  broadcastSignal(const OpID &eventID, const CSMsgContentBasePtr &event) = 0;
+  virtual ActionCallStatus broadcastSignal(const OpID &eventID,
+                                           const CSPayloadIFPtr &event) = 0;
 
-  virtual CSMsgContentBasePtr getStatus(const OpID &propertyID) = 0;
+  virtual CSPayloadIFPtr getStatus(const OpID &propertyID) = 0;
 };
 
 } // namespace messaging

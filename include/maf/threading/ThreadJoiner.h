@@ -1,5 +1,4 @@
-#ifndef THREADJOINER_H
-#define THREADJOINER_H
+#pragma once
 
 #include <thread>
 
@@ -11,13 +10,14 @@ template <class ThreadContainer> class ThreadJoiner {
 
 public:
   ThreadJoiner(ThreadContainer &threads) : _threads(threads) {}
-  ~ThreadJoiner() {
+  void join() {
     for (auto &th : _threads) {
       if (th.joinable()) {
         th.join();
       }
     }
   }
+  ~ThreadJoiner() { join(); }
 };
 
 template <> class ThreadJoiner<std::thread> {
@@ -33,4 +33,3 @@ public:
 
 } // namespace threading
 } // namespace maf
-#endif // THREADJOINER_H

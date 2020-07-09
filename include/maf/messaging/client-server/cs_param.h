@@ -8,14 +8,15 @@ namespace maf {
 namespace messaging {
 
 // clang-format off
-struct cs_operation
+struct cs_translatable  {};
+
+struct cs_operation : public cs_translatable
 {
-    std::string dump() { return "cs_param"; }
+    std::string dump() { return "cs_operation"; }
 };
 
-struct cs_param             : public CSMessageContentBase
+struct cs_param : public cs_translatable
 {
-    cs_param(): CSMessageContentBase(Type::Data){ }
     std::string dump() { return "cs_param"; }
 };
 
@@ -35,35 +36,7 @@ struct cs_attributes        : public cs_outputbase  {};
 // clang-format on
 
 template <class SerializableCSParamClass, class cs_param_type>
-struct serializable_cs_param_t : public cs_param_type,
-                                 public srz::SerializableIF {
-  bool equal(const CSMessageContentBase *other) const override {
-    if (other && (this->type() == other->type())) {
-      assert(typeid(*this) == typeid(*other));
-      auto Other = static_cast<const SerializableCSParamClass *>(other);
-      auto This = static_cast<const SerializableCSParamClass *>(this);
-      return *Other == *This;
-    }
-    return false;
-  }
-
-  CSMessageContentBase *clone() const override {
-    return new SerializableCSParamClass(
-        *static_cast<const SerializableCSParamClass *>(this));
-  }
-
-  bool serialize(srz::OByteStream &os) const override {
-    maf::srz::SR sr(os);
-    sr << *static_cast<const SerializableCSParamClass *>(this);
-    return !os.fail();
-  }
-
-  bool deserialize(srz::IByteStream &is) override {
-    maf::srz::DSR ds(is);
-    ds >> *static_cast<SerializableCSParamClass *>(this);
-    return !is.fail();
-  }
-};
+struct serializable_cs_param_t : public cs_param_type{ };
 
 } // namespace messaging
 } // namespace maf

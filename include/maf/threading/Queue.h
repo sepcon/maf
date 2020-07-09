@@ -1,5 +1,4 @@
-#ifndef QUEUE_H
-#define QUEUE_H
+#pragma once
 
 #include "ThreadSafeQueue.h"
 
@@ -12,4 +11,3 @@ using PriorityQueue = ThreadSafeQueue<stdwrap::PriorityQueue<T, Comp>>;
 
 } // namespace threading
 } // namespace maf
-#endif // QUEUE_H

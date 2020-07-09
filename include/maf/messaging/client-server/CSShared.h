@@ -3,11 +3,12 @@
 #include <maf/messaging/client-server/CSMessage.h>
 #include <maf/messaging/client-server/CSStatus.h>
 
+#include <functional>
+
 namespace maf {
 namespace messaging {
 
-using CSMessageContentHandlerCallback =
-    std::function<void(const CSMsgContentBasePtr &)>;
+using CSPayloadProcessCallback = std::function<void(const CSPayloadIFPtr &)>;
 
-}
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

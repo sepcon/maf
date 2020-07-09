@@ -1,5 +1,4 @@
-#ifndef MAF_UTILS_SERIALIZATION_BASICSTREAMBUF_H
-#define MAF_UTILS_SERIALIZATION_BASICSTREAMBUF_H
+#pragma once
 
 #include <limits>
 #include <streambuf>
@@ -145,13 +144,15 @@ public:
     if (!(state_ & Constant_) &&
         Base::pptr() != nullptr) { // writable, make string from write buffer
       const auto base = Base::pbase();
-      return string_view_type(base, static_cast<size_type>(
-                              _Max_value(Base::pptr(), seekHigh_) - base));
+      return string_view_type(
+          base,
+          static_cast<size_type>(_Max_value(Base::pptr(), seekHigh_) - base));
     } else if (!(state_ & Noread_) &&
                Base::gptr() !=
                    nullptr) { // readable, make string from read buffer
       const auto base = Base::eback();
-      return string_view_type(base, static_cast<size_type>(Base::egptr() - base));
+      return string_view_type(base,
+                              static_cast<size_type>(Base::egptr() - base));
     }
     return {};
   }
@@ -476,5 +477,3 @@ private:
 
 } // namespace srz
 } // namespace maf
-
-#endif // MAF_UTILS_SERIALIZATION_BASICSTREAMBUF_H

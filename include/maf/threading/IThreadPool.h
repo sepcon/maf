@@ -1,5 +1,4 @@
-#ifndef ITHREADPOOL_H
-#define ITHREADPOOL_H
+#pragma once
 
 #include "Runnable.h"
 
@@ -17,5 +16,3 @@ public:
 
 } // namespace threading
 } // namespace maf
-
-#endif // ITHREADPOOL_H

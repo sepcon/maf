@@ -1,7 +1,4 @@
-#ifndef PATTERNS_H
-#define PATTERNS_H
-
-#include <memory>
+#pragma once
 
 namespace maf {
 namespace pattern {
@@ -46,4 +43,3 @@ protected:
 
 } // namespace pattern
 } // namespace maf
-#endif // PATTERNS_H

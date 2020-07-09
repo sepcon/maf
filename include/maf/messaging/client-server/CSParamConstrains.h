@@ -1,5 +1,4 @@
-#ifndef CSPARAMCONSTRAINS_H_
-#define CSPARAMCONSTRAINS_H_
+#pragma once
 
 #include <type_traits>
 
@@ -54,5 +53,3 @@ using AllowOnlyRequestOrInputT =
 } // namespace paco
 } // namespace messaging
 } // namespace maf
-
-#endif // CSPARAMCONSTRAINS_H_

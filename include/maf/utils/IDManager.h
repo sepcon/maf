@@ -1,5 +1,4 @@
-#ifndef IDMANAGER_H
-#define IDMANAGER_H
+#pragma once
 
 #ifdef RECLAIMABLE_ID_MANAGER
 #include <mutex>
@@ -69,4 +68,3 @@ using IDManager = IDManagerT<uint64_t>;
 } // namespace util
 } // namespace maf
 #endif
-#endif // IDMANAGER_H

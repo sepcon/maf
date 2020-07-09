@@ -1,5 +1,4 @@
-#ifndef BYTEARRAY_H
-#define BYTEARRAY_H
+#pragma once
 
 #include <string>
 
@@ -10,5 +9,3 @@ using ByteArray = std::string;
 
 } // namespace srz
 } // namespace maf
-
-#endif // BYTEARRAY_H

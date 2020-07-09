@@ -1,15 +1,15 @@
-#ifndef SERVICESTATUSSIGNAL_H
-#define SERVICESTATUSSIGNAL_H
+#pragma once
 
-#include "BasicProxy.h"
 #include <condition_variable>
 #include <mutex>
+
+#include "BasicProxy.h"
 
 namespace maf {
 namespace messaging {
 
 class ServiceStatusSignal : public ServiceStatusObserverIF {
-public:
+ public:
   bool waitTill(const Availability expectedStatus) {
     std::unique_lock lock(m_);
     statusChanged_.wait(lock, [this, expectedStatus] {
@@ -47,7 +47,7 @@ public:
 
   void onServiceStatusChanged(const ServiceID & /*sid*/,
                               Availability /*oldStatus*/,
-                              Availability newStatus) noexcept override {
+                              Availability newStatus) override {
     std::lock_guard lock(m_);
     currentStatus_ = newStatus;
     statusChanged_.notify_all();
@@ -58,16 +58,20 @@ public:
     return currentStatus_;
   }
 
-private:
+ private:
   mutable std::mutex m_;
   std::condition_variable statusChanged_;
   Availability currentStatus_ = Availability::Unavailable;
   bool stopped_ = false;
 };
 
-template <class ProxyType>
-std::shared_ptr<ServiceStatusSignal>
-serviceStatusSignal(const std::shared_ptr<ProxyType> &proxy = {}) {
+std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
+  return std::shared_ptr<ServiceStatusSignal>{new ServiceStatusSignal{}};
+}
+
+template <class PTrait>
+std::shared_ptr<ServiceStatusSignal> serviceStatusSignal(
+    const std::shared_ptr<BasicProxy<PTrait>> &proxy = {}) {
   auto waiter = serviceStatusSignal();
   if (proxy) {
     proxy->registerServiceStatusObserver(waiter);
@@ -75,11 +79,5 @@ serviceStatusSignal(const std::shared_ptr<ProxyType> &proxy = {}) {
   return waiter;
 }
 
-std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
-  return std::shared_ptr<ServiceStatusSignal>{new ServiceStatusSignal{}};
-}
-
-} // namespace messaging
-} // namespace maf
-
-#endif // SERVICESTATUSSIGNAL_H
+}  // namespace messaging
+}  // namespace maf

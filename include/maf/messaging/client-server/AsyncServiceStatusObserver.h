@@ -1,9 +1,10 @@
-#ifndef ASYNCSERVICESTATUSOBSERVER_H
-#define ASYNCSERVICESTATUSOBSERVER_H
+#pragma once
+
+#include <maf/messaging/Component.h>
+
+#include <cassert>
 
 #include "ServiceStatusObserverIF.h"
-#include <cassert>
-#include <maf/messaging/Component.h>
 
 namespace maf {
 namespace messaging {
@@ -12,22 +13,21 @@ class AsyncServiceStatusObserver : public ServiceStatusObserverIF {
   using CompWPtr = std::weak_ptr<Component>;
   using CompPtr = std::shared_ptr<Component>;
 
-public:
+ public:
   AsyncServiceStatusObserver(CompPtr comp) : _wpcomp{comp} {
     assert(comp && "Component must not be nullptr");
   }
 
+ private:
   void onServiceStatusChanged(const ServiceID &sid, Availability oldStatus,
-                              Availability newStatus) noexcept override;
-
-private:
+                              Availability newStatus) override;
   void notifyServiceStatusChange(const ServiceID &sid, Availability oldStatus,
                                  Availability newStatus);
   CompWPtr _wpcomp;
 };
 
-inline std::shared_ptr<ServiceStatusObserverIF>
-asyncServiceStatusObserver(std::shared_ptr<Component> comp) {
+inline std::shared_ptr<ServiceStatusObserverIF> asyncServiceStatusObserver(
+    std::shared_ptr<Component> comp) {
   return std::shared_ptr<AsyncServiceStatusObserver>{
       new AsyncServiceStatusObserver{std::move(comp)}};
 }
@@ -41,8 +41,7 @@ struct ServiceStatusMsg {
 };
 
 inline void AsyncServiceStatusObserver::onServiceStatusChanged(
-    const ServiceID &sid, Availability oldStatus,
-    Availability newStatus) noexcept {
+    const ServiceID &sid, Availability oldStatus, Availability newStatus) {
   notifyServiceStatusChange(sid, oldStatus, newStatus);
 }
 
@@ -53,7 +52,5 @@ inline void AsyncServiceStatusObserver::notifyServiceStatusChange(
   }
 }
 
-} // namespace messaging
-} // namespace maf
-
-#endif // ASYNCSERVICESTATUSOBSERVER_H
+}  // namespace messaging
+}  // namespace maf

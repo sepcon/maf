@@ -21,7 +21,7 @@ MC_MAF_STRINGIFYABLE_ENUM(CSErrorCode, char,
                     );
 // clang-format on
 
-class CSError : public CSMessageContentBase {
+class CSError : public CSMsgPayloadIF {
 public:
   using ErrorCode = CSErrorCode;
   using Description = std::string;
@@ -30,9 +30,9 @@ public:
                      ErrorCode code = CSErrorCode::Unknown);
 
   MAF_EXPORT ~CSError();
-
-  MAF_EXPORT bool equal(const CSMessageContentBase *other) const override;
-  MAF_EXPORT CSMessageContentBase *clone() const override;
+  MAF_EXPORT CSPayloadType type() const override;
+  MAF_EXPORT bool equal(const CSMsgPayloadIF *other) const override;
+  MAF_EXPORT CSMsgPayloadIF *clone() const override;
 
   MAF_EXPORT const Description &description() const;
   MAF_EXPORT void setDescription(Description description);
@@ -40,7 +40,7 @@ public:
   MAF_EXPORT ErrorCode code() const;
   MAF_EXPORT void setCode(ErrorCode code);
 
-  MAF_EXPORT std::string dump(int level = 0) const;
+  MAF_EXPORT std::string dump(int = 0) const;
 
 private:
   struct CSErrorDataPrv *d_;

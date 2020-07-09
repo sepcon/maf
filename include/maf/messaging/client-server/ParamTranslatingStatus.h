@@ -1,5 +1,4 @@
-#ifndef MESSAGETRAITBASE_H
-#define MESSAGETRAITBASE_H
+#pragma once
 
 #include <maf/utils/StringifyableEnum.h>
 
@@ -10,11 +9,10 @@ namespace messaging {
 MC_MAF_STRINGIFYABLE_ENUM(TranslationStatus, char,
                           Success,
                           NoSource,
+                          SourceCorrupted,
                           DestSrcMismatch
                           );
 // clang-format on
 
 } // namespace messaging
 } // namespace maf
-
-#endif // MESSAGETRAITBASE_H

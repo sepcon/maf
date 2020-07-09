@@ -1,45 +1,43 @@
 #pragma once
 
-#include <any>
-#include <functional>
-#include <future>
 #include <maf/export/MafExport_global.h>
 #include <maf/logging/Logger.h>
 #include <maf/patterns/Patterns.h>
-#include <typeindex>
+
+#include <future>
+
+#include "ComponentDef.h"
+#include "ExecutorIF.h"
 
 namespace maf {
 namespace messaging {
 
-class Component;
-using ComponentPtr = std::shared_ptr<Component>;
-
-using ComponentMessage = std::any;
-using ComponentMessageID = std::type_index;
-using GenericMsgHandlerFunction = std::function<void(ComponentMessage)>;
-template <class Msg>
-using ComponentMessageHandlerFunction = std::function<void(Msg)>;
-class ComponentMessageHandler;
-
 class Component final : pattern::Unasignable,
                         public std::enable_shared_from_this<Component> {
   std::unique_ptr<struct ComponentDataPrv> d_;
-  MAF_EXPORT Component(std::string name);
+  MAF_EXPORT Component(ComponentID id);
+
+  using ThreadFunction = std::function<void()>;
 
 public:
-  MAF_EXPORT static std::shared_ptr<Component> create(std::string name = {});
-  MAF_EXPORT const std::string &name() const;
-  MAF_EXPORT void setName(std::string name);
+  using StoppedSignal = std::future<void>;
+  using Executor = std::shared_ptr<ExecutorIF>;
 
-  MAF_EXPORT void run(std::function<void()> onEntry = {},
-                      std::function<void()> onExit = {});
+  MAF_EXPORT static std::shared_ptr<Component> create(ComponentID id = {});
+  MAF_EXPORT const ComponentID &id() const;
 
-  MAF_EXPORT std::future<void> runAsync(std::function<void()> onEntry = {},
-                                        std::function<void()> onExit = {});
+  MAF_EXPORT void run(ThreadFunction threadInit = {},
+                      ThreadFunction threadDeinit = {});
+
+  MAF_EXPORT StoppedSignal runAsync(ThreadFunction threadInit = {},
+                                   ThreadFunction threadDeinit = {});
 
   MAF_EXPORT void stop();
 
   MAF_EXPORT bool post(ComponentMessage &&msg);
+  MAF_EXPORT bool post(const ComponentMessage &msg);
+  MAF_EXPORT bool execute(Execution &&exec);
+  MAF_EXPORT Executor getExecutor();
 
   MAF_EXPORT void
   registerMessageHandler(ComponentMessageID msgid,
@@ -57,7 +55,7 @@ public:
                                this](ComponentMessage genericMsg) {
       try {
         callback(std::any_cast<Msg>(std::move(genericMsg)));
-      } catch (const std::bad_any_cast&) {
+      } catch (const std::bad_any_cast &) {
         MAF_LOGGER_ERROR("Failed to CAST msg to type of ", typeid(Msg).name());
       }
     };
@@ -79,8 +77,6 @@ public:
 private:
   MAF_EXPORT ~Component();
   static void deleteFunction(Component *comp);
-  friend struct ComponentImpl;
-  friend class CompThread;
 };
 
 class ComponentMessageHandler {
@@ -89,34 +85,35 @@ public:
   virtual ~ComponentMessageHandler() = default;
 };
 
-struct RunningComponent {
-  MAF_EXPORT static std::shared_ptr<Component> shared();
-  MAF_EXPORT static std::weak_ptr<Component> weak();
-  MAF_EXPORT static bool stop();
-  MAF_EXPORT static bool post(ComponentMessage &&msg);
+namespace this_component {
+MAF_EXPORT std::shared_ptr<Component> instance();
+MAF_EXPORT std::weak_ptr<Component> ref();
+MAF_EXPORT bool stop();
+MAF_EXPORT bool post(ComponentMessage &&msg);
+MAF_EXPORT Component::Executor getExecutor();
 
-  template <
-      class Msg, typename... Args,
-      std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
-  static bool post(Args &&... args) {
-    return post(Msg{std::forward<Args>(args)...});
-  }
+template <class Msg, typename... Args,
+          std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+static bool post(Args &&... args) {
+  return post(Msg{std::forward<Args>(args)...});
+}
 
-  template <class Msg>
-  static bool onMessage(ComponentMessageHandlerFunction<Msg> f) {
-    if (auto comp = shared()) {
-      comp->onMessage<Msg>(std::move(f));
-      return true;
-    }
-    return false;
+template <class Msg>
+static bool onMessage(ComponentMessageHandlerFunction<Msg> f) {
+  if (auto comp = instance()) {
+    comp->onMessage<Msg>(std::move(f));
+    return true;
   }
-  template <class Msg> static bool ignoreMessage() {
-    if (auto comp = shared()) {
-      return comp->ignoreMessage<Msg>();
-    }
-    return false;
+  return false;
+}
+
+template <class Msg> static bool ignoreMessage() {
+  if (auto comp = instance()) {
+    return comp->ignoreMessage<Msg>();
   }
-};
+  return false;
+}
+}; // namespace this_component
 
 } // namespace messaging
 } // namespace maf

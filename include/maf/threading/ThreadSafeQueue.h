@@ -1,5 +1,4 @@
-#ifndef THREADSAFEQUEUE_H
-#define THREADSAFEQUEUE_H
+#pragma once
 
 #include "Lockable.h"
 #include <atomic>
@@ -38,8 +37,9 @@ public:
   template <class std_chrono_duration>
   bool waitFor(value_type &value, std_chrono_duration interval) {
     std::unique_lock lock(queue_);
-    if (!queueNotEmpty_.wait_for(lock, interval,
-                           [this] { return !queue_->empty() || isClosed(); })) {
+    if (!queueNotEmpty_.wait_for(lock, interval, [this] {
+          return !queue_->empty() || isClosed();
+        })) {
       return false;
     } else if (!isClosed()) {
       value = std::move(queue_->front());
@@ -49,13 +49,14 @@ public:
     return false;
   }
 
-  bool waitFor(value_type& value, long long ms) {
-      return waitFor(value, std::chrono::milliseconds{ms});
+  bool waitFor(value_type &value, long long ms) {
+    return waitFor(value, std::chrono::milliseconds{ms});
   }
 
   bool wait(value_type &value) {
     std::unique_lock lock(queue_);
-    queueNotEmpty_.wait(lock, [this] { return !queue_->empty() || isClosed(); });
+    queueNotEmpty_.wait(lock,
+                        [this] { return !queue_->empty() || isClosed(); });
     if (!isClosed()) {
       value = std::move(queue_->front());
       queue_->pop();
@@ -72,6 +73,11 @@ public:
       return true;
     }
     return false;
+  }
+
+  void reOpen() {
+    clear();
+    closed_.store(false, std::memory_order_release);
   }
 
   void close() {
@@ -124,5 +130,3 @@ public:
 };
 } // namespace stdwrap
 } // namespace maf
-
-#endif // THREADSAFEQUEUE_H

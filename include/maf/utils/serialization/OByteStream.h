@@ -1,5 +1,4 @@
-#ifndef OSTREAM_H
-#define OSTREAM_H
+#pragma once
 
 #include "ByteArray.h"
 #include <cstring>
@@ -62,5 +61,3 @@ template <> struct StreamHelper<OByteStream, void> {
 
 } // namespace srz
 } // namespace maf
-
-#endif // OSTREAM_H

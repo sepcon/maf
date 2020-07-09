@@ -36,7 +36,7 @@
 
 #ifndef MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 #define MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
-#   include "Serializer1.h"
+#   include "Serializer.h"
 #   include "DumpHelper.h"
 #endif // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 

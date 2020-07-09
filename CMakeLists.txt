@@ -12,12 +12,12 @@ set(MAF_LIB_INCLUDE_PATH ${MAF_ROOT_DIR}/include)
 include_directories(${MAF_LIB_INCLUDE_PATH})
 add_definitions(-DMAF_MIN_ALLOWED_LOG_LEVEL=1)
 # --> Collect platforms dependent sources/headers
-file(GLOB_RECURSE MAF_LIBRARY_SOURCES
-    src/maf/*.cpp)
+file(GLOB_RECURSE MAF_COMMON_SOURCES
+    src/common/maf/*.cpp)
 file(GLOB_RECURSE MAF_LIBRARY_HEADERS
     include/*.h)
-file(GLOB_RECURSE MAF_LIBRARY_PRIV_HEADERS
-    src/maf/*.h)
+file(GLOB_RECURSE MAF_COMMON_PRIV_SOURCES
+    src/common/maf/*.h)
 # <-- platforms dependent sources/headers
 
 
@@ -34,11 +34,11 @@ endif()
 if(MAF_PLATFORM_NAME)
     set(MAF_PLATFORM_DIR "src/platforms/${MAF_PLATFORM_NAME}")
 
-    file(GLOB MAF_PLATFORM_HEADERS
-        "${MAF_PLATFORM_DIR}/internal/*.h"
+    file(GLOB_RECURSE MAF_PLATFORM_HEADERS
+        "${MAF_PLATFORM_DIR}/*.h"
         )
-    file(GLOB MAF_PLATFORM_SOURCES
-        "${MAF_PLATFORM_DIR}/internal/*.cpp"
+    file(GLOB_RECURSE MAF_PLATFORM_SOURCES
+        "${MAF_PLATFORM_DIR}/*.cpp"
         )
     include_directories(${MAF_PLATFORM_DIR})
 endif(MAF_PLATFORM_NAME)
@@ -53,10 +53,10 @@ endif()
 
 # Add maf.lib
 set( MAF_ALL_SOURCES
-    ${MAF_LIBRARY_SOURCES}
+    ${MAF_COMMON_SOURCES}
     ${MAF_PLATFORM_SOURCES}
     ${MAF_LIBRARY_HEADERS}
-    ${MAF_LIBRARY_PRIV_HEADERS}
+    ${MAF_COMMON_PRIV_SOURCES}
     ${MAF_PLATFORM_HEADERS}
     )
 
@@ -81,16 +81,21 @@ endif()
 if(MAF_BUILD_SAMPLE)
     add_subdirectory("sample/")
 endif(MAF_BUILD_SAMPLE)
+if(MAF_ENABLE_TEST)
+    add_subdirectory("test/")
+endif(MAF_ENABLE_TEST)
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+    message(${CMAKE_CXX_FLAGS_RELEASE})
 endif(MSVC)
 
 # Grouping sources/headers into tree layout for IDE browsing
 if(NOT DISABLE_SOURCE_GROUP)
-    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_SOURCES} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_COMMON_SOURCES} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_SOURCES} )
-    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_LIBRARY_PRIV_HEADERS} )
+    source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_COMMON_PRIV_SOURCES} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/src PREFIX "Sources" FILES ${MAF_PLATFORM_HEADERS} )
     source_group(TREE ${PROJECT_SOURCE_DIR}/include PREFIX "include" FILES ${MAF_LIBRARY_HEADERS} )
 endif(NOT DISABLE_SOURCE_GROUP)
