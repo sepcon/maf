@@ -10,15 +10,15 @@ protected:
   ~ExtensibleComponent() = default;
 
 public:
-  ExtensibleComponent(const std::string &name = "") {
-    _comp = Component::create();
-    _comp->setName(name);
+  using StoppedSignal = Component::StoppedSignal;
+
+  ExtensibleComponent(ComponentID id = {}) {
+    _comp = Component::create(std::move(id));
   }
 
-  const std::string &name() const;
-  void setName(std::string name);
+  const std::string &id() const;
   void run();
-  std::future<void> runAsync();
+  StoppedSignal runAsync();
   void stop();
   void post(ComponentMessage &&msg);
 
@@ -45,31 +45,25 @@ public:
     return _comp->ignoreMessage<Msg>();
   }
 
-  ComponentPtr component() const { return _comp; }
+  ComponentInstance component() const { return _comp; }
 
 protected:
-  virtual void onEntry() {}
-  virtual void onExit() {}
+  virtual void threadInit() {}
+  virtual void threadDeinit() {}
 
-  ComponentPtr _comp;
+  ComponentInstance _comp;
 };
 
-inline const std::string &ExtensibleComponent::name() const {
-  return _comp->name();
-}
-
-inline void ExtensibleComponent::setName(std::string name) {
-  _comp->setName(std::move(name));
+inline const std::string &ExtensibleComponent::id() const {
+  return _comp->id();
 }
 
 inline void ExtensibleComponent::run() {
-  return _comp->run(std::bind(&ExtensibleComponent::onEntry, this),
-                    std::bind(&ExtensibleComponent::onExit, this));
+  return _comp->run([this] { threadInit(); }, [this] { threadDeinit(); });
 }
 
-inline std::future<void> ExtensibleComponent::runAsync() {
-  return _comp->runAsync(std::bind(&ExtensibleComponent::onEntry, this),
-                         std::bind(&ExtensibleComponent::onExit, this));
+inline ExtensibleComponent::StoppedSignal ExtensibleComponent::runAsync() {
+  return _comp->runAsync([this] { threadInit(); }, [this] { threadDeinit(); });
 }
 
 inline void ExtensibleComponent::stop() { _comp->stop(); }

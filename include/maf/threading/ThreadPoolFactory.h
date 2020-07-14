@@ -1,5 +1,4 @@
-#ifndef THREADPOOLFACTORY_H
-#define THREADPOOLFACTORY_H
+#pragma once
 
 #include "IThreadPool.h"
 #include <maf/export/MafExport_global.h>
@@ -17,4 +16,3 @@ public:
 };
 } // namespace threading
 } // namespace maf
-#endif // THREADPOOLFACTORY_H

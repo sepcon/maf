@@ -20,6 +20,7 @@ MC_MAF_STRINGIFYABLE_ENUM(ActionCallStatus, char,
                     ReceiverBusy,
                     ReceiverUnavailable,
                     Timeout,
+                    NoAction,
                     FailedUnknown)
 // clang-format on
 }

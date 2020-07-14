@@ -2,10 +2,9 @@
 
 #include "client-server-contract.h"
 #include <chrono>
-#include <maf/messaging/AsyncCallbackExecutor.h>
 #include <maf/messaging/ExtensibleComponent.h>
 #include <maf/messaging/Timer.h>
-#include <maf/messaging/client-server/Stub.h>
+#include <maf/messaging/client-server/BasicStub.h>
 #include <maf/utils/TimeMeasurement.h>
 
 using namespace maf::messaging;
@@ -57,7 +56,7 @@ class ServerComponent : public maf::messaging::ExtensibleComponent {
 
 public:
   ServerComponent(std::shared_ptr<Stub> stub) : stub_{std::move(stub)} {
-    stub_->setExecutor(asyncExecutor(component()));
+    stub_->setExecutor(component()->getExecutor());
     MAF_LOGGER_DEBUG("Service id is: ", stub_->serviceID());
 
     stub_->template registerRequestHandler<implicitly_response_request::input>(
@@ -156,7 +155,7 @@ public:
     stub_->startServing();
   }
 
-  void onExit() override {
+  void threadDeinit() override {
     MAF_LOGGER_DEBUG("Server Component is shutting down!");
     stub_->stopServing();
   }

@@ -1,5 +1,4 @@
-#ifndef HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
-#define HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H
+#pragma once
 
 #include <functional>
 #include <maf/export/MafExport_global.h>
@@ -163,4 +162,3 @@ inline constexpr MafCStr constexprPastLastSlash(MafCStr str) {
 
 #define MAF_SHORT_FILE_NAME maf::logging::constexprPastLastSlash(__FILE__)
 
-#endif // HEADERS_LIBS_UTILS_DEBUGGING_DEBUG_H

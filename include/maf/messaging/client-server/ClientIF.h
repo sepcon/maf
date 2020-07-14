@@ -19,9 +19,10 @@ public:
   virtual bool hasServiceRequester(const ServiceID &sid) = 0;
   virtual ServiceRequesterIFPtr getServiceRequester(const ServiceID &sid) = 0;
   virtual Availability getServiceStatus(const ServiceID &sid) = 0;
-  virtual bool init(const Address &serverAddr,
-                    long long sersverMonitoringCycleMS) = 0;
-  virtual bool deinit() = 0;
+  virtual bool init(const Address &serverAddr) = 0;
+  virtual bool start() = 0;
+  virtual void stop() = 0;
+  virtual void deinit() = 0;
 };
 
 } // namespace messaging

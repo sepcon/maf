@@ -1,8 +1,8 @@
-#ifndef TIMER_H
-#define TIMER_H
+#pragma once
 
-#include "CallbackExecutorIF.h"
+#include "ExecutorIF.h"
 #include <chrono>
+#include <functional>
 #include <maf/export/MafExport_global.h>
 #include <maf/patterns/Patterns.h>
 #include <memory>
@@ -11,7 +11,7 @@ namespace maf {
 namespace messaging {
 
 class Timer : public pattern::Unasignable {
-  using ExecutorPtr = std::shared_ptr<CallbackExecutorIF>;
+  using ExecutorPtr = std::shared_ptr<ExecutorIF>;
 
 public:
   typedef std::function<void()> TimeOutCallback;
@@ -33,4 +33,3 @@ private:
 
 } // namespace messaging
 } // namespace maf
-#endif // TIMER_H

@@ -1,5 +1,4 @@
-#ifndef SERVERSTATUSOBSERVERIF_H
-#define SERVERSTATUSOBSERVERIF_H
+#pragma once
 
 #include "CSStatus.h"
 #include "CSTypes.h"
@@ -15,5 +14,3 @@ public:
 
 } // namespace messaging
 } // namespace maf
-
-#endif // SERVERSTATUSOBSERVERIF_H

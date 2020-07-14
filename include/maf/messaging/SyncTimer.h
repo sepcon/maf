@@ -1,7 +1,6 @@
-#ifndef SYNCTIMER_H
-#define SYNCTIMER_H
+#pragma once
 
-#include "CallbackExecutorIF.h"
+#include "ExecutorIF.h"
 #include <chrono>
 #include <maf/export/MafExport_global.h>
 #include <maf/patterns/Patterns.h>
@@ -10,7 +9,7 @@ namespace maf {
 namespace messaging {
 
 class SyncTimer : public pattern::Unasignable {
-  using ExecutorPtr = std::shared_ptr<CallbackExecutorIF>;
+  using ExecutorPtr = std::shared_ptr<ExecutorIF>;
 
 public:
   typedef std::function<void()> TimeOutCallback;
@@ -32,5 +31,3 @@ private:
 
 } // namespace messaging
 } // namespace maf
-
-#endif // SYNCTIMER_H

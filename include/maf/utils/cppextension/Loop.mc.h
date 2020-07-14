@@ -1,5 +1,4 @@
-#ifndef MACROS_H
-#define MACROS_H
+#pragma once
 
 #define mc_maf_msvc_expand_va_args(X) X
 
@@ -660,5 +659,3 @@
 #define mc_remove_first_arg_(first, ...) __VA_ARGS__
 #define mc_remove_first_arg(...)                                               \
   mc_maf_msvc_expand_va_args(mc_remove_first_arg_(__VA_ARGS__))
-
-#endif // MACROS_H

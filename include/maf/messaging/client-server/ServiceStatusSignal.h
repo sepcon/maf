@@ -1,32 +1,33 @@
-#ifndef SERVICESTATUSSIGNAL_H
-#define SERVICESTATUSSIGNAL_H
+#pragma once
 
-#include "Proxy.h"
+#include <condition_variable>
 #include <mutex>
+
+#include "BasicProxy.h"
 
 namespace maf {
 namespace messaging {
 
 class ServiceStatusSignal : public ServiceStatusObserverIF {
-public:
-    bool waitTill(const Availability expectedStatus) {
-        std::unique_lock lock(m_);
-        statusChanged_.wait(
-            lock, [this, expectedStatus] { return expectedStatus == currentStatus_ || stopped_; });
-        if (!stopped_) {
-          return true;
-        }
-        return false;
+ public:
+  bool waitTill(const Availability expectedStatus) {
+    std::unique_lock lock(m_);
+    statusChanged_.wait(lock, [this, expectedStatus] {
+      return expectedStatus == currentStatus_ || stopped_;
+    });
+    if (!stopped_) {
+      return true;
     }
+    return false;
+  }
 
-
-  bool waitTill(const Availability status, long long ms) {
-    return waitTill(status, std::chrono::milliseconds{ms});
+  bool waitTill(const Availability expectedStatus, long long ms) {
+    return waitTill(expectedStatus, std::chrono::milliseconds{ms});
   }
 
   template <typename Rep, typename Period>
   bool waitTill(const Availability expectedStatus,
-               const std::chrono::duration<Rep, Period> interval) {
+                const std::chrono::duration<Rep, Period> interval) {
     std::unique_lock lock(m_);
     if (statusChanged_.wait_for(lock, interval, [this, expectedStatus] {
           return expectedStatus == currentStatus_ || stopped_;
@@ -46,7 +47,7 @@ public:
 
   void onServiceStatusChanged(const ServiceID & /*sid*/,
                               Availability /*oldStatus*/,
-                              Availability newStatus) noexcept override {
+                              Availability newStatus) override {
     std::lock_guard lock(m_);
     currentStatus_ = newStatus;
     statusChanged_.notify_all();
@@ -57,24 +58,26 @@ public:
     return currentStatus_;
   }
 
-private:
+ private:
   mutable std::mutex m_;
   std::condition_variable statusChanged_;
   Availability currentStatus_ = Availability::Unavailable;
   bool stopped_ = false;
 };
 
+std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
+  return std::shared_ptr<ServiceStatusSignal>{new ServiceStatusSignal{}};
+}
+
 template <class PTrait>
-std::shared_ptr<ServiceStatusSignal>
-serviceStatusSignal(const std::shared_ptr<Proxy<PTrait>> &proxy = {}) {
-  auto waiter = std::make_shared<ServiceStatusSignal>();
+std::shared_ptr<ServiceStatusSignal> serviceStatusSignal(
+    const std::shared_ptr<BasicProxy<PTrait>> &proxy = {}) {
+  auto waiter = serviceStatusSignal();
   if (proxy) {
     proxy->registerServiceStatusObserver(waiter);
   }
   return waiter;
 }
 
-} // namespace messaging
-} // namespace maf
-
-#endif // SERVICESTATUSSIGNAL_H
+}  // namespace messaging
+}  // namespace maf

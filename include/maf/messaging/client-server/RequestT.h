@@ -6,23 +6,23 @@
 
 #include <cassert>
 #include <maf/logging/Logger.h>
-#include <maf/messaging/CallbackExecutorIF.h>
+#include <maf/messaging/ExecutorIF.h>
 
 namespace maf {
 namespace messaging {
 using namespace paco;
 
 template <class PTrait, class Input> class RequestT {
-  template <class MT> friend class Stub;
+  template <class MT> friend class BasicStub;
 
 #define mc_maf_reqt_assert_is_output(Output)                                   \
   static_assert(IsOutput<PTrait, Output>,                                      \
                 "the param must be a kind of output or status")
 
-#define mc_maf_reqt_assert_is_same_opid(Output, Input)                         \
-  static_assert(PTrait::template getOperationID<Input>() ==                    \
-                    PTrait::template getOperationID<Output>(),                 \
-                "Output class must has same operationID as Input")
+#define mc_maf_reqt_assert_is_same_opid(Output, Input) /*                      \
+static_assert(PTrait::template getOperationID<Input>() ==                      \
+PTrait::template getOperationID<Output>(),                                     \
+"Output class must has same operationID as Input")*/
 
   RequestT(std::shared_ptr<RequestIF> delegate)
       : delegate_(std::move(delegate)) {}
@@ -46,10 +46,10 @@ public:
   bool valid() const { return delegate_->valid(); }
 
   void setAbortRequestHandler(AbortRequestCallback abortCallback,
-                              std::shared_ptr<CallbackExecutorIF> executor) {
+                              std::shared_ptr<ExecutorIF> executor) {
 
     assert(executor && "Executor must not be null");
-    delegate_->setAbortRequestHandler(std::bind(&CallbackExecutorIF::execute,
+    delegate_->setAbortRequestHandler(std::bind(&ExecutorIF::execute,
                                                 std::move(executor),
                                                 std::move(abortCallback)));
   }
@@ -88,10 +88,6 @@ public:
 
     auto answer = std::make_shared<Output>(std::forward<Arg0>(resultInput0),
                                            std::forward<Args>(resultInputs)...);
-
-    MAF_LOGGER_VERBOSE("Responds to request `", delegate_->getOperationID(),
-                       "`: ", PTrait::template dump(answer));
-
     return this->respond(std::move(answer));
   }
 

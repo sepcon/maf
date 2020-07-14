@@ -1,5 +1,4 @@
-#ifndef RUNNABLE_H
-#define RUNNABLE_H
+#pragma once
 
 namespace maf {
 namespace threading {
@@ -36,4 +35,3 @@ inline void done(Runnable *runner) {
 
 } // namespace threading
 } // namespace maf
-#endif // RUNNABLE_H

@@ -1,17 +1,19 @@
 #pragma once
 
+#include <maf/export/MafExport_global.h>
+
 #include "CSStatus.h"
 #include "CSTypes.h"
 
 namespace maf {
 namespace messaging {
 
-class ServiceStatusObserverIF {
-public:
+class MAF_EXPORT ServiceStatusObserverIF {
+ public:
   virtual ~ServiceStatusObserverIF() = default;
   virtual void onServiceStatusChanged(const ServiceID &sid,
                                       Availability oldStatus,
-                                      Availability newStatus) noexcept = 0;
+                                      Availability newStatus) = 0;
 };
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

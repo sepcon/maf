@@ -1,5 +1,4 @@
-#ifndef THREADPOOLIMPLBASE_H
-#define THREADPOOLIMPLBASE_H
+#pragma once
 
 #include <atomic>
 #include <functional>
@@ -130,4 +129,3 @@ private:
 };
 } // namespace threading
 } // namespace maf
-#endif // THREADPOOLIMPLBASE_H

@@ -1,5 +1,4 @@
-#ifndef TYPETRAITS_H
-#define TYPETRAITS_H
+#pragma once
 
 #include <iterator>
 #include <memory>
@@ -182,4 +181,3 @@ auto revert_call(F &&f, Args &&... args) {
 
 } // namespace nstl
 } // namespace maf
-#endif // TYPETRAITS_H

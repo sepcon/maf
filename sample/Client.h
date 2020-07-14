@@ -1,12 +1,13 @@
 #pragma once
 
-#include "client-server-contract.h"
-#include "maf/messaging/AsyncCallbackExecutor.h"
-#include "maf/messaging/ExtensibleComponent.h"
-#include "maf/messaging/client-server/AsyncServiceStatusObserver.h"
-#include "maf/messaging/client-server/Proxy.h"
-#include "maf/utils/TimeMeasurement.h"
+#include <maf/Messaging.h>
+
+#include <iostream>
 #include <thread>
+
+#include "client-server-contract.h"
+#include "maf/messaging/client-server/BasicProxy.h"
+#include "maf/utils/TimeMeasurement.h"
 
 using namespace std::chrono_literals;
 using namespace maf;
@@ -14,53 +15,56 @@ using namespace maf::messaging;
 
 struct EndOfRequestChainMsg {};
 
-template <class Proxy> class ClientComponent : public ExtensibleComponent {
+template <class Proxy>
+class ClientComponent : public ExtensibleComponent {
   using ProxyPtr = std::shared_ptr<Proxy>;
-  template <class T> using Response = typename Proxy::template Response<T>;
+  template <class T>
+  using Response = typename Proxy::template Response<T>;
 
-public:
+ public:
   ClientComponent(ProxyPtr proxy) : proxy_{std::move(proxy)} {
-    proxy_->setExecutor(asyncExecutor(component()));
-    proxy_->registerServiceStatusObserver(
-        statusObserver_ = asyncServiceStatusObserver(component()));
+    proxy_->setExecutor(component()->getExecutor());
+
+    statusObserver_ = proxy_->onServiceStatusChanged(
+        [this](Availability, Availability newStatus) {
+          if (newStatus == Availability::Available) {
+            proxy_->template sendRequest<unhandled_request>(nullptr, 10s);
+            proxy_->template sendRequestAsync<implicitly_response_request>(
+                [](auto response) {
+                  assert(response.isError());
+                  auto err = response.getError();
+                  MAF_LOGGER_DEBUG("Got implicit response from server ",
+                                   err->dump());
+                });
+
+            MAF_LOGGER_DEBUG(
+                "Server already clear all status, then start jobs...");
+            registerStatuses();
+
+            proxy_->template sendRequestAsync<today_weather_request::output>(
+                today_weather_request::make_input("Client is client", 100),
+                [](Response<today_weather_request::output> response) {
+                  if (response.isOutput()) {
+                    MAF_LOGGER_DEBUG("Received output from server ",
+                                     response.getOutput()->get_your_command());
+                  } else {
+                    MAF_LOGGER_DEBUG("Error for request of today_weather: ",
+                                     response.getError()->description());
+                  }
+                });
+
+            proxy_->template sendRequestAsync<update_status_request>();
+
+          } else {
+            MAF_LOGGER_DEBUG(
+                "Service is off for sometime, please wait for him "
+                "to be available again!");
+          }
+        });
 
     // Try send first request when service is not available,
     // with asumption that server started later than client
     proxy_->template sendRequest<boot_time_request::output>(nullptr, 10s);
-
-    onMessage<ServiceStatusMsg>([this](ServiceStatusMsg msg) {
-      if (msg.newStatus == Availability::Available) {
-        proxy_->template sendRequest<unhandled_request>(nullptr, 10s);
-        proxy_->template sendRequestAsync<implicitly_response_request>(
-            [](auto response) {
-              assert(response.isError());
-              auto err = response.getError();
-              MAF_LOGGER_DEBUG("Got implicit response from server ",
-                               err->dump());
-            });
-
-        MAF_LOGGER_DEBUG("Server already clear all status, then start jobs...");
-        registerStatuses();
-
-        proxy_->template sendRequestAsync<today_weather_request::output>(
-            today_weather_request::make_input("Client is client", 100),
-            [](Response<today_weather_request::output> response) {
-              if (response.isOutput()) {
-                MAF_LOGGER_DEBUG("Received output from server ",
-                                 response.getOutput()->get_your_command());
-              } else {
-                MAF_LOGGER_DEBUG("Error for request of today_weather: ",
-                                 response.getError()->description());
-              }
-            });
-
-        proxy_->template sendRequestAsync<update_status_request>();
-
-      } else {
-        MAF_LOGGER_DEBUG("Service is off for sometime, please wait for him "
-                         "to be available again!");
-      }
-    });
   }
 
   ~ClientComponent() {
@@ -77,7 +81,8 @@ public:
     proxy_->unregisterServiceStatusObserver(statusObserver_);
   }
 
-  template <typename Category> void sendSyncRequest() {
+  template <typename Category>
+  void sendSyncRequest() {
     long long total = 0;
     const int totalRequests = 5000;
     {
@@ -103,7 +108,8 @@ public:
     registerStatus<compliance1_property::status>();
   }
 
-  template <class Status> void registerStatus() {
+  template <class Status>
+  void registerStatus() {
     auto dumpCallback = [this](const auto &status) {
       MAF_LOGGER_DEBUG("Got status update from server[", status->operationID(),
                        "]: ", status->get_updated_count());
@@ -169,9 +175,10 @@ public:
         MAF_LOGGER_ERROR("Server might respond nothing!");
       }
     }
-    RunningComponent::post<EndOfRequestChainMsg>();
+    this_component::post<EndOfRequestChainMsg>();
   }
-  template <class Status> void getStatus() {
+  template <class Status>
+  void getStatus() {
     for (int i = 0; i < 10; ++i) {
       auto compliance5 = proxy_->template getStatus<Status>();
       if (compliance5) {
@@ -197,7 +204,7 @@ public:
     }
   }
 
-private:
+ private:
   std::shared_ptr<ServiceStatusObserverIF> statusObserver_;
   std::shared_ptr<Proxy> proxy_;
   std::vector<RegID> regids_;

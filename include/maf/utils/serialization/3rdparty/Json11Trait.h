@@ -14,7 +14,7 @@
 
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
-#include <maf/utils/serialization/BasicTypes.h>
+#include <maf/utils/serialization/TuplizableTypeBase.h>
 #include <maf/utils/serialization/JsonTrait.h>
 
 //#include "json11.hpp"
@@ -28,7 +28,7 @@ template <typename T>
 struct is_json11_convertible_type
     : public std::integral_constant<bool, std::is_same_v<std::string, T> ||
                                               nstl::is_number_type_v<T> ||
-                                              is_tuple_like_v<T>> {};
+                                              is_tuplizable_type_v<T>> {};
 
 template <typename T>
 struct is_json11_convertible_type<std::vector<T>>
@@ -48,14 +48,14 @@ template <typename Type> struct J11TraitImpl {
   static bool exist(const Json &j) { return internal::template exist<Type>(j); }
 
   struct internal {
-    template <typename T, std::enable_if_t<is_tuple_like_v<T>, bool> = true>
+    template <typename T, std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
     static T get(const Json &j) {
       T t;
       t.load_from_json(j);
       return t;
     }
 
-    template <typename T, std::enable_if_t<is_tuple_like_v<T>, bool> = true>
+    template <typename T, std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
     static bool exist(const Json &j) {
       return j.is_object();
     }
@@ -75,7 +75,7 @@ template <class T> struct J11TraitImpl<std::vector<T>> {
     2. integer types
     3. double
     4. bool
-    5. TupleLikeBase classes
+    5. TuplizableTypeBase classes
     6. std::vector<one_of_above_types>
     7. std::map<string, one_of_above_types>)");
 
@@ -100,7 +100,7 @@ template <class Key, class Value> struct J11TraitImpl<std::map<Key, Value>> {
     2. integer types
     3. double
     4. bool
-    5. TupleLikeBase classes
+    5. TuplizableTypeBase classes
     6. std::vector<one_of_above_types>
     7. std::map<string, one_of_above_types>)");
 
