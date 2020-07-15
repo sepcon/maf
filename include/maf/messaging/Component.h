@@ -23,7 +23,9 @@ public:
   using StoppedSignal = std::future<void>;
   using Executor = std::shared_ptr<ExecutorIF>;
 
-  MAF_EXPORT static std::shared_ptr<Component> create(ComponentID id = {});
+  MAF_EXPORT static ComponentInstance create(ComponentID id = {});
+  MAF_EXPORT static ComponentInstance findComponent(const ComponentID& id);
+
   MAF_EXPORT const ComponentID &id() const;
 
   MAF_EXPORT void run(ThreadFunction threadInit = {},

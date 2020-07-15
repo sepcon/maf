@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/messaging/Component.h>
-#include <maf/messaging/MessageRouting.h>
+#include <maf/messaging/Routing.h>
 #include <maf/patterns/Patterns.h>
 #include <maf/threading/Lockable.h>
 
@@ -11,6 +11,7 @@
 namespace maf {
 namespace messaging {
 namespace impl {
+using namespace routing;
 
 struct ReceiverCompare {
   typedef int is_transparent;

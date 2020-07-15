@@ -6,6 +6,7 @@
 
 namespace maf {
 namespace messaging {
+namespace routing {
 
 using Receiver = Component;
 using ReceiverInstance = ComponentInstance;
@@ -14,16 +15,17 @@ using ReceiverID = ComponentID;
 using Message = ComponentMessage;
 
 struct ReceiverStatusMsg {
-    enum Status { Available, Unavailable };
-    ReceiverRef receiver;
-    Status status = Available;
-    bool isAvailable() const { return status == Available; }
-    bool isUnavailable() const { return status == Unavailable; }
+  enum Status { Available, Unavailable };
+  ReceiverRef receiver;
+  Status status = Available;
+  bool isAvailable() const { return status == Available; }
+  bool isUnavailable() const { return status == Unavailable; }
 };
 
 MAF_EXPORT bool routeMessage(Message&& msg, const ReceiverID& receiverID);
 MAF_EXPORT bool broadcast(Message&& msg);
 MAF_EXPORT ReceiverInstance findReceiver(const ReceiverID& id);
 
+}  // namespace routing
 }  // namespace messaging
 }  // namespace maf

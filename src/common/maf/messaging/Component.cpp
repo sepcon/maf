@@ -1,5 +1,4 @@
 #include <maf/logging/Logger.h>
-#include <maf/messaging/BasicMessages.h>
 #include <maf/messaging/Component.h>
 #include <maf/threading/Lockable.h>
 #include <maf/threading/Queue.h>
@@ -19,11 +18,12 @@ using HandlerMap = threading::Lockable<
 class CallbackExecutor : public ExecutorIF {
   ComponentRef compref;
 
-public:
+ public:
   CallbackExecutor(ComponentRef &&cr) : compref{std::move(cr)} {}
   bool execute(CallbackType callback) noexcept override {
     if (auto comp = compref.lock()) {
-      return comp->execute(std::move(callback));
+      comp->execute(std::move(callback));
+      return true;
     }
     return false;
   }
@@ -55,12 +55,14 @@ static Execution makeExecution(GenericMsgHandlerFunction &&handler,
     try {
       handler(std::move(msg));
     } catch (const std::exception &e) {
-      MAF_LOGGER_ERROR("Exception occurred while executing "
-                       "messageHandler function of msg `",
-                       msgType.name(), "`: ", e.what());
+      MAF_LOGGER_ERROR(
+          "Exception occurred while executing "
+          "messageHandler function of msg `",
+          msgType.name(), "`: ", e.what());
     } catch (...) {
-      MAF_LOGGER_ERROR("Unknown exception occurred while executing"
-                       " messageHandler function: ");
+      MAF_LOGGER_ERROR(
+          "Unknown exception occurred while executing"
+          " messageHandler function: ");
     }
   };
 
@@ -72,15 +74,19 @@ Component::Component(ComponentID id)
 
 Component::~Component() {}
 
-std::shared_ptr<Component> Component::create(ComponentID name) {
-  auto comp = std::shared_ptr<Component>{new Component{std::move(name)},
-                                         &Component::deleteFunction};
+ComponentInstance Component::create(ComponentID name) {
+  auto comp = ComponentInstance{new Component{std::move(name)},
+                                &Component::deleteFunction};
   if (!comp->id().empty()) {
     if (!MessageRouter::instance().addReceiver(comp)) {
       comp.reset();
     }
   }
   return comp;
+}
+
+ComponentInstance Component::findComponent(const ComponentID &id) {
+  return routing::findReceiver(id);
 }
 
 const ComponentID &Component::id() const { return d_->id; }
@@ -169,7 +175,7 @@ bool Component::unregisterHandler(ComponentMessageID msgid) {
 
 void Component::deleteFunction(Component *comp) { delete comp; }
 
-std::shared_ptr<Component> this_component::instance() {
+ComponentInstance this_component::instance() {
   if (tlInstance_) {
     return tlInstance_->shared_from_this();
   } else {
@@ -207,5 +213,5 @@ Component::Executor this_component::getExecutor() {
   return {};
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf
