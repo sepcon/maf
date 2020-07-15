@@ -1,10 +1,14 @@
-#include "test.h"
-#include <atomic>
 #include <maf/messaging/Component.h>
-#include <maf/messaging/MessageRouting.h>
+#include <maf/messaging/Routing.h>
 #include <maf/utils/StringifyableEnum.h>
 
+#include <atomic>
+
+#include "test.h"
+
 using namespace maf::messaging;
+using namespace maf::messaging::routing;
+
 using namespace std::chrono_literals;
 
 static constexpr auto MasterID = "id.master";
@@ -20,7 +24,6 @@ struct HasSenderMessage {
   }
   ReceiverInstance sender;
 };
-
 
 struct TaskInputRequest : public HasSenderMessage {};
 struct TaskSubmitted {};
@@ -56,20 +59,20 @@ static constexpr int eval(const Task &task) {
   auto [op, first, second] = task;
   auto output = 0;
   switch (op) {
-  case BinOp::Add:
-    output = first + second;
-    break;
-  case BinOp::Sub:
-    output = first - second;
-    break;
-  case BinOp::Mul:
-    output = first * second;
-    break;
-  case BinOp::Dev:
-    output = first / second;
-    break;
-  default:
-    break;
+    case BinOp::Add:
+      output = first + second;
+      break;
+    case BinOp::Sub:
+      output = first - second;
+      break;
+    case BinOp::Mul:
+      output = first * second;
+      break;
+    case BinOp::Dev:
+      output = first / second;
+      break;
+    default:
+      break;
   }
   return output;
 }
@@ -79,7 +82,8 @@ struct CompLogRecord {
   CompLogRecord(CompLogRecord &&) = default;
   CompLogRecord(const CompLogRecord &) = delete;
   ~CompLogRecord() { std::cout << oss.str() << std::endl; }
-  template <typename T> CompLogRecord &operator<<(const T &val) {
+  template <typename T>
+  CompLogRecord &operator<<(const T &val) {
     oss << val;
     return *this;
   };
@@ -101,8 +105,8 @@ static void setupSlaves() {
 
         ->onMessage<Task>([](Task task) {
           routeMessage(TaskResult{this_component::instance(), std::get<0>(task),
-                                 eval(task)},
-                      MasterID);
+                                  eval(task)},
+                       MasterID);
         })
         ->onMessage<TaskSubmitted>([](auto) {
           log() << "Task submitted to master then quit!";

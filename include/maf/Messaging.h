@@ -1,4 +1,4 @@
 #pragma once
 
-#include "messaging/MessageRouting.h"
+#include "messaging/Routing.h"
 #include "messaging/ExtensibleComponent.h"
