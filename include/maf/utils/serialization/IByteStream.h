@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "ByteArray.h"
+#include "Buffer.h"
 
 namespace maf {
 namespace srz {
@@ -13,12 +13,12 @@ class IByteStream {
   static constexpr State Failed = 2;
   static constexpr State Eof = 4;
 
-public:
+ public:
   using SizeType = size_t;
   // NOTES: for purpose of IPC serialization in maf, IByteStream should be copy
   // constructible and assignable for storing state of current stream
-  IByteStream(ByteArray &&ba) noexcept : data_{std::move(ba)} {}
-  IByteStream(const ByteArray &ba) noexcept : data_{ba} {}
+  IByteStream(Buffer &&ba) noexcept : data_{std::move(ba)} {}
+  IByteStream(const Buffer &ba) noexcept : data_{ba} {}
   IByteStream(const IByteStream &) = default;
   IByteStream &operator=(const IByteStream &) = default;
 
@@ -31,7 +31,7 @@ public:
     return *this;
   }
 
-  void read(char *buf, SizeType size) {
+  void read(char *buf, SizeType size) noexcept {
     if (good()) {
       if (readingPos_ + size > data_.size()) {
         state_ &= Failed;
@@ -45,11 +45,11 @@ public:
     }
   }
 
-  bool eof() const { return state_ & Eof; }
-  bool good() const { return state_ & Good; }
-  bool fail() const { return state_ & Failed; }
-  ByteArray &bytes() noexcept { return data_; }
-  const ByteArray &bytes() const noexcept { return data_; }
+  bool eof() const noexcept { return state_ & Eof; }
+  bool good() const noexcept { return state_ & Good; }
+  bool fail() const noexcept { return state_ & Failed; }
+  Buffer &bytes() noexcept { return data_; }
+  const Buffer &bytes() const noexcept { return data_; }
 
   void reset() noexcept {
     readingPos_ = 0;
@@ -57,7 +57,9 @@ public:
     data_.clear();
   }
 
-private:
+  SizeType readingPos() const noexcept { return readingPos_; }
+
+ private:
   void moveTo(IByteStream &other) noexcept {
     other.data_ = std::move(data_);
     other.readingPos_ = readingPos_;
@@ -65,10 +67,10 @@ private:
     state_ = Good;
     readingPos_ = 0;
   }
-  ByteArray data_;
+  Buffer data_;
   SizeType readingPos_ = 0;
   State state_ = Good;
 };
 
-} // namespace srz
-} // namespace maf
+}  // namespace srz
+}  // namespace maf

@@ -5,7 +5,7 @@
 namespace maf {
 namespace srz {
 
-using ByteArray = std::string;
+using Buffer = std::string;
 
 } // namespace srz
 } // namespace maf

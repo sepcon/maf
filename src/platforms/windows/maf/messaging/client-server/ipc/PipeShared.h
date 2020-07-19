@@ -1,17 +1,17 @@
 #pragma once
 
 #include <maf/messaging/client-server/Address.h>
-#include <maf/utils/serialization/ByteArray.h>
+#include <maf/utils/serialization/Buffer.h>
 #include <windows.h>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-static constexpr int WAIT_DURATION_MAX = 5000; // milliseconds
-static constexpr int BUFFER_SIZE = 500;        // bytes
+static constexpr int WAIT_DURATION_MAX = 5000;  // milliseconds
+static constexpr int BUFFER_SIZE = 500;         // bytes
 
-using ByteArrayPtr = std::shared_ptr<srz::ByteArray>;
+using ByteArrayPtr = std::shared_ptr<srz::Buffer>;
 using PipeNameType = std::string;
 
 inline PipeNameType constructPipeName(const Address &pAddr) {
@@ -29,6 +29,6 @@ struct AutoCloseHandle {
   HANDLE _h;
 };
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

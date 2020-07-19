@@ -2,14 +2,14 @@
 #include "ServerFactory.h"
 #include "ServiceProvider.h"
 #include <maf/logging/Logger.h>
-#include <maf/messaging/client-server/CSManager.h>
+#include <maf/messaging/client-server/CSMgmt.h>
 #include <maf/threading/Lockable.h>
 #include <map>
 #include <vector>
 
 namespace maf {
 namespace messaging {
-namespace csmanagement {
+namespace csmgmt {
 
 std::shared_ptr<ServiceRequesterIF>
 getServiceRequester(const ConnectionType &conntype, const Address &serverAddr,
@@ -37,6 +37,6 @@ ServiceProviderIFPtr getServiceProvider(const ConnectionType &conntype,
   return {};
 }
 
-} // namespace csmanagement
+} // namespace csmgmt
 } // namespace messaging
 } // namespace maf

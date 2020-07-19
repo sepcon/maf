@@ -15,9 +15,11 @@ using ServiceStatusObserverPtr = Proxy::ServiceStatusObserverPtr;
 template <class CSParam>
 using Response = Proxy::Response<CSParam>;
 
+static inline constexpr auto connectionType = "itc.messaging.maf";
+
 inline ProxyPtr createProxy(const ServiceID &sid, ExecutorPtr executor = {},
                             ServiceStatusObserverPtr statusObsv = {}) {
-  return Proxy::createProxy("itc.messaging.maf", {}, sid, std::move(executor),
+  return Proxy::createProxy(connectionType, {}, sid, std::move(executor),
                             std::move(statusObsv));
 }
 

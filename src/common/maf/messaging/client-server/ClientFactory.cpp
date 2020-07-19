@@ -1,20 +1,21 @@
 #include "ClientFactory.h"
-#include "ipc/LocalIPCClient.h"
-#include "itc/Client.h"
+
 #include <maf/logging/Logger.h>
 #include <maf/utils/containers/Map2D.h>
+
+#include "ipc/LocalIPCClient.h"
+#include "itc/Client.h"
 
 namespace maf {
 namespace messaging {
 
 class ClientFactoryImpl {
-
-public:
+ public:
   threading::Lockable<
       util::Map2D<ConnectionType, Address, std::shared_ptr<ClientIF>>>
       _clientMap;
 
-public:
+ public:
   ~ClientFactoryImpl() {
     std::lock_guard lock(_clientMap);
     for (auto &[contype, clients] : *_clientMap) {
@@ -31,7 +32,7 @@ public:
     if (connectionType == "itc.messaging.maf") {
       return itc::Client::instance();
     } else if (connectionType == "local.ipc.messaging.maf") {
-      return std::make_shared<ipc::LocalIPCClient>();
+      return std::make_shared<ipc::local::LocalIPCClient>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
                        connectionType, "]");
@@ -62,11 +63,10 @@ ClientFactory::ClientFactory(Invisible)
 
 ClientFactory::~ClientFactory() = default;
 
-std::shared_ptr<ClientIF>
-ClientFactory::getClient(const ConnectionType &connectionType,
-                         const Address &addr) {
+std::shared_ptr<ClientIF> ClientFactory::getClient(
+    const ConnectionType &connectionType, const Address &addr) {
   return _pImpl->getClient(connectionType, addr);
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

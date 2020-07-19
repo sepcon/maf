@@ -1,20 +1,23 @@
 #pragma once
 
-#include "SocketShared.h"
+#include <maf/utils/serialization/Buffer.h>
+
 #include <atomic>
 #include <future>
-#include <maf/utils/serialization/ByteArray.h>
+
+#include "SocketShared.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
-using ByteArrayPtr = std::shared_ptr<srz::ByteArray>;
-using BytesComeCallback = std::function<void(srz::ByteArray &&)>;
+using ByteArrayPtr = std::shared_ptr<srz::Buffer>;
+using BytesComeCallback = std::function<void(srz::Buffer &&)>;
 
-class LocalIPCReceiverImpl {
-public:
-  ~LocalIPCReceiverImpl();
+class LocalIPCBufferReceiverImpl {
+ public:
+  ~LocalIPCBufferReceiverImpl();
   bool init(const Address &addr);
   bool start();
   void stop();
@@ -23,7 +26,7 @@ public:
   const Address &address() const;
   void setObserver(BytesComeCallback callback);
 
-private:
+ private:
   enum class State : char {
     Uninitialized,
     Initialized,
@@ -47,6 +50,7 @@ private:
   std::atomic<State> state_ = State::Uninitialized;
 };
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

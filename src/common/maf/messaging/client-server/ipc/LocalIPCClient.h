@@ -1,19 +1,23 @@
 #pragma once
 
-#include "../ClientBase.h"
-#include "IPCReceiverIF.h"
-#include "IPCTypes.h"
-
 #include <future>
 #include <thread>
+
+#include "../ClientBase.h"
+#include "BufferReceiverIF.h"
+#include "IPCTypes.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-class IPCSenderIF;
+class BufferSenderIF;
+class BufferReceiverIF;
+
+namespace local {
+
 class LocalIPCClient : public ClientBase, public BytesComeObserver {
-public:
+ public:
   LocalIPCClient();
   ~LocalIPCClient() override;
 
@@ -27,21 +31,22 @@ public:
   void onServerStatusChanged(Availability oldStatus,
                              Availability newStatus) noexcept override;
 
-protected:
+ protected:
   void monitorServerStatus(long long intervalMs);
-  void onBytesCome(srz::ByteArray &&bytes) override;
+  void onBytesCome(srz::Buffer &&bytes) override;
 
   Address myServerAddress_;
 
   std::thread serverMonitorThread_;
   std::thread receiverThread_;
 
-  std::unique_ptr<IPCSenderIF> pSender_;
-  std::unique_ptr<IPCReceiverIF> pReceiver_;
+  std::unique_ptr<BufferSenderIF> pSender_;
+  std::unique_ptr<BufferReceiverIF> pReceiver_;
 
   std::promise<void> stopEventSource_;
 };
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

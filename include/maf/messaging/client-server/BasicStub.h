@@ -5,7 +5,7 @@
 
 #include <maf/logging/Logger.h>
 #include <maf/messaging/ExecutorIF.h>
-#include <maf/messaging/client-server/CSManager.h>
+#include <maf/messaging/client-server/CSMgmt.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
 
 namespace maf {
@@ -83,7 +83,7 @@ typename BasicStub<PTrait>::StubPtr
 BasicStub<PTrait>::createStub(const ConnectionType &contype,
                               const Address &addr, const ServiceID &sid,
                               ExecutorPtr executor) {
-  if (auto provider = csmanagement::getServiceProvider(contype, addr, sid)) {
+  if (auto provider = csmgmt::getServiceProvider(contype, addr, sid)) {
     return std::shared_ptr<BasicStub>{
         new BasicStub(std::move(provider), std::move(executor))};
   }

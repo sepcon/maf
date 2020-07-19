@@ -15,10 +15,12 @@ using ServiceStatusObserverPtr = Proxy::ServiceStatusObserverPtr;
 template <class Output>
 using Response = Proxy::Response<Output>;
 
+inline constexpr auto connectionType = "local.ipc.messaging.maf";
+
 inline ProxyPtr createProxy(const Address &addr, const ServiceID &sid,
                             ExecutorPtr executor = {},
                             ServiceStatusObserverPtr statusObsv = {}) {
-  return Proxy::createProxy("local.ipc.messaging.maf", addr, sid,
+  return Proxy::createProxy(connectionType, addr, sid,
                             std::move(executor), std::move(statusObsv));
 }
 

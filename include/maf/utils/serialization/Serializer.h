@@ -1,40 +1,42 @@
 #pragma once
 
-#include "TuplizableTypeBase.h"
-#include <cassert>
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
+
+#include <cassert>
 #include <string>
 #include <tuple>
 
+#include "TuplizableTypeBase.h"
+
 /// Serialization
 
-#define mc_enable_if_is_tuplelike_(TypeName)                                   \
-  template <typename TypeName,                                                 \
+#define mc_enable_if_is_tuplelike_(TypeName) \
+  template <typename TypeName,               \
             std::enable_if_t<is_tuplizable_type_v<TypeName>, bool> = true>
-#define mc_enable_if_is_number_or_enum_(NumberType)                            \
-  template <typename NumberType,                                               \
-            std::enable_if_t<nstl::is_number_type<NumberType>::value ||        \
-                                 std::is_enum_v<NumberType>,                   \
+#define mc_enable_if_is_number_or_enum_(NumberType)                     \
+  template <typename NumberType,                                        \
+            std::enable_if_t<nstl::is_number_type<NumberType>::value || \
+                                 std::is_enum_v<NumberType>,            \
                              bool> = true>
-#define mc_enable_if_is_smartptr_(SmartPtrType)                                \
-  template <typename SmartPtrType,                                             \
+#define mc_enable_if_is_smartptr_(SmartPtrType) \
+  template <typename SmartPtrType,              \
             std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
-#define mc_enable_if_is_ptr_(PointerType)                                      \
-  template <typename PointerType,                                              \
+#define mc_enable_if_is_ptr_(PointerType) \
+  template <typename PointerType,         \
             std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
-#define mc_enable_if_is_a_char_string(CharString)                              \
-  template <typename CharString,                                               \
-            std::enable_if_t<std::is_base_of_v<std::string, CharString> &&     \
-                                 !std::is_same_v<std::string, CharString>,     \
+#define mc_enable_if_is_a_char_string(CharString)                          \
+  template <typename CharString,                                           \
+            std::enable_if_t<std::is_base_of_v<std::string, CharString> && \
+                                 !std::is_same_v<std::string, CharString>, \
                              bool> = true>
-#define mc_must_default_constructible(PointerType)                             \
-  static_assert(                                                               \
-      std::is_default_constructible_v<std::remove_pointer_t<PointerType>>,     \
+#define mc_must_default_constructible(PointerType)                         \
+  static_assert(                                                           \
+      std::is_default_constructible_v<std::remove_pointer_t<PointerType>>, \
       "");
 
-#define mc_enable_if_is_iterable_(Container)                                   \
-  template <typename Container,                                                \
+#define mc_enable_if_is_iterable_(Container) \
+  template <typename Container,              \
             std::enable_if_t<nstl::is_iterable_v<Container>, bool> = true>
 
 namespace maf {
@@ -45,13 +47,16 @@ using namespace nstl;
 using SizeType = uint32_t;
 inline constexpr SizeType SIZETYPE_WIDE = sizeof(SizeType);
 
-template <class OStream, typename T> void serialize(OStream &, const T &);
+template <class OStream, typename T>
+void serialize(OStream &, const T &);
 
-template <class IStream, typename T> T deserialize(IStream &, bool &);
+template <class IStream, typename T>
+T deserialize(IStream &, bool &);
 
 namespace internal {
 
-template <class Container, typename = void> struct ContainerReserver {
+template <class Container, typename = void>
+struct ContainerReserver {
   static void reserve(Container & /*c*/, SizeType /*size*/) {}
 };
 
@@ -63,24 +68,27 @@ struct ContainerReserver<
   }
 };
 
-template <typename T> char *to_cstr(T *value) {
+template <typename T>
+char *to_cstr(T *value) {
   return reinterpret_cast<char *>(value);
 }
 
-template <typename T> const char *to_cstr(const T *value) {
+template <typename T>
+const char *to_cstr(const T *value) {
   return reinterpret_cast<const char *>(value);
 }
 
-template <class StreamType, typename = void> struct StreamHelper {
+template <class StreamType, typename = void>
+struct StreamHelper {
   static void prepareNextWrite(StreamType &, SizeType) {}
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <class OStream, class IStream, typename T, typename = void>
 struct Serializer {
-
-  template <typename TT> using SerializerT = Serializer<OStream, IStream, TT>;
+  template <typename TT>
+  using SerializerT = Serializer<OStream, IStream, TT>;
 
   void serialize(OStream &os, const T &value) {
     Impl::template serialize<T>(os, value);
@@ -251,8 +259,8 @@ struct Serializer {
 
 template <class OStream, class IStream, typename First, typename Second>
 struct Serializer<OStream, IStream, std::pair<First, Second>, void> {
-
-  template <typename T> using SerializerT = Serializer<OStream, IStream, T>;
+  template <typename T>
+  using SerializerT = Serializer<OStream, IStream, T>;
 
   using DType = std::pair<First, Second>;
   using FirstPure = pure_type_t<First>;
@@ -284,7 +292,8 @@ struct Serializer<OStream, IStream, std::pair<First, Second>, void> {
 template <class OStream, class IStream, typename Tuple>
 struct Serializer<OStream, IStream, Tuple,
                   std::enable_if_t<nstl::is_tuple_v<Tuple>, void>> {
-  template <typename T> using SerializerT = Serializer<OStream, IStream, T>;
+  template <typename T>
+  using SerializerT = Serializer<OStream, IStream, T>;
   using SrType = Tuple;
 
   SizeType serializedSize(const Tuple &tp) noexcept {
@@ -315,8 +324,8 @@ template <class OStream, class IStream, typename CharT, class Trait,
           class Allocator>
 struct Serializer<OStream, IStream, std::basic_string<CharT, Trait, Allocator>,
                   void> {
-
-  template <typename T> using SerializerT = Serializer<OStream, IStream, T>;
+  template <typename T>
+  using SerializerT = Serializer<OStream, IStream, T>;
   using SrType = std::basic_string<CharT>;
 
   SizeType serializedSize(const SrType &value) noexcept {
@@ -350,8 +359,8 @@ struct Serializer<
     std::enable_if_t<std::is_base_of_v<std::string, StringDerived> &&
                          !std::is_same_v<std::string, StringDerived>,
                      void>> {
-
-  template <typename T> using SerializerT = Serializer<OStream, IStream, T>;
+  template <typename T>
+  using SerializerT = Serializer<OStream, IStream, T>;
   using SrType = StringDerived;
 
   SizeType serializedSize(const SrType &value) noexcept {
@@ -371,38 +380,45 @@ struct Serializer<
   SerializerT<std::string> ssr_;
 };
 
-template <class OStream, typename T> void serialize(OStream &os, const T &v) {
+template <class OStream, typename T>
+void serialize(OStream &os, const T &v) {
   using namespace internal;
   auto sr = Serializer<OStream, std::nullptr_t, T>{};
   StreamHelper<OStream>::prepareNextWrite(os, sr.serializedSize(v));
   sr.serialize(os, v);
 }
 
-template <class IStream, typename T> T deserialize(IStream &is, bool &good) {
+template <class IStream, typename T>
+T deserialize(IStream &is, bool &good) {
   return Serializer<std::nullptr_t, IStream, T>{}.deserialize(is, good);
 }
 
-template <class OStream> class SR {
+template <class OStream>
+class SR {
   OStream &os_;
 
-public:
+ public:
   SR(OStream &os) : os_{os} {}
-  template <typename T> SR &operator<<(const T &value) {
+  template <typename T>
+  SR &operator<<(const T &value) {
     serialize(os_, value);
     return *this;
   }
 
-  template <typename... Ts> void serializeBatch(const Ts &... ts) {
+  template <typename... Ts>
+  void serializeBatch(const Ts &... ts) {
     serialize(os_, std::tie(ts...));
   }
 };
 
-template <class IStream> class DSR {
+template <class IStream>
+class DSR {
   IStream &is_;
 
-public:
+ public:
   DSR(IStream &is) : is_{is} {}
-  template <typename T> DSR &operator>>(T &value) {
+  template <typename T>
+  DSR &operator>>(T &value) {
     bool good = true;
     value = deserialize<IStream, T>(is_, good);
     if (!good) {
@@ -411,7 +427,8 @@ public:
     return *this;
   }
 
-  template <typename... Ts> DSR &deserializeBatch(Ts &... ts) {
+  template <typename... Ts>
+  DSR &deserializeBatch(Ts &... ts) {
     bool good = true;
     std::tie(ts...) = deserialize<IStream, std::tuple<Ts...>>(is_, good);
     if (!good) {
@@ -421,8 +438,8 @@ public:
   }
 };
 
-} // namespace srz
-} // namespace maf
+}  // namespace srz
+}  // namespace maf
 
 #undef mc_enable_if_is_tuplelike_
 #undef mc_enable_if_is_number_or_enum_

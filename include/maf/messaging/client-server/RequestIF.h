@@ -6,7 +6,7 @@ namespace maf {
 namespace messaging {
 
 class MAF_EXPORT RequestIF {
-public:
+ public:
   virtual ~RequestIF() = default;
   virtual OpCode getOperationCode() const = 0;
   virtual const OpID &getOperationID() const = 0;
@@ -17,5 +17,5 @@ public:
   virtual void setAbortRequestHandler(AbortRequestCallback abortCallback) = 0;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

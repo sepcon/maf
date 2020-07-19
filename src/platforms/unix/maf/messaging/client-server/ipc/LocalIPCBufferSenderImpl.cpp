@@ -1,14 +1,15 @@
-#include "LocalIPCSenderImpl.h"
+#include "LocalIPCBufferSenderImpl.h"
 
 #define ns_global
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
 namespace {
 
-bool connectable(sockaddr_un *sockaddr) {
+static bool connectable(sockaddr_un *sockaddr) {
   AutoCloseFD<SockFD> fd;
   if (fd = socket(AF_UNIX, SOCK_STREAM, 0); fd == INVALID_FD) {
     MAF_SOCKET_ERROR("Cannot create socket");
@@ -20,15 +21,15 @@ bool connectable(sockaddr_un *sockaddr) {
   }
   return fd != INVALID_FD;
 }
-} // namespace
+}  // namespace
 
-ActionCallStatus LocalIPCSenderImpl::send(const Buffer &payload,
-                                          const Address &destination) {
+ActionCallStatus LocalIPCBufferSenderImpl::send(const Buffer &payload,
+                                                const Address &destination) {
   return send(payload, destination.get_name());
 }
 
-Availability
-LocalIPCSenderImpl::checkReceiverStatus(const Address &destination) const {
+Availability LocalIPCBufferSenderImpl::checkReceiverStatus(
+    const Address &destination) const {
   static thread_local sockaddr_un destSockAddr;
   static thread_local Address destAddr;
   if (destination != destAddr) {
@@ -40,8 +41,8 @@ LocalIPCSenderImpl::checkReceiverStatus(const Address &destination) const {
                                     : Availability::Unavailable;
 }
 
-ActionCallStatus LocalIPCSenderImpl::send(const Buffer &payload,
-                                          const SocketPath &sockpath) {
+ActionCallStatus LocalIPCBufferSenderImpl::send(const Buffer &payload,
+                                                const SocketPath &sockpath) {
   ActionCallStatus acs = ActionCallStatus::FailedUnknown;
   if (auto fd = connectToSocket(sockpath); fd != INVALID_FD) {
     SizeType totalWritten = 0;
@@ -73,7 +74,6 @@ ActionCallStatus LocalIPCSenderImpl::send(const Buffer &payload,
 
     if (acs != ActionCallStatus::Success) {
       if (totalWritten == 0) {
-
       } else {
         // ec = FailedUnknown, must provide more info for debugging purpose
         MAF_LOGGER_ERROR("Failed to send payload to receiver, expected is ",
@@ -86,6 +86,7 @@ ActionCallStatus LocalIPCSenderImpl::send(const Buffer &payload,
   return acs;
 }
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

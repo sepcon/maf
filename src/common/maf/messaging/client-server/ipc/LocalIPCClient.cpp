@@ -1,17 +1,21 @@
 #include "LocalIPCClient.h"
-#include "IPCMessage.h"
-#include "IPCSenderIF.h"
-#include "LocalIPCReceiver.h"
-#include "LocalIPCSender.h"
+
 #include <maf/logging/Logger.h>
 #include <maf/utils/Process.h>
+
+#include "BufferSenderIF.h"
+#include "LocalIPCBufferReceiver.h"
+#include "LocalIPCBufferSender.h"
+#include "LocalIPCMessage.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
 LocalIPCClient::LocalIPCClient()
-    : pSender_{new LocalIPCSender}, pReceiver_{new LocalIPCReceiver} {}
+    : pSender_{new local::LocalIPCBufferSender},
+      pReceiver_{new LocalIPCBufferReceiver} {}
 
 bool LocalIPCClient::init(const Address &serverAddress) {
   assert(serverAddress.valid());
@@ -52,8 +56,9 @@ ActionCallStatus LocalIPCClient::sendMessageToServer(const CSMessagePtr &msg) {
   assert(msg != nullptr);
   try {
     msg->setSourceAddress(pReceiver_->address());
-    return pSender_->send(std::static_pointer_cast<IPCMessage>(msg)->toBytes(),
-                          myServerAddress_);
+    return pSender_->send(
+        std::static_pointer_cast<local::LocalIPCMessage>(msg)->toBytes(),
+        myServerAddress_);
   } catch (const std::bad_alloc &e) {
     MAF_LOGGER_ERROR("Message is too large to be serialized: ", e.what());
     return ActionCallStatus::FailedUnknown;
@@ -64,7 +69,7 @@ void LocalIPCClient::onServerStatusChanged(Availability oldStatus,
                                            Availability newStatus) noexcept {
   ClientBase::onServerStatusChanged(oldStatus, newStatus);
   if (newStatus == Availability::Available) {
-    auto registeredMsg = messaging::createCSMessage<IPCMessage>(
+    auto registeredMsg = messaging::createCSMessage<local::LocalIPCMessage>(
         ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
     if (sendMessageToServer(registeredMsg) == ActionCallStatus::Success) {
       MAF_LOGGER_INFO(
@@ -100,8 +105,9 @@ void LocalIPCClient::monitorServerStatus(long long intervalMs) {
       });
 }
 
-void LocalIPCClient::onBytesCome(srz::ByteArray &&bytes) {
-  std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
+void LocalIPCClient::onBytesCome(srz::Buffer &&bytes) {
+  std::shared_ptr<local::LocalIPCMessage> csMsg =
+      std::make_shared<local::LocalIPCMessage>();
   if (csMsg->fromBytes(std::move(bytes))) {
     onIncomingMessage(csMsg);
   } else {
@@ -109,6 +115,7 @@ void LocalIPCClient::onBytesCome(srz::ByteArray &&bytes) {
   }
 }
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

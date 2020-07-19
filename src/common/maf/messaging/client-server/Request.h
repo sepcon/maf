@@ -1,8 +1,9 @@
 #pragma once
 
-#include <maf/messaging/client-server/RequestIF.h>
 #include <maf/messaging/client-server/CSShared.h>
+#include <maf/messaging/client-server/RequestIF.h>
 #include <maf/patterns/Patterns.h>
+
 #include <mutex>
 
 namespace maf {
@@ -26,7 +27,7 @@ class Request : public RequestIF, public pattern::Unasignable {
   ActionCallStatus sendMsgBackToClient();
   void setOperationCode(OpCode opCode);
 
-public:
+ public:
   OpCode getOperationCode() const override;
   const OpID &getOperationID() const override;
   RequestID getRequestID() const override;
@@ -36,5 +37,5 @@ public:
   void setAbortRequestHandler(AbortRequestCallback abortCallback) override;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

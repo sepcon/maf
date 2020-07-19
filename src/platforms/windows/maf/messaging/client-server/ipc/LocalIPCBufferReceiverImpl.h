@@ -5,28 +5,29 @@
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
 struct PipeInstance {
-  srz::ByteArray ba;
+  srz::Buffer ba;
   OVERLAPPED oOverlap;
   HANDLE hPipeInst;
   bool fPendingIO = false;
 };
 
-using BytesComeCallback = std::function<void(srz::ByteArray &&)>;
+using BytesComeCallback = std::function<void(srz::Buffer &&)>;
 
-class LocalIPCReceiverImpl : public NamedPipeReceiverBase {
-public:
+class LocalIPCBufferReceiverImpl : public NamedPipeReceiverBase {
+ public:
   using Base = NamedPipeReceiverBase;
   using PipeInstances = std::vector<std::unique_ptr<PipeInstance>>;
   using Handles = std::vector<HANDLE>;
 
-  LocalIPCReceiverImpl();
+  LocalIPCBufferReceiverImpl();
   bool stop();
   void setObserver(BytesComeCallback &&);
   bool init(const Address &address);
 
-private:
+ private:
   bool initPipes();
   void listningThreadFunction();
   void disconnectAndReconnect(size_t index);
@@ -36,6 +37,7 @@ private:
   PipeInstances _pipeInstances;
   Handles _hEvents;
 };
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

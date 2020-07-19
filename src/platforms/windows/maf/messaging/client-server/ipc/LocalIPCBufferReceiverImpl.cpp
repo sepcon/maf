@@ -1,4 +1,4 @@
-#include "LocalIPCReceiverImpl.h"
+#include "LocalIPCBufferReceiverImpl.h"
 
 #include <AccCtrl.h>
 #include <AclAPI.h>
@@ -6,19 +6,17 @@
 
 #include "PipeShared.h"
 
-#define CONNECTING_STATE 0
-#define READING_STATE 1
 #define MAX_INSTANCES 10
 #define PIPE_TIMEOUT 5000
 
 namespace maf {
-
 namespace messaging {
 namespace ipc {
+namespace local {
 
 #define _2dw(value) static_cast<DWORD>(value)
 
-using PipeInstances = LocalIPCReceiverImpl::PipeInstances;
+using PipeInstances = LocalIPCBufferReceiverImpl::PipeInstances;
 static bool connectToNewClient(HANDLE, LPOVERLAPPED);
 static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
                          char *buffer, size_t buffSize) {
@@ -130,9 +128,9 @@ static void disablePermissionRestriction(HANDLE hPipe) {
   if (pNewACL) LocalFree(pNewACL);
 }
 
-LocalIPCReceiverImpl::LocalIPCReceiverImpl() {}
+LocalIPCBufferReceiverImpl::LocalIPCBufferReceiverImpl() {}
 
-bool LocalIPCReceiverImpl::stop() {
+bool LocalIPCBufferReceiverImpl::stop() {
   stopped_.store(true, std::memory_order_release);
   disconnectAndClosePipeInstances(_pipeInstances);
   for (auto &hE : _hEvents) {
@@ -141,15 +139,15 @@ bool LocalIPCReceiverImpl::stop() {
   return true;
 }
 
-void LocalIPCReceiverImpl::setObserver(BytesComeCallback &&callback) {
+void LocalIPCBufferReceiverImpl::setObserver(BytesComeCallback &&callback) {
   _bytesComeCallback = std::move(callback);
 }
 
-bool LocalIPCReceiverImpl::init(const Address &address) {
+bool LocalIPCBufferReceiverImpl::init(const Address &address) {
   return Base::init(address) && initPipes();
 }
 
-bool LocalIPCReceiverImpl::initPipes() {
+bool LocalIPCBufferReceiverImpl::initPipes() {
   for (int i = 0; i < MAX_INSTANCES; ++i) {
     _pipeInstances.push_back(std::make_unique<PipeInstance>());
   }
@@ -202,7 +200,7 @@ bool LocalIPCReceiverImpl::initPipes() {
   return true;
 }
 
-void LocalIPCReceiverImpl::listningThreadFunction() {
+void LocalIPCBufferReceiverImpl::listningThreadFunction() {
   DWORD dwWait;
   while (running()) {
     dwWait = WaitForMultipleObjects(
@@ -235,7 +233,7 @@ void LocalIPCReceiverImpl::listningThreadFunction() {
   }
 }
 
-bool LocalIPCReceiverImpl::readOnPipe(size_t index) {
+bool LocalIPCBufferReceiverImpl::readOnPipe(size_t index) {
   bool fSuccess = false;
   auto &incommingBA = _pipeInstances[index]->ba;
   size_t bytesRead = 0;
@@ -263,7 +261,7 @@ bool LocalIPCReceiverImpl::readOnPipe(size_t index) {
 // closes its handle to the pipe. Disconnect from this client, then
 // call ConnectNamedPipe to wait for another client to connect.
 
-void LocalIPCReceiverImpl::disconnectAndReconnect(size_t index) {
+void LocalIPCBufferReceiverImpl::disconnectAndReconnect(size_t index) {
   // Disconnect the pipe instance.
 
   if (!DisconnectNamedPipe(_pipeInstances[index]->hPipeInst)) {
@@ -314,6 +312,7 @@ bool connectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo) {
   return fPendingIO;
 }
 
+}  // namespace local
 }  // namespace ipc
 }  // namespace messaging
 }  // namespace maf

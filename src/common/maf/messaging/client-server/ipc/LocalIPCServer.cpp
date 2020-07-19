@@ -1,16 +1,19 @@
 #include "LocalIPCServer.h"
-#include "IPCMessage.h"
-#include "LocalIPCReceiver.h"
-#include "LocalIPCSender.h"
+
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
+
+#include "LocalIPCMessage.h"
+#include "LocalIPCBufferReceiver.h"
+#include "LocalIPCBufferSender.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
 LocalIPCServer::LocalIPCServer()
-    : pSender_{new LocalIPCSender}, pReceiver_{new LocalIPCReceiver} {}
+    : pSender_{new LocalIPCBufferSender}, pReceiver_{new LocalIPCBufferReceiver} {}
 
 LocalIPCServer::~LocalIPCServer() = default;
 
@@ -44,14 +47,15 @@ ActionCallStatus LocalIPCServer::sendMessageToClient(const CSMessagePtr &msg,
   if (pSender_) {
     try {
       return pSender_->send(
-          std::static_pointer_cast<IPCMessage>(msg)->toBytes(), addr);
+          std::static_pointer_cast<LocalIPCMessage>(msg)->toBytes(), addr);
     } catch (const std::bad_alloc &e) {
       MAF_LOGGER_ERROR("Message is too large to be serialized: ", e.what());
       return ActionCallStatus::FailedUnknown;
     }
   } else {
-    MAF_LOGGER_ERROR("Cannot send message due to null sender, please call init "
-                     "function before send function");
+    MAF_LOGGER_ERROR(
+        "Cannot send message due to null sender, please call init "
+        "function before send function");
     return ActionCallStatus::ReceiverUnavailable;
   }
 }
@@ -60,7 +64,7 @@ void LocalIPCServer::notifyServiceStatusToClient(const ServiceID &sid,
                                                  Availability oldStatus,
                                                  Availability newStatus) {
   if (oldStatus != newStatus) {
-    auto serviceStatusMsg = createCSMessage<IPCMessage>(
+    auto serviceStatusMsg = createCSMessage<LocalIPCMessage>(
         sid,
         newStatus == Availability::Available ? OpID_ServiceAvailable
                                              : OpID_ServiceUnavailable,
@@ -83,39 +87,39 @@ void LocalIPCServer::notifyServiceStatusToClient(const ServiceID &sid,
 
 bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
   switch (csMsg->operationCode()) {
-  case OpCode::RegisterServiceStatus:
-    registedClAddrs_.atomic()->insert(csMsg->sourceAddress());
-    {
-      std::lock_guard lock(providers_);
-      for (auto &[sid, provider] : *providers_) {
-        notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
-                                    Availability::Unavailable,
-                                    Availability::Available);
-      }
-    }
-    return true;
-
-  case OpCode::UnregisterServiceStatus:
-    if (csMsg->serviceID() == ServiceIDInvalid) {
-      registedClAddrs_.atomic()->erase(csMsg->sourceAddress());
-      std::lock_guard lock(providers_);
-      for (auto &[sid, provider] : *providers_) {
-        csMsg->setServiceID(sid);
-        provider->onIncomingMessage(csMsg);
+    case OpCode::RegisterServiceStatus:
+      registedClAddrs_.atomic()->insert(csMsg->sourceAddress());
+      {
+        std::lock_guard lock(providers_);
+        for (auto &[sid, provider] : *providers_) {
+          notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
+                                      Availability::Unavailable,
+                                      Availability::Available);
+        }
       }
       return true;
-    } else {
+
+    case OpCode::UnregisterServiceStatus:
+      if (csMsg->serviceID() == ServiceIDInvalid) {
+        registedClAddrs_.atomic()->erase(csMsg->sourceAddress());
+        std::lock_guard lock(providers_);
+        for (auto &[sid, provider] : *providers_) {
+          csMsg->setServiceID(sid);
+          provider->onIncomingMessage(csMsg);
+        }
+        return true;
+      } else {
+        break;
+      }
+    default:
       break;
-    }
-  default:
-    break;
   }
 
   return ServerBase::onIncomingMessage(csMsg);
 }
 
-void LocalIPCServer::onBytesCome(srz::ByteArray &&bytes) {
-  std::shared_ptr<IPCMessage> csMsg = std::make_shared<IPCMessage>();
+void LocalIPCServer::onBytesCome(srz::Buffer &&bytes) {
+  std::shared_ptr<LocalIPCMessage> csMsg = std::make_shared<LocalIPCMessage>();
   if (csMsg->fromBytes(std::move(bytes))) {
     onIncomingMessage(csMsg);
   } else {
@@ -130,7 +134,7 @@ void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,
   if (oldStatus != newStatus) {
     MAF_LOGGER_INFO("Update service ", sid,
                     " status to client at address: ", clAddr.dump());
-    auto serviceStatusMsg = createCSMessage<IPCMessage>(
+    auto serviceStatusMsg = createCSMessage<LocalIPCMessage>(
         sid,
         newStatus == Availability::Available ? OpID_ServiceAvailable
                                              : OpID_ServiceUnavailable,
@@ -143,6 +147,7 @@ void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,
   }
 }
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf
