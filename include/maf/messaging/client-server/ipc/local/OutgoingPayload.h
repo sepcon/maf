@@ -3,22 +3,24 @@
 #include <maf/messaging/client-server/CSMsgPayloadIF.h>
 #include <maf/utils/serialization/OByteStream.h>
 #include <maf/utils/serialization/Serializer.h>
+
 #include <memory>
 
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
 class MAF_EXPORT OutgoingPayload : public CSMsgPayloadIF {
-public:
+ public:
   CSPayloadType type() const override { return CSPayloadType::OutgoingData; }
   virtual ~OutgoingPayload() = default;
   virtual bool serialize(srz::OByteStream &os) const = 0;
 };
 
-template <class Content> class OutgoingPayloadT : public OutgoingPayload {
-
-public:
+template <class Content>
+class OutgoingPayloadT : public OutgoingPayload {
+ public:
   using ContentType = std::shared_ptr<Content>;
 
   OutgoingPayloadT(ContentType &&content) : content_{std::move(content)} {}
@@ -50,10 +52,11 @@ public:
     throw std::runtime_error("OutgoingPayload: empty payload");
   }
 
-private:
+ private:
   ContentType content_;
 };
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

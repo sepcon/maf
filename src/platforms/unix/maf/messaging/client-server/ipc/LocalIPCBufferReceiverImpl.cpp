@@ -1,19 +1,21 @@
-#include "LocalIPCReceiverImpl.h"
-#include "SocketShared.h"
-#include <maf/logging/Logger.h>
+#include "LocalIPCBufferReceiverImpl.h"
 
 #include <arpa/inet.h>
+#include <maf/logging/Logger.h>
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 
+#include "SocketShared.h"
+
 namespace maf {
 namespace messaging {
 namespace ipc {
+namespace local {
 
-LocalIPCReceiverImpl::~LocalIPCReceiverImpl() { stop(); }
+LocalIPCBufferReceiverImpl::~LocalIPCBufferReceiverImpl() { stop(); }
 
-bool LocalIPCReceiverImpl::init(const Address &addr) {
+bool LocalIPCBufferReceiverImpl::init(const Address &addr) {
   bool startable = false;
   myaddr_ = addr;
   auto sockpath = myaddr_.get_name();
@@ -43,7 +45,7 @@ bool LocalIPCReceiverImpl::init(const Address &addr) {
   return startable;
 }
 
-bool LocalIPCReceiverImpl::start() {
+bool LocalIPCBufferReceiverImpl::start() {
   try {
     waitAndProcessConnections();
   } catch (StoppedInterruption) {
@@ -53,7 +55,7 @@ bool LocalIPCReceiverImpl::start() {
   return true;
 }
 
-void LocalIPCReceiverImpl::stop() {
+void LocalIPCBufferReceiverImpl::stop() {
   if (running()) {
     auto currentState = getState();
     setState(State::Stopped);
@@ -64,25 +66,25 @@ void LocalIPCReceiverImpl::stop() {
   }
 }
 
-void LocalIPCReceiverImpl::deinit() {}
+void LocalIPCBufferReceiverImpl::deinit() {}
 
-bool LocalIPCReceiverImpl::running() const {
+bool LocalIPCBufferReceiverImpl::running() const {
   switch (getState()) {
-  case State::Running:
-  case State::WaitingConnection:
-    return true;
-  default:
-    return false;
+    case State::Running:
+    case State::WaitingConnection:
+      return true;
+    default:
+      return false;
   }
 }
 
-const Address &LocalIPCReceiverImpl::address() const { return myaddr_; }
+const Address &LocalIPCBufferReceiverImpl::address() const { return myaddr_; }
 
-void LocalIPCReceiverImpl::setObserver(BytesComeCallback callback) {
+void LocalIPCBufferReceiverImpl::setObserver(BytesComeCallback callback) {
   bytesComeCallback_ = std::move(callback);
 }
 
-bool LocalIPCReceiverImpl::waitAndProcessConnections() {
+bool LocalIPCBufferReceiverImpl::waitAndProcessConnections() {
   auto maxSd = INVALID_FD;
   socklen_t sockLen = sizeof(mySockAddr_);
   std::vector<int> fdClientSocks(MAXCLIENTS, 0);
@@ -101,12 +103,10 @@ bool LocalIPCReceiverImpl::waitAndProcessConnections() {
       auto sd = fdClientSocks[i];
 
       // if valid socket descriptor then add to read list
-      if (sd > 0)
-        FD_SET(sd, &readfds);
+      if (sd > 0) FD_SET(sd, &readfds);
 
       // highest file descriptor number, need it for the select function
-      if (sd > maxSd)
-        maxSd = sd;
+      if (sd > maxSd) maxSd = sd;
     }
 
     timeval timeout = {1, 0};
@@ -155,7 +155,7 @@ bool LocalIPCReceiverImpl::waitAndProcessConnections() {
         if (auto bytesRead = read(sd, reinterpret_cast<char *>(&messageLength),
                                   sizeof(SizeType));
             bytesRead == sizeof(SizeType)) {
-          auto payload = srz::ByteArray{};
+          auto payload = srz::Buffer{};
           payload.resize(messageLength);
           while (totalRead < messageLength) {
             if (bytesRead = read(sd, payload.data() + totalRead, messageLength);
@@ -182,7 +182,7 @@ bool LocalIPCReceiverImpl::waitAndProcessConnections() {
   return true;
 }
 
-void LocalIPCReceiverImpl::interruptionPoint() {
+void LocalIPCBufferReceiverImpl::interruptionPoint() {
   if (getState() == State::Stopped) {
     MAF_LOGGER_INFO("Finish running due to flag STOP was turned on, address: ",
                     myaddr_.dump());
@@ -190,6 +190,7 @@ void LocalIPCReceiverImpl::interruptionPoint() {
   }
 }
 
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf

@@ -1,4 +1,4 @@
-#include "LocalIPCSenderImpl.h"
+#include "LocalIPCBufferSenderImpl.h"
 
 #include <maf/logging/Logger.h>
 
@@ -11,6 +11,7 @@ namespace maf {
 
 namespace messaging {
 namespace ipc {
+namespace local {
 
 static constexpr int MAX_ATEMPTS = 10;
 
@@ -18,11 +19,11 @@ static HANDLE openPipe(const std::string &pipeName);
 static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
                         const char *buffer, size_t buffSize);
 
-LocalIPCSenderImpl::LocalIPCSenderImpl() {}
+LocalIPCBufferSenderImpl::LocalIPCBufferSenderImpl() {}
 
-LocalIPCSenderImpl::~LocalIPCSenderImpl() {}
+LocalIPCBufferSenderImpl::~LocalIPCBufferSenderImpl() {}
 
-ActionCallStatus LocalIPCSenderImpl::send(const srz::ByteArray &ba,
+ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
                                           const Address &destination) {
   auto errCode = ActionCallStatus::ReceiverUnavailable;
   bool success = false;
@@ -135,6 +136,7 @@ static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
   return success;
 }
 
+}  // namespace local
 }  // namespace ipc
 }  // namespace messaging
 }  // namespace maf

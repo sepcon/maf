@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ByteArray.h"
+#include "Buffer.h"
 #include <cstring>
 
 namespace maf {
@@ -39,11 +39,11 @@ public:
 
   bool good() const { return state_ & Good; }
   bool fail() const { return state_ & Failed; }
-  ByteArray &bytes() { return data_; }
-  const ByteArray &bytes() const { return data_; }
+  Buffer &bytes() { return data_; }
+  const Buffer &bytes() const { return data_; }
 
 private:
-  ByteArray data_;
+  Buffer data_;
   SizeType currentPos_ = 0;
   State state_ = Good;
 };

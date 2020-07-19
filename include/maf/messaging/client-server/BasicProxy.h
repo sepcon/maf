@@ -2,7 +2,7 @@
 
 #include <maf/logging/Logger.h>
 #include <maf/messaging/ExecutorIF.h>
-#include <maf/messaging/client-server/CSManager.h>
+#include <maf/messaging/client-server/CSMgmt.h>
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>
 #include <maf/utils/Pointers.h>
 
@@ -100,19 +100,12 @@ class BasicProxy {
       const ServiceStatusObserverPtr &observer) noexcept;
 
   std::shared_ptr<ServiceStatusObserverIF> onServiceStatusChanged(
-      ServiceStatusChangedCallback callback) {
-    if (executor_ && callback) {
-      auto observer = std::make_shared<ServiceStatusObserverDelegater>(
-          executor_, std::move(callback));
-      registerServiceStatusObserver(observer);
-      return observer;
-    }
-    return {};
-  }
+      ServiceStatusChangedCallback callback) noexcept;
 
   void setExecutor(ExecutorPtr executor) noexcept;
   ExecutorPtr getExecutor() const noexcept;
   std::shared_ptr<BasicProxy> with(ExecutorPtr executor) noexcept;
+  RequesterPtr getRequester() const noexcept;
 
  private:
   BasicProxy(RequesterPtr requester, ExecutorPtr executor) noexcept;
@@ -156,11 +149,19 @@ class BasicProxy {
   ExecutorPtr executor_;
 };
 
+#ifndef MAF_NO_STATIC_OPERATION_ID
+#define MAF_ASSERT_SAME_OPERATION_ID(Input, OutputOrRequest)         \
+  static_assert(PTrait::template IsSameOpID<Input, OutputOrRequest>, \
+                "Input and Request/Output must have same OpID");
+#else
+#define MAF_ASSERT_SAME_OPERATION_ID(Input, OutputOrRequest)
+#endif
+
 template <class PTrait>
 std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::createProxy(
     const ConnectionType &contype, const Address &addr, const ServiceID &sid,
     ExecutorPtr executor, ServiceStatusObserverPtr statusObsv) noexcept {
-  if (auto requester = csmanagement::getServiceRequester(contype, addr, sid)) {
+  if (auto requester = csmgmt::getServiceRequester(contype, addr, sid)) {
     auto proxy = std::shared_ptr<BasicProxy<PTrait>>{
         new BasicProxy<PTrait>(std::move(requester), std::move(executor))};
     proxy->registerServiceStatusObserver(std::move(statusObsv));
@@ -198,6 +199,20 @@ template <class PTrait>
 void BasicProxy<PTrait>::unregisterServiceStatusObserver(
     const ServiceStatusObserverPtr &observer) noexcept {
   requester_->unregisterServiceStatusObserver(observer);
+}
+
+template <class PTrait>
+std::shared_ptr<ServiceStatusObserverIF>
+BasicProxy<PTrait>::onServiceStatusChanged(
+    ServiceStatusChangedCallback callback) noexcept {
+  if (executor_ && callback) {
+    // make shared might throw?
+    auto observer = std::make_shared<ServiceStatusObserverDelegater>(
+        executor_, std::move(callback));
+    registerServiceStatusObserver(observer);
+    return observer;
+  }
+  return {};
 }
 
 template <class PTrait>
@@ -403,8 +418,8 @@ RegID BasicProxy<PTrait>::sendRequestAsync(
     const std::shared_ptr<Input> &input,
     ResponseProcessingCallback<RequestOrOutput> callback,
     ActionCallStatus *callStatus) noexcept {
-  static_assert(getOpID<RequestOrOutput>() == getOpID<Input>(),
-                "Input and Request/Output must have same OpID");
+  MAF_ASSERT_SAME_OPERATION_ID(Input, RequestOrOutput);
+
   return requester_->sendRequestAsync(
       getOpID<RequestOrOutput>(), translate(input),
       createResponseMsgHandlerCallback(std::move(callback)), callStatus);
@@ -429,8 +444,7 @@ typename BasicProxy<PTrait>::template Response<RequestOrOutput>
 BasicProxy<PTrait>::sendRequest(const std::shared_ptr<Input> &input,
                                 ActionCallStatus *callStatus,
                                 RequestTimeoutMs timeout) noexcept {
-  static_assert(getOpID<RequestOrOutput>() == getOpID<Input>(),
-                "Input and Output/Request must have same OpID");
+  MAF_ASSERT_SAME_OPERATION_ID(Input, RequestOrOutput);
   return sendRequest<RequestOrOutput>(getOpID<RequestOrOutput>(),
                                       translate(input), callStatus, timeout);
 }
@@ -480,6 +494,7 @@ typename BasicProxy<PTrait>::ExecutorPtr BasicProxy<PTrait>::getExecutor()
   return executor_;
 }
 
+
 template <class PTrait>
 std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::with(
     BasicProxy::ExecutorPtr executor) noexcept {
@@ -490,6 +505,13 @@ std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::with(
   }
   return {};
 }
+
+template <class PTrait>
+typename BasicProxy<PTrait>::RequesterPtr BasicProxy<PTrait>::getRequester()
+    const noexcept {
+  return requester_;
+}
+
 
 }  // namespace messaging
 }  // namespace maf

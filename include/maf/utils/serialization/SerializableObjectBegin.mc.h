@@ -23,7 +23,7 @@
  *  //... write sr.c_str() to file, share it between programs
  *  //... now deserialize it
  *
- *  maf::srz::ByteArray ba = readFromFile/FromPipe();
+ *  maf::srz::Buffer ba = readFromFile/FromPipe();
  *  maf::srz::BADeserializer dsr(ba);
  *  TheObject object;
  *  std::vector<std::string> vec;

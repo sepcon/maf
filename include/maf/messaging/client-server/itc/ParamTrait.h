@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MessageContent.h"
+#include "Payload.h"
 #include <maf/messaging/client-server/CSMessage.h>
 #include <maf/messaging/client-server/ParamTraitBase.h>
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>

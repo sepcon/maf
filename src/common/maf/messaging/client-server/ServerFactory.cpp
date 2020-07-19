@@ -29,7 +29,7 @@ public:
     if (connectionType == "itc.messaging.maf") {
       return itc::Server::instance();
     } else if (connectionType == "local.ipc.messaging.maf") {
-      return std::make_shared<ipc::LocalIPCServer>();
+      return std::make_shared<ipc::local::LocalIPCServer>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
                        connectionType, "]");

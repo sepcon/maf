@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/messaging/client-server/Address.h>
-#include <maf/utils/serialization/ByteArray.h>
+#include <maf/utils/serialization/Buffer.h>
 
 namespace maf {
 namespace messaging {
@@ -10,12 +10,12 @@ namespace ipc {
 class BytesComeObserver {
 public:
   virtual ~BytesComeObserver() = default;
-  virtual void onBytesCome(srz::ByteArray &&bytes) = 0;
+  virtual void onBytesCome(srz::Buffer &&bytes) = 0;
 };
 
-class IPCReceiverIF {
+class BufferReceiverIF {
 public:
-  virtual ~IPCReceiverIF() = default;
+  virtual ~BufferReceiverIF() = default;
   virtual bool init(const Address &address) = 0;
   virtual bool start() = 0;
   virtual void stop() = 0;

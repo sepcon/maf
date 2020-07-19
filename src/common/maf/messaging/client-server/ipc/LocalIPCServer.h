@@ -1,19 +1,23 @@
 #pragma once
 
-#include "../ServerBase.h"
-#include "IPCReceiverIF.h"
-#include "IPCTypes.h"
 #include <set>
 #include <thread>
+
+#include "../ServerBase.h"
+#include "BufferReceiverIF.h"
+#include "IPCTypes.h"
 
 namespace maf {
 namespace messaging {
 namespace ipc {
 
-class IPCSenderIF;
-class IPCReceiverIF;
+class BufferSenderIF;
+class BufferReceiverIF;
+
+namespace local {
+
 class LocalIPCServer : public ServerBase, public BytesComeObserver {
-public:
+ public:
   LocalIPCServer();
   ~LocalIPCServer() override;
   bool init(const Address &serverAddress) override;
@@ -27,17 +31,19 @@ public:
                                    Availability newStatus) override;
   bool onIncomingMessage(const CSMessagePtr &csMsg) override;
 
-protected:
-  void onBytesCome(srz::ByteArray &&bytes) override;
+ protected:
+  void onBytesCome(srz::Buffer &&bytes) override;
   void notifyServiceStatusToClient(const Address &clAddr, const ServiceID &sid,
                                    Availability oldStatus,
                                    Availability newStatus);
   using RegistedClientAddresses = threading::Lockable<std::set<Address>>;
   RegistedClientAddresses registedClAddrs_;
-  std::unique_ptr<IPCSenderIF> pSender_;
-  std::unique_ptr<IPCReceiverIF> pReceiver_;
+  std::unique_ptr<BufferSenderIF> pSender_;
+  std::unique_ptr<BufferReceiverIF> pReceiver_;
   std::thread listeningThread_;
 };
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf
