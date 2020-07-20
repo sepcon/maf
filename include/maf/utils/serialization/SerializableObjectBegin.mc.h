@@ -38,29 +38,31 @@
 #define MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 #   include "Serializer.h"
 #   include "DumpHelper.h"
+#   include <maf/utils/cppextension/Loop.mc.h>
 #endif // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 
 // The rest of this file must be putted outside include guard
 // Make it to be use with multiple files
+#include "Internal/SerializableObjectImpl.mc.h"
 
-#include "Internal/SerializableObjectBegin.mc.h"
+#   ifdef OBJECT
+#       pragma push_macro("OBJECT")
+#       define maf_restore_macro_OBJECT
+#   endif
+#   ifdef OBJECT_EX
+#       pragma push_macro("OBJECT_EX")
+#       define maf_restore_macro_OBJECT_EX
+#   endif
+#   ifdef MEMBERS
+#       pragma push_macro("MEMBERS")
+#       define maf_restore_macro_PROPERTIES
+#   endif
+#   ifdef ENDOBJECT
+#       pragma push_macro("ENDOBJECT")
+#       define maf_restore_macro_END_OBJECT
+#   endif
 
-#    ifdef OBJECT
-#        pragma push_macro("OBJECT")
-#        define maf_restore_macro_OBJECT
-#    endif
-#    ifdef MEMBERS
-#        pragma push_macro("MEMBERS")
-#        define maf_restore_macro_PROPERTIES
-#    endif
-#    ifdef ENDOBJECT
-#        pragma push_macro("ENDOBJECT")
-#        define maf_restore_macro_END_OBJECT
-#    endif
-
-#define OBJECT mc_maf_tuple_like_object
-
-#define ENDOBJECT mc_maf_tuple_like_object_end
-
-#define MEMBERS mc_maf_properties_map
-
+#define OBJECT mc_maf_sb_object
+#define OBJECT_EX mc_maf_sb_object_ex
+#define ENDOBJECT mc_maf_sb_endobject
+#define MEMBERS mc_maf_sb_members

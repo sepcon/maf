@@ -29,8 +29,8 @@ class ParamTrait : public ParamTraitBase {
     if (msg) {
       // for inter-thread communication, the content of message should be
       // cloned instead of shared by reference/pointer
-      return std::make_shared<Payload<Content>>(
-          CSPayloadType::OutgoingData, std::make_shared<Content>(*msg));
+      return std::make_shared<Payload<Content>>(CSPayloadType::OutgoingData,
+                                                msg);
     } else {
       return {};
     }

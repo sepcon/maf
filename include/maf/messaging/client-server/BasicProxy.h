@@ -6,6 +6,8 @@
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>
 #include <maf/utils/Pointers.h>
 
+#include <cassert>
+
 #include "CSParamConstrains.h"
 #include "ResponseT.h"
 #include "ServiceStatusObserverDelegater.h"

@@ -1,6 +1,4 @@
 // NO INCLUDE GUARD
-#include "Internal/SerializableObjectEnd.mc.h"
-
 // clang-format off
 
 #    ifdef OBJECT
@@ -9,6 +7,13 @@
 #    ifdef maf_restore_macro_OBJECT
 #        pragma pop_macro("OBJECT")
 #        undef maf_restore_macro_OBJECT
+#    endif
+#    ifdef OBJECT_EX
+#        undef OBJECT_EX
+#    endif
+#    ifdef maf_restore_macro_OBJECT_EX
+#        pragma pop_macro("OBJECT_EX")
+#        undef maf_restore_macro_OBJECT_EX
 #    endif
 #    ifdef MEMBERS
 #        undef MEMBERS

@@ -12,12 +12,12 @@ struct cs_translatable  {};
 
 struct cs_operation : public cs_translatable
 {
-    std::string dump() { return "cs_operation"; }
+//    std::string dump() { return "cs_operation"; }
 };
 
 struct cs_param : public cs_translatable
 {
-    std::string dump() { return "cs_param"; }
+//    std::string dump() { return "cs_param"; }
 };
 
 

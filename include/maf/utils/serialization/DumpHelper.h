@@ -1,7 +1,7 @@
 #pragma once
 
 #include "JsonTrait.h"
-#include "TuplizableTypeBase.h"
+#include "Tuplizable.h"
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
 #include <string.h>

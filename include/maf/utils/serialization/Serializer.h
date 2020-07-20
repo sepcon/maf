@@ -7,7 +7,7 @@
 #include <string>
 #include <tuple>
 
-#include "TuplizableTypeBase.h"
+#include "Tuplizable.h"
 
 /// Serialization
 
@@ -83,6 +83,22 @@ struct StreamHelper {
   static void prepareNextWrite(StreamType &, SizeType) {}
 };
 
+template <class T>
+struct DeserializableType {
+  using Type = std::remove_const_t<T>;
+};
+
+template <class First, class Second>
+struct DeserializableType<std::pair<First, Second>> {
+  using Type =
+      std::pair<std::remove_const_t<First>, std::remove_const_t<Second>>;
+};
+
+template <class... Args>
+struct DeserializableType<std::tuple<Args...>> {
+  using Type = std::tuple<std::remove_const_t<Args>...>;
+};
+
 }  // namespace internal
 
 template <class OStream, class IStream, typename T, typename = void>
@@ -93,8 +109,8 @@ struct Serializer {
   void serialize(OStream &os, const T &value) {
     Impl::template serialize<T>(os, value);
   }
-  T deserialize(IStream &is, bool &good) {
-    return Impl::template deserialize<T>(is, good);
+  bool deserialize(IStream &is, T &val) {
+    return Impl::template deserialize<T>(is, val);
   }
   SizeType serializedSize(const T &value) noexcept {
     return Impl::template serializedSize<T>(value);
@@ -103,19 +119,19 @@ struct Serializer {
   struct Impl {
     mc_enable_if_is_tuplelike_(TupleLike) inline static SizeType
         serializedSize(const TupleLike &value) noexcept {
-      return SerializerT<typename TupleLike::data_type>{}.serializedSize(
-          value.tuple());
+      return SerializerT<decltype(value.as_tuple())>{}.serializedSize(
+          value.as_tuple());
     }
 
     mc_enable_if_is_tuplelike_(TupleLike) static void serialize(
         OStream &os, const TupleLike &value) {
-      SerializerT<typename TupleLike::data_type>{}.serialize(os, value.tuple());
+      SerializerT<decltype(value.as_tuple())>{}.serialize(os, value.as_tuple());
     }
 
-    mc_enable_if_is_tuplelike_(TupleLike) static TupleLike
-        deserialize(IStream &is, bool &good) {
-      return Serializer<OStream, IStream, typename TupleLike::data_type>{}
-          .deserialize(is, good);
+    mc_enable_if_is_tuplelike_(TupleLike) static bool deserialize(
+        IStream &is, TupleLike &tpl) {
+      auto tp = tpl.as_tuple();
+      return Serializer<OStream, IStream, decltype(tp)>{}.deserialize(is, tp);
     }
 
     mc_enable_if_is_number_or_enum_(NumberOrEnum) static SizeType
@@ -128,12 +144,10 @@ struct Serializer {
       os.write(internal::to_cstr(&value), sizeof(NumberOrEnum));
     }
 
-    mc_enable_if_is_number_or_enum_(NumberOrEnum) static NumberOrEnum
-        deserialize(IStream &is, bool &good) {
-      auto value = NumberOrEnum{};
+    mc_enable_if_is_number_or_enum_(NumberOrEnum) static bool deserialize(
+        IStream &is, NumberOrEnum &value) {
       is.read(internal::to_cstr(&value), sizeof(NumberOrEnum));
-      good = !is.fail();
-      return value;
+      return !is.fail();
     }
 
     mc_enable_if_is_ptr_(PointerType) inline static SizeType
@@ -164,22 +178,27 @@ struct Serializer {
       }
     }
 
-    mc_enable_if_is_ptr_(
-        PointerType) static pure_type_t<PointerType> deserialize(IStream &is,
-                                                                 bool &good) {
+    mc_enable_if_is_ptr_(PointerType) static bool deserialize(
+        IStream &is, pure_type_t<PointerType> &p) {
       mc_must_default_constructible(PointerType);
 
       using NormalTypeOfPointerType =
           std::remove_const_t<std::remove_pointer_t<PointerType>>;
-      auto p = pure_type_t<PointerType>{nullptr};
-      char isNotNull = 0;
+      auto success = true;
+      p = nullptr;
+      uint8_t isNotNull = 0;
 
-      is.read(&isNotNull, 1);
+      is.read(internal::to_cstr(&isNotNull), 1);
       if (isNotNull) {
         p = new NormalTypeOfPointerType{};
-        *p = SerializerT<NormalTypeOfPointerType>{}.deserialize(is, good);
+        success = SerializerT<NormalTypeOfPointerType>{}.deserialize(is, *p);
+        if (!success) {
+          delete p;
+          p = nullptr;
+        }
       }
-      return p;
+
+      return success;
     }
 
     mc_enable_if_is_smartptr_(SmartPtrType) static SizeType
@@ -194,16 +213,15 @@ struct Serializer {
       SerializerT<PtrType>{}.serialize(os, p.get());
     }
 
-    mc_enable_if_is_smartptr_(
-        SmartPtrType) static pure_type_t<SmartPtrType> deserialize(IStream &is,
-                                                                   bool &good) {
+    mc_enable_if_is_smartptr_(SmartPtrType) static bool deserialize(
+        IStream &is, pure_type_t<SmartPtrType> &sptr) {
       using PtrType = typename SmartPtrType::element_type *;
-      auto sptr = pure_type_t<SmartPtrType>{};
-
-      if (auto ptr = SerializerT<PtrType>{}.deserialize(is, good); good) {
+      auto success = false;
+      PtrType ptr = nullptr;
+      if (success = SerializerT<PtrType>{}.deserialize(is, ptr); success) {
         sptr.reset(ptr);
       }
-      return sptr;
+      return success;
     }
 
     mc_enable_if_is_iterable_(Container) inline static SizeType
@@ -231,17 +249,20 @@ struct Serializer {
 
     template <typename Container,
               std::enable_if_t<nstl::is_iterable_v<Container>, bool> = true>
-    static Container deserialize(IStream &is, bool &good) {
-      using ElemType = std::remove_const_t<typename Container::value_type>;
+    static bool deserialize(IStream &is, Container &c) {
+      using ElemType = typename Container::value_type;
+      using DSBElemType = typename internal::DeserializableType<ElemType>::Type;
       using SizeTypeSerializer = SerializerT<SizeType>;
       constexpr bool pushBackable = nstl::is_back_insertible_v<Container>;
-      auto c = Container{};
-      auto esr = SerializerT<ElemType>{};
-      if (auto size = SizeTypeSerializer{}.deserialize(is, good);
-          good && size > 0) {
+      auto success = false;
+      auto esr = SerializerT<DSBElemType>{};
+      auto size = typename Container::size_type{0};
+      if (success |= SizeTypeSerializer{}.deserialize(is, size);
+          success && size > 0) {
         internal::ContainerReserver<Container>::reserve(c, size);
         for (SizeType i = 0; i < size; ++i) {
-          if (auto elem = esr.deserialize(is, good); good) {
+          DSBElemType elem;
+          if (success |= esr.deserialize(is, elem); success) {
             if constexpr (pushBackable) {
               c.push_back(std::move(elem));
             } else {
@@ -252,7 +273,7 @@ struct Serializer {
           }
         }
       }
-      return c;
+      return success;
     }
   };
 };
@@ -277,12 +298,12 @@ struct Serializer<OStream, IStream, std::pair<First, Second>, void> {
     secondSr_.serialize(os, p.second);
   }
 
-  NCDType deserialize(IStream &is, bool &good) {
-    NCDType value;
-    if (value.first = firstSr_.deserialize(is, good); good) {
-      value.second = secondSr_.deserialize(is, good);
+  bool deserialize(IStream &is, NCDType &value) {
+    bool success = false;
+    if (success |= firstSr_.deserialize(is, value.first); success) {
+      success |= secondSr_.deserialize(is, value.second);
     }
-    return value;
+    return success;
   }
 
   SerializerT<FirstPure> firstSr_;
@@ -311,12 +332,13 @@ struct Serializer<OStream, IStream, Tuple,
     });
   }
 
-  SrType deserialize(IStream &is, bool &good) {
-    SrType tp;
-    nstl::tuple_for_each(tp, [&is, &good](auto &elem) {
-      elem = SerializerT<pure_type_t<decltype(elem)>>{}.deserialize(is, good);
+  bool deserialize(IStream &is, SrType &tp) {
+    bool success = false;
+    nstl::tuple_for_each(tp, [&is, &success](auto &elem) {
+      success |=
+          SerializerT<pure_type_t<decltype(elem)>>{}.deserialize(is, elem);
     });
-    return tp;
+    return success;
   }
 };
 
@@ -341,15 +363,15 @@ struct Serializer<OStream, IStream, std::basic_string<CharT, Trait, Allocator>,
     }
   }
 
-  SrType deserialize(IStream &is, bool &good) {
-    SrType value;
-    if (auto size = SerializerT<SizeType>{}.deserialize(is, good);
-        good && size > 0) {
-      value.resize(size);
-      is.read(internal::to_cstr(&value[0]), size * sizeof(CharT));
+  bool deserialize(IStream &is, SrType &value) {
+    SizeType size = 0;
+    if (SerializerT<SizeType>{}.deserialize(is, size)) {
+      if (size > 0) {
+        value.resize(size);
+        is.read(internal::to_cstr(&value[0]), size * sizeof(CharT));
+      }
     }
-    good = !is.fail();
-    return value;
+    return !is.fail();
   }
 };
 
@@ -371,10 +393,8 @@ struct Serializer<
     ssr_.serialize(os, static_cast<const std::string &>(value));
   }
 
-  SrType deserialize(IStream &is, bool &good) {
-    SrType value;
-    static_cast<std::string &>(value) = ssr_.deserialize(is, good);
-    return value;
+  bool deserialize(IStream &is, SrType &value) {
+    return ssr_.deserialize(is, static_cast<std::string &>(value));
   }
 
   SerializerT<std::string> ssr_;
@@ -389,8 +409,8 @@ void serialize(OStream &os, const T &v) {
 }
 
 template <class IStream, typename T>
-T deserialize(IStream &is, bool &good) {
-  return Serializer<std::nullptr_t, IStream, T>{}.deserialize(is, good);
+bool deserialize(IStream &is, T &value) {
+  return Serializer<std::nullptr_t, IStream, T>{}.deserialize(is, value);
 }
 
 template <class OStream>
@@ -419,9 +439,7 @@ class DSR {
   DSR(IStream &is) : is_{is} {}
   template <typename T>
   DSR &operator>>(T &value) {
-    bool good = true;
-    value = deserialize<IStream, T>(is_, good);
-    if (!good) {
+    if (!deserialize<IStream, T>(is_, value)) {
       throw std::runtime_error{"Could not deserialize"};
     }
     return *this;
@@ -429,9 +447,8 @@ class DSR {
 
   template <typename... Ts>
   DSR &deserializeBatch(Ts &... ts) {
-    bool good = true;
-    std::tie(ts...) = deserialize<IStream, std::tuple<Ts...>>(is_, good);
-    if (!good) {
+    auto tp = std::tie(ts...);
+    if (!deserialize<IStream, std::tuple<Ts...>>(is_, tp)) {
       throw std::runtime_error{"Could not deserialize"};
     }
     return *this;

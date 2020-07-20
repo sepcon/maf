@@ -7,6 +7,7 @@
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
 #include "LocalIPCMessage.h"
+#include <cassert>
 
 namespace maf {
 namespace messaging {

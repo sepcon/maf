@@ -3,6 +3,8 @@
 #include <maf/logging/Logger.h>
 #include <maf/utils/Process.h>
 
+#include <cassert>
+
 #include "../GlobalThreadPool.h"
 #include "BufferSenderIF.h"
 #include "LocalIPCBufferReceiver.h"

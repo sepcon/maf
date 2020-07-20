@@ -147,17 +147,16 @@
                                               maf::messaging::cs_##type>; \
                                                                           \
  public:                                                                  \
-  OBJECT(type, my_sb_param##type<type>)                                   \
+  OBJECT_EX(type, my_sb_param##type<type>)                                \
   static constexpr maf::messaging::OpIDConst operationID() noexcept {     \
     return ID;                                                            \
   }                                                                       \
   MEMBERS(__VA_ARGS__)                                                    \
-  }                                                                       \
-  ;                                                                       \
+  ENDOBJECT(type)                                                         \
   using type##_ptr = std::shared_ptr<type>;                               \
   using type##_cptr = std::shared_ptr<const type>;                        \
   template <typename... Args>                                             \
   static type##_ptr make_##type(Args &&... args) {                        \
-    type##_ptr ptr{new type{std::forward<Args>(args)...}};                \
+    type##_ptr ptr{new type(std::forward<Args>(args)...)};                \
     return ptr;                                                           \
   }

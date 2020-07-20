@@ -14,7 +14,7 @@
 
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
-#include <maf/utils/serialization/TuplizableTypeBase.h>
+#include <maf/utils/serialization/Tuplizable.h>
 #include <maf/utils/serialization/JsonTrait.h>
 
 //#include "json11.hpp"
