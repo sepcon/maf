@@ -14,7 +14,7 @@ class AsyncServiceStatusObserver : public ServiceStatusObserverIF {
   using CompPtr = std::shared_ptr<Component>;
 
  public:
-  AsyncServiceStatusObserver(CompPtr comp) : _wpcomp{comp} {
+  AsyncServiceStatusObserver(const CompPtr& comp) : _wpcomp{comp} {
     assert(comp && "Component must not be nullptr");
   }
 

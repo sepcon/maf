@@ -31,7 +31,7 @@ class NamedPipeReceiverBase {
   bool start() {
     if (!running()) {
       stopped_.store(false, std::memory_order_release);
-      listningThreadFunction();
+      startListening();
     }
     return true;
   }
@@ -47,7 +47,7 @@ class NamedPipeReceiverBase {
   const Address &address() const { return myaddr_; }
 
  protected:
-  virtual void listningThreadFunction() {
+  virtual void startListening() {
     MAF_LOGGER_WARN(
         "listningThreadFunction must be overridden by derived class");
   }

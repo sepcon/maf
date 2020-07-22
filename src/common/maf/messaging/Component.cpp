@@ -6,7 +6,7 @@
 #include <cassert>
 #include <map>
 
-#include "MessageRouter.h"
+#include "Router.h"
 
 namespace maf {
 namespace messaging {
@@ -78,7 +78,7 @@ ComponentInstance Component::create(ComponentID name) {
   auto comp = ComponentInstance{new Component{std::move(name)},
                                 &Component::deleteFunction};
   if (!comp->id().empty()) {
-    if (!MessageRouter::instance().addReceiver(comp)) {
+    if (!Router::instance().addReceiver(comp)) {
       comp.reset();
     }
   }
@@ -115,7 +115,7 @@ Component::StoppedSignal Component::runAsync(ThreadFunction threadInit,
 
 void Component::stop() {
   d_->pendingExecutions.close();
-  MessageRouter::instance().removeReceiver(shared_from_this());
+  Router::instance().removeReceiver(shared_from_this());
 }
 
 bool Component::post(ComponentMessage &&msg) {

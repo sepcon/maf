@@ -110,7 +110,7 @@ inline void init_test_cases() {
                   << " PASSED (" << expectation_met << " expectations)";    \
       } else {                                                              \
         std::cerr << "Test case: " << test_case_name                        \
-                  << " FAILED! at line: " << linefailed;                    \
+                  << " FAILED! at line: " << linefailed << std::endl;       \
       }                                                                     \
     };
 

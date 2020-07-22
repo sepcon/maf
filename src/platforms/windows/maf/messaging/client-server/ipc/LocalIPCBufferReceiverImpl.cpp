@@ -172,19 +172,19 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
     instance->oOverlap.hEvent = _hEvents.back();
 
     // clang-format off
-        instance->hPipeInst = CreateNamedPipeA(
-            pipeName_.c_str(),          // pipe name
-            PIPE_ACCESS_INBOUND  |      // Read only
-            WRITE_DAC            |
-            FILE_FLAG_OVERLAPPED,       // overlapped mode
-            PIPE_TYPE_MESSAGE    |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
-            PIPE_READMODE_MESSAGE|      // * block of bytes that greater than buffer_size
-            PIPE_WAIT,                  // blocking mode
-            _2dw(_pipeInstances.size()),// number of instances
-            0,                          // output buffer size
-            BUFFER_SIZE*sizeof(char),   // input buffer size
-            PIPE_TIMEOUT,               // client time-out
-            nullptr);                   // default security attributes
+    instance->hPipeInst = CreateNamedPipeA(
+        pipeName_.c_str(),          // pipe name
+        PIPE_ACCESS_INBOUND  |      // Read only
+        WRITE_DAC            |
+        FILE_FLAG_OVERLAPPED,       // overlapped mode
+        PIPE_TYPE_MESSAGE    |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
+        PIPE_READMODE_MESSAGE|      // * block of bytes that greater than buffer_size
+        PIPE_WAIT,                  // blocking mode
+        _2dw(_pipeInstances.size()),// number of instances
+        0,                          // output buffer size
+        BUFFER_SIZE*sizeof(char),   // input buffer size
+        PIPE_TIMEOUT,               // client time-out
+        nullptr);                   // default security attributes
 
     // clang-format on
     if (instance->hPipeInst == INVALID_HANDLE_VALUE) {
@@ -200,7 +200,7 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
   return true;
 }
 
-void LocalIPCBufferReceiverImpl::listningThreadFunction() {
+void LocalIPCBufferReceiverImpl::startListening() {
   DWORD dwWait;
   while (running()) {
     dwWait = WaitForMultipleObjects(

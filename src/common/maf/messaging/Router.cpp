@@ -1,11 +1,11 @@
-#include "MessageRouter.h"
+#include "Router.h"
 
 namespace maf {
 namespace messaging {
 namespace impl {
 
 static inline void broadcastExcept(Message &&msg,
-                                   const MessageRouter::Receivers &receivers,
+                                   const Router::Receivers &receivers,
                                    const ReceiverInstance &ignoredRcvr) {
   for (auto &r : receivers) {
     if (r != ignoredRcvr) {
@@ -14,7 +14,7 @@ static inline void broadcastExcept(Message &&msg,
   }
 }
 
-bool MessageRouter::route(Message &&msg,
+bool Router::routeMessage(Message &&msg,
                           const ReceiverID &receiverID) noexcept {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->post(std::move(msg));
@@ -22,7 +22,14 @@ bool MessageRouter::route(Message &&msg,
   return false;
 }
 
-bool MessageRouter::broadcast(const Message &msg) noexcept {
+bool Router::routeExecution(Execution exc,
+                            const ReceiverID &receiverID) noexcept {
+  if (auto receiver = findReceiver(receiverID)) {
+    return receiver->execute(std::move(exc));
+  }
+  return false;
+}
+bool Router::broadcast(const Message &msg) noexcept {
   bool delivered = false;
   auto atReceivers = receivers_.atomic();
   for (const auto &receiver : *atReceivers) {
@@ -31,8 +38,7 @@ bool MessageRouter::broadcast(const Message &msg) noexcept {
   return delivered;
 }
 
-ReceiverInstance MessageRouter::findReceiver(
-    const ReceiverID &id) const noexcept {
+ReceiverInstance Router::findReceiver(const ReceiverID &id) const noexcept {
   auto atReceivers = receivers_.atomic();
   if (auto itReceiver = atReceivers->find(id);
       itReceiver != atReceivers->end()) {
@@ -41,7 +47,7 @@ ReceiverInstance MessageRouter::findReceiver(
   return {};
 }
 
-bool MessageRouter::addReceiver(ReceiverInstance receiver) noexcept {
+bool Router::addReceiver(ReceiverInstance receiver) noexcept {
   if (receiver) {
     auto atmReceivers = receivers_.atomic();
     if (atmReceivers->insert(receiver).second) {
@@ -53,7 +59,7 @@ bool MessageRouter::addReceiver(ReceiverInstance receiver) noexcept {
   return false;
 }
 
-bool MessageRouter::removeReceiver(const ReceiverInstance &receiver) noexcept {
+bool Router::removeReceiver(const ReceiverInstance &receiver) noexcept {
   if (receivers_.atomic()->erase(receiver) != 0) {
     broadcast(ReceiverStatusMsg{receiver, ReceiverStatusMsg::Unavailable});
     return true;
