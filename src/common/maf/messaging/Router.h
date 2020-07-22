@@ -29,27 +29,28 @@ struct ReceiverCompare {
   }
 };
 
-class MessageRouter : public pattern::SingletonObject<MessageRouter> {
-public:
+class Router : public pattern::SingletonObject<Router> {
+ public:
   using Receivers = std::set<ReceiverInstance, ReceiverCompare>;
 
-  MessageRouter(Invisible) noexcept {}
-  bool route(Message &&msg, const ReceiverID &receiverID) noexcept;
+  Router(Invisible) noexcept {}
+  bool routeMessage(Message &&msg, const ReceiverID &receiverID) noexcept;
+  bool routeExecution(Execution exc, const ReceiverID &receiverID) noexcept;
   bool broadcast(const Message &msg) noexcept;
   ReceiverInstance findReceiver(const ReceiverID &id) const noexcept;
 
   bool addReceiver(ReceiverInstance receiver) noexcept;
   bool removeReceiver(const ReceiverInstance &receiver) noexcept;
 
-private:
+ private:
   using AtomicReceivers = threading::Lockable<Receivers, std::mutex>;
 
   AtomicReceivers receivers_;
 };
 
-} // namespace impl
+}  // namespace impl
 
-using impl::MessageRouter;
+using impl::Router;
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

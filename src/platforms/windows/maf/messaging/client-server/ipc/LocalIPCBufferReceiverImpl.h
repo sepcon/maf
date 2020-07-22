@@ -29,7 +29,7 @@ class LocalIPCBufferReceiverImpl : public NamedPipeReceiverBase {
 
  private:
   bool initPipes();
-  void listningThreadFunction();
+  void startListening();
   void disconnectAndReconnect(size_t index);
   bool readOnPipe(size_t index);
 

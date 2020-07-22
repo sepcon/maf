@@ -8,7 +8,6 @@
 #include "PipeShared.h"
 
 namespace maf {
-
 namespace messaging {
 namespace ipc {
 namespace local {
@@ -24,7 +23,7 @@ LocalIPCBufferSenderImpl::LocalIPCBufferSenderImpl() {}
 LocalIPCBufferSenderImpl::~LocalIPCBufferSenderImpl() {}
 
 ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
-                                          const Address &destination) {
+                                                const Address &destination) {
   auto errCode = ActionCallStatus::ReceiverUnavailable;
   bool success = false;
   if (checkReceiverStatus(destination) == Availability::Available) {
@@ -39,7 +38,7 @@ ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
                                    sizeof(baSize)))) {
           if ((success =
                    writeToPipe(pipeHandle, oOverlap_, ba.data(), ba.size()))) {
-            FlushFileBuffers(pipeHandle);
+            //            FlushFileBuffers(pipeHandle);
             break;
           }
         }
@@ -76,16 +75,18 @@ ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
   return errCode;
 }
 
+// clang-format off
 static HANDLE openPipe(const std::string &pipeName) {
-  return CreateFileA(pipeName.c_str(),  // pipe name
-                     GENERIC_WRITE |    // write only
+  return CreateFileA(pipeName.c_str(),          // pipe name
+                     GENERIC_WRITE |            // write only
                          FILE_FLAG_OVERLAPPED,
-                     0,              // no sharing
-                     nullptr,        // default security attributes
-                     OPEN_EXISTING,  // opens existing pipe
-                     0,              // write overlapped
-                     nullptr);       // no template file
+                     0,                         // no sharing
+                     nullptr,                   // default security attributes
+                     OPEN_EXISTING,             // opens existing pipe
+                     FILE_FLAG_NO_BUFFERING,    // no buffering
+                     nullptr);                  // no template file
 }
+// clang-format on
 
 static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
                         const char *buffer, size_t buffSize) {

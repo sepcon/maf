@@ -216,6 +216,9 @@ class Tester {
 
       stub_->broadcastSignal(sentAttribute);
 
+      stub_->broadcastSignal(server_notify_signal::make_attributes("hello", details));
+      stub_->template broadcastSignal<server_notify_signal::attributes>("hello", details);
+
       MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(10ms) ==
                       std::future_status::ready)
       MAF_TEST_EXPECT(receivedAttributeFuture.get() == *sentAttribute);
@@ -254,6 +257,7 @@ class Tester {
       std::this_thread::sleep_for(10ms);
 
       stub_->setStatus(sentStatus);
+      stub_->template setStatus<some_string_property::status>("hello");
 
       for (auto& [regID, propFuture] : propertyRegs) {
         do {

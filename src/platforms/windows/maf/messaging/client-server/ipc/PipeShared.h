@@ -8,8 +8,8 @@ namespace maf {
 namespace messaging {
 namespace ipc {
 
-static constexpr int WAIT_DURATION_MAX = 5000;  // milliseconds
-static constexpr int BUFFER_SIZE = 500;         // bytes
+inline constexpr int WAIT_DURATION_MAX = 5000;  // milliseconds
+inline constexpr int BUFFER_SIZE = 1000;         // bytes
 
 using ByteArrayPtr = std::shared_ptr<srz::Buffer>;
 using PipeNameType = std::string;

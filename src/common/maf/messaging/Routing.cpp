@@ -1,20 +1,24 @@
 #include <maf/messaging/Routing.h>
 
-#include "MessageRouter.h"
+#include "Router.h"
 
 namespace maf {
 namespace messaging {
 namespace routing {
 
 bool routeMessage(Message &&msg, const ReceiverID &receiverID) {
-  return MessageRouter::instance().route(std::move(msg), receiverID);
+  return Router::instance().routeMessage(std::move(msg), receiverID);
+}
+
+bool routeExecution(Execution exc, const ReceiverID &receiverID) {
+  return Router::instance().routeExecution(std::move(exc), receiverID);
 }
 
 bool broadcast(Message &&msg) {
-  return MessageRouter::instance().broadcast(std::move(msg));
+  return Router::instance().broadcast(std::move(msg));
 }
 ReceiverInstance findReceiver(const ReceiverID &id) {
-  return MessageRouter::instance().findReceiver(id);
+  return Router::instance().findReceiver(id);
 }
 
 }  // namespace routing
