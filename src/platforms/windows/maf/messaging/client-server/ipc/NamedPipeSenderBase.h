@@ -29,7 +29,7 @@ class NamedPipeSenderBase {
       receiverAddress_ = receiverAddr;
       pipeName_ = constructPipeName(receiverAddr);
     }
-    return WaitNamedPipeA(pipeName_.c_str(), WAIT_DURATION_MAX)
+    return WaitNamedPipeA(pipeName_.c_str(), 0)
                ? Availability::Available
                : Availability::Unavailable;
   }

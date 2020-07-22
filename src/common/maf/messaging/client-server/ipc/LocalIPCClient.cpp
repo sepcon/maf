@@ -3,6 +3,7 @@
 #include <maf/logging/Logger.h>
 #include <maf/utils/Process.h>
 
+#include "../GlobalThreadPool.h"
 #include "BufferSenderIF.h"
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
@@ -33,19 +34,18 @@ bool LocalIPCClient::init(const Address &serverAddress) {
 
 bool LocalIPCClient::start() {
   receiverThread_ = std::thread{[this] { pReceiver_->start(); }};
-  monitorServerStatus(500);
-  return true;
+  global_threadpool::tryAddThread();
+  global_threadpool::submit([this] { monitorServerStatus(); });
+  return global_threadpool::threadCount() > 0;
 }
 
 void LocalIPCClient::stop() {
   pReceiver_->stop();
-  stopEventSource_.set_value();
-  if (serverMonitorThread_.joinable()) {
-    serverMonitorThread_.join();
-  }
+  serverMonitorTimer_.stop();
   if (receiverThread_.joinable()) {
     receiverThread_.join();
   }
+  global_threadpool::tryRemoveThread();
 }
 
 void LocalIPCClient::deinit() { ClientBase::deinit(); }
@@ -81,38 +81,30 @@ void LocalIPCClient::onServerStatusChanged(Availability oldStatus,
   }
 }
 
-void LocalIPCClient::monitorServerStatus(long long intervalMs) {
-  serverMonitorThread_ = std::thread(
-      [this, stopEvent = stopEventSource_.get_future(), intervalMs] {
-        auto oldStatus = Availability::Unavailable;
-        auto tunnedInterval = decltype(intervalMs){0};
-        do {
-          if (auto newStatus = pSender_->checkReceiverStatus(myServerAddress_);
-              oldStatus != newStatus) {
-            tunnedInterval = intervalMs;
-            this->onServerStatusChanged(oldStatus, newStatus);
-            oldStatus = newStatus;
-          } else if (newStatus == Availability::Unavailable) {
-            if (tunnedInterval < intervalMs) {
-              tunnedInterval += 10;
-            }
-          }
-          if (stopEvent.wait_for(std::chrono::milliseconds{tunnedInterval}) ==
-              std::future_status::ready) {
-            break;
-          }
-        } while (true);
-      });
+void LocalIPCClient::monitorServerStatus(long long tunedInterval) {
+  if (auto newStatus = pSender_->checkReceiverStatus(myServerAddress_);
+      currentServerStatus_ != newStatus) {
+    tunedInterval = serverMonitorInterval;
+    this->onServerStatusChanged(currentServerStatus_, newStatus);
+    currentServerStatus_ = newStatus;
+
+  } else if (tunedInterval < serverMonitorInterval) {
+    tunedInterval += 5;
+  }
+  serverMonitorTimer_.start(tunedInterval,
+                            [=] { this->monitorServerStatus(tunedInterval); });
 }
 
-void LocalIPCClient::onBytesCome(srz::Buffer &&bytes) {
-  std::shared_ptr<local::LocalIPCMessage> csMsg =
-      std::make_shared<local::LocalIPCMessage>();
-  if (csMsg->fromBytes(std::move(bytes))) {
-    onIncomingMessage(csMsg);
-  } else {
-    MAF_LOGGER_ERROR("incoming message is not wellformed");
-  }
+void LocalIPCClient::onBytesCome(srz::Buffer &&buff) {
+  global_threadpool::submit([this, buff = std::move(buff)]() mutable {
+    std::shared_ptr<local::LocalIPCMessage> csMsg =
+        std::make_shared<local::LocalIPCMessage>();
+    if (csMsg->fromBytes(std::move(buff))) {
+      onIncomingMessage(csMsg);
+    } else {
+      MAF_LOGGER_ERROR("incoming message is not wellformed");
+    }
+  });
 }
 
 }  // namespace local

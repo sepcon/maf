@@ -3,6 +3,7 @@
 #include <maf/messaging/Timer.h>
 
 #include <cassert>
+#include <memory>
 
 #include "TimerManager.h"
 
@@ -11,18 +12,20 @@ namespace maf {
 namespace messaging {
 
 using JobID = TimerManager::JobID;
+using TimerMgrPtr = std::shared_ptr<TimerManager>;
+
+static std::shared_ptr<TimerManager> mgr_() {
+  static auto mgr_ = std::make_shared<TimerManager>();
+  return mgr_;
+}
 
 struct TimerDataPrv {
   TimerDataPrv(JobID _id, bool _cyclic) : id{_id}, cyclic{_cyclic} {}
 
+  TimerMgrPtr mgr = mgr_();
   JobID id;
   bool cyclic;
 };
-
-static TimerManager &mgr() {
-  static TimerManager mgr_;
-  return mgr_;
-}
 
 Timer::Timer(bool cyclic)
     : d_{new TimerDataPrv{TimerManager::invalidJobID(), cyclic}} {}
@@ -57,21 +60,21 @@ void Timer::start(std::chrono::milliseconds milliseconds,
       }
     };
 
-    d_->id = mgr().start(milliseconds.count(), onTimeout, d_->cyclic);
+    d_->id = d_->mgr->start(milliseconds.count(), onTimeout, d_->cyclic);
     MAF_LOGGER_INFO("Start new timer with id = ", d_->id);
   }
 }
 
-void Timer::restart() { mgr().restart(d_->id); }
+void Timer::restart() { d_->mgr->restart(d_->id); }
 
-void Timer::stop() { mgr().stop(d_->id); }
+void Timer::stop() { d_->mgr->stop(d_->id); }
 
-bool Timer::running() { return mgr().isRunning(d_->id); }
+bool Timer::running() { return d_->mgr->isRunning(d_->id); }
 
 void Timer::setCyclic(bool cyclic) {
   if (cyclic != d_->cyclic) {
     d_->cyclic = cyclic;
-    mgr().setCyclic(d_->id, cyclic);
+    d_->mgr->setCyclic(d_->id, cyclic);
   }
 }
 

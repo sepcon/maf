@@ -1,7 +1,5 @@
 #pragma once
 
-#include <maf/export/MafExport_global.h>
-#include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/ServerIF.h>
 #include <maf/patterns/Patterns.h>
 
