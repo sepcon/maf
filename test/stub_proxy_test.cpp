@@ -6,6 +6,7 @@
 #include <maf/messaging/DirectExecutor.h>
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 #include <maf/messaging/client-server/ServiceStatusSignal.h>
+#include <maf/utils/TimeMeasurement.h>
 
 #include <algorithm>
 #include <future>
@@ -68,6 +69,11 @@ class Tester {
       : stub_{std::move(stub)}, proxy_{std::move(proxy)} {}
 
   void test() {
+    maf::util::TimeMeasurement tm([](auto elapsed) {
+      maf::test::log_rec() << "Total time for test = " << elapsed.count() / 1000
+                           << "ms";
+    });
+
     auto stub = stub_->with(maf::messaging::directExecutor());
     auto proxy = proxy_->with(maf::messaging::directExecutor());
     Availability serviceStatus;
@@ -118,14 +124,18 @@ class Tester {
 
     stub_->startServing();
 
+    std::promise<void> serviceStatusSource;
+    auto ftServiceStatusChangedSignal = serviceStatusSource.get_future();
     proxy->onServiceStatusChanged(
-        [&serviceStatus](auto, Availability newStatus) {
+        [&serviceStatus,  &serviceStatusSource](auto, Availability newStatus) {
           serviceStatus = newStatus;
+          serviceStatusSource.set_value();
         });
 
     serviceStatusSignal(proxy)->waitTill(Availability::Available);
 
     MAF_TEST_CASE_BEGIN(service_status) {
+      MAF_TEST_EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) == std::future_status::ready);
       MAF_TEST_EXPECT(serviceStatus == Availability::Available);
     }
     MAF_TEST_CASE_END(service_status)
@@ -206,22 +216,21 @@ class Tester {
       auto sentAttribute =
           server_notify_signal::make_attributes(inputString, details);
 
-      proxy->template registerSignal<server_notify_signal::attributes>(
+      auto regid = proxy->template registerSignal<server_notify_signal::attributes>(
           [&receivedAttribute](server_notify_signal::attributes_cptr attr) {
             receivedAttribute.set_value(std::move(*attr));
           });
 
       // wait for signal register comes to server
-      std::this_thread::sleep_for(10ms);
+      std::this_thread::sleep_for(1ms);
 
       stub_->broadcastSignal(sentAttribute);
-
-      stub_->broadcastSignal(server_notify_signal::make_attributes("hello", details));
-      stub_->template broadcastSignal<server_notify_signal::attributes>("hello", details);
 
       MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(10ms) ==
                       std::future_status::ready)
       MAF_TEST_EXPECT(receivedAttributeFuture.get() == *sentAttribute);
+
+      proxy->unregister(regid);
 
       auto sentStatus = some_string_property::make_status("this is status");
 
@@ -254,7 +263,7 @@ class Tester {
       }
 
       // wait for signal register comes to server
-      std::this_thread::sleep_for(10ms);
+      std::this_thread::sleep_for(1ms);
 
       stub_->setStatus(sentStatus);
       stub_->template setStatus<some_string_property::status>("hello");
@@ -295,11 +304,16 @@ class Tester {
 static constexpr auto ServiceIDTest = "request_response_test.service";
 void testLocalIPC() {
   using namespace localipc;
-  maf::test::log_rec() <<
-  "--------------START LOCAL IPC TEST --------------------" ;
+  maf::test::log_rec()
+      << "--------------START LOCAL IPC TEST --------------------";
   Address addr{"maf.request_response_test.name", 0};
 
-  Tester<localipc::ParamTrait> tester{createStub(addr, ServiceIDTest),
+  auto stub = createStub(addr, ServiceIDTest);
+  while (!stub) {
+      std::this_thread::sleep_for(10ms);
+      stub = createStub(addr, ServiceIDTest);
+  } ;
+  Tester<localipc::ParamTrait> tester{ stub,
                                       createProxy(addr, ServiceIDTest)};
   tester.test();
 }
@@ -308,19 +322,18 @@ void testITC() {
   using namespace itc;
 
   maf::test::log_rec() << "--------------START INTER THREAD COMMUNICATION TEST "
-               "--------------------" ;
+                          "--------------------";
   Tester<itc::ParamTrait> tester{createStub(ServiceIDTest),
                                  createProxy(ServiceIDTest)};
   tester.test();
 }
 
 int main() {
-  //    maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
-  //                           maf::logging::LOG_LEVEL_VERBOSE,
-  //                       [](const auto& msg){
-  //                           std::cout << msg << std::endl;
-  //                       });
-
+  //maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
+  //                       maf::logging::LOG_LEVEL_VERBOSE |
+  //                       maf::logging::LOG_LEVEL_DEBUG,
+  //                   [](const auto& msg) { std::cout << msg << std::endl; });
+     
   maf::test::init_test_cases();
   testLocalIPC();
   testITC();

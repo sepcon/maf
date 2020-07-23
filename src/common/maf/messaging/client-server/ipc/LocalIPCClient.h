@@ -1,5 +1,7 @@
 #pragma once
 
+#include <maf/messaging/Timer.h>
+
 #include <future>
 #include <thread>
 
@@ -32,18 +34,19 @@ class LocalIPCClient : public ClientBase, public BytesComeObserver {
                              Availability newStatus) noexcept override;
 
  protected:
-  void monitorServerStatus(long long intervalMs);
-  void onBytesCome(srz::Buffer &&bytes) override;
+  void monitorServerStatus(long long intervalMs = 0);
+  void onBytesCome(srz::Buffer &&buff) override;
 
   Address myServerAddress_;
 
-  std::thread serverMonitorThread_;
+  Timer serverMonitorTimer_;
   std::thread receiverThread_;
 
   std::unique_ptr<BufferSenderIF> pSender_;
   std::unique_ptr<BufferReceiverIF> pReceiver_;
 
-  std::promise<void> stopEventSource_;
+  Availability currentServerStatus_ = Availability::Unavailable;
+  int serverMonitorInterval = 500;
 };
 
 }  // namespace local

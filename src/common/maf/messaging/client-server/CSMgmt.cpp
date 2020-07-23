@@ -1,19 +1,26 @@
-#include "ClientFactory.h"
-#include "ServerFactory.h"
-#include "ServiceProvider.h"
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSMgmt.h>
-#include <maf/threading/Lockable.h>
-#include <map>
-#include <vector>
+
+#include "ClientFactory.h"
+#include "GlobalThreadPool.h"
+#include "ServerFactory.h"
 
 namespace maf {
 namespace messaging {
 namespace csmgmt {
 
-std::shared_ptr<ServiceRequesterIF>
-getServiceRequester(const ConnectionType &conntype, const Address &serverAddr,
-                    const ServiceID &sid) noexcept {
+struct CSInit {
+  CSInit() { global_threadpool::init(); }
+
+  ~CSInit() { global_threadpool::deinit(); }
+};
+
+static void csinit() { static CSInit _; }
+
+std::shared_ptr<ServiceRequesterIF> getServiceRequester(
+    const ConnectionType &conntype, const Address &serverAddr,
+    const ServiceID &sid) noexcept {
+  csinit();
   if (auto client = ClientFactory::instance().getClient(conntype, serverAddr)) {
     if (auto requester = client->getServiceRequester(sid)) {
       return requester;
@@ -30,6 +37,7 @@ getServiceRequester(const ConnectionType &conntype, const Address &serverAddr,
 ServiceProviderIFPtr getServiceProvider(const ConnectionType &conntype,
                                         const Address &serverAddr,
                                         const ServiceID &sid) noexcept {
+  csinit();
   if (auto server = ServerFactory::instance().getServer(conntype, serverAddr)) {
     // if already had provider on found server
     return server->getServiceProvider(sid);
@@ -37,6 +45,6 @@ ServiceProviderIFPtr getServiceProvider(const ConnectionType &conntype,
   return {};
 }
 
-} // namespace csmgmt
-} // namespace messaging
-} // namespace maf
+}  // namespace csmgmt
+}  // namespace messaging
+}  // namespace maf

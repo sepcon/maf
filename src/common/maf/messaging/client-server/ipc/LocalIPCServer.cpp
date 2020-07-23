@@ -3,9 +3,10 @@
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
 
-#include "LocalIPCMessage.h"
+#include "../GlobalThreadPool.h"
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
+#include "LocalIPCMessage.h"
 
 namespace maf {
 namespace messaging {
@@ -13,7 +14,8 @@ namespace ipc {
 namespace local {
 
 LocalIPCServer::LocalIPCServer()
-    : pSender_{new LocalIPCBufferSender}, pReceiver_{new LocalIPCBufferReceiver} {}
+    : pSender_{new LocalIPCBufferSender},
+      pReceiver_{new LocalIPCBufferReceiver} {}
 
 LocalIPCServer::~LocalIPCServer() = default;
 
@@ -26,8 +28,9 @@ bool LocalIPCServer::init(const Address &serverAddress) {
 }
 
 bool LocalIPCServer::start() {
+  global_threadpool::tryAddThread();
   listeningThread_ = std::thread{[this] { pReceiver_->start(); }};
-  return true;
+  return global_threadpool::threadCount() > 0;
 }
 
 void LocalIPCServer::stop() {
@@ -37,6 +40,7 @@ void LocalIPCServer::stop() {
   if (listeningThread_.joinable()) {
     listeningThread_.join();
   }
+  global_threadpool::tryRemoveThread();
 }
 
 void LocalIPCServer::deinit() {}
@@ -118,13 +122,16 @@ bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
   return ServerBase::onIncomingMessage(csMsg);
 }
 
-void LocalIPCServer::onBytesCome(srz::Buffer &&bytes) {
-  std::shared_ptr<LocalIPCMessage> csMsg = std::make_shared<LocalIPCMessage>();
-  if (csMsg->fromBytes(std::move(bytes))) {
-    onIncomingMessage(csMsg);
-  } else {
-    MAF_LOGGER_ERROR("incoming message is not wellformed");
-  }
+void LocalIPCServer::onBytesCome(srz::Buffer &&buff) {
+  global_threadpool::submit([this, buff = std::move(buff)]() mutable {
+    std::shared_ptr<LocalIPCMessage> csMsg =
+        std::make_shared<LocalIPCMessage>();
+    if (csMsg->fromBytes(std::move(buff))) {
+      onIncomingMessage(csMsg);
+    } else {
+      MAF_LOGGER_ERROR("incoming message is not wellformed");
+    }
+  });
 }
 
 void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,

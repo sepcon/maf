@@ -195,7 +195,9 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
     disablePermissionRestriction(instance->hPipeInst);
 
     // Call the subroutine to connect to the new client
-    connectToNewClient(instance->hPipeInst, &instance->oOverlap);
+    if (!connectToNewClient(instance->hPipeInst, &instance->oOverlap)) {
+      return false;
+    }
   }
   return true;
 }

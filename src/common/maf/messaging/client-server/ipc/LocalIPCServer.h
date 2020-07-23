@@ -32,7 +32,7 @@ class LocalIPCServer : public ServerBase, public BytesComeObserver {
   bool onIncomingMessage(const CSMessagePtr &csMsg) override;
 
  protected:
-  void onBytesCome(srz::Buffer &&bytes) override;
+  void onBytesCome(srz::Buffer &&buff) override;
   void notifyServiceStatusToClient(const Address &clAddr, const ServiceID &sid,
                                    Availability oldStatus,
                                    Availability newStatus);
