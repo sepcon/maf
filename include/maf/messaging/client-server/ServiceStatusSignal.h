@@ -10,33 +10,48 @@ namespace messaging {
 
 class ServiceStatusSignal : public ServiceStatusObserverIF {
  public:
-  bool waitTill(const Availability expectedStatus) {
+  class WaitStatus {
+   public:
+    enum Status : char { Ready, TimeOut, Interrupted };
+    WaitStatus(Status s) : _{s} {}
+    bool isReady() const { return _ == Ready; }
+    bool isInterrupted() const { return _ == Interrupted; }
+    bool isTimeout() const { return _ == TimeOut; }
+
+   private:
+    Status _;
+  };
+
+  WaitStatus waitIfNot(const Availability expectedStatus) {
     std::unique_lock lock(m_);
     statusChanged_.wait(lock, [this, expectedStatus] {
       return expectedStatus == currentStatus_ || stopped_;
     });
     if (!stopped_) {
-      return true;
+      return WaitStatus(WaitStatus::Ready);
     }
-    return false;
+    return WaitStatus(WaitStatus::Interrupted);
   }
 
-  bool waitTill(const Availability expectedStatus, long long ms) {
-    return waitTill(expectedStatus, std::chrono::milliseconds{ms});
+  WaitStatus waitIfNot(const Availability expectedStatus, long long ms) {
+    return waitIfNot(expectedStatus, std::chrono::milliseconds{ms});
   }
 
   template <typename Rep, typename Period>
-  bool waitTill(const Availability expectedStatus,
-                const std::chrono::duration<Rep, Period> interval) {
+  WaitStatus waitIfNot(const Availability expectedStatus,
+                       const std::chrono::duration<Rep, Period> interval) {
     std::unique_lock lock(m_);
     if (statusChanged_.wait_for(lock, interval, [this, expectedStatus] {
           return expectedStatus == currentStatus_ || stopped_;
         })) {
       if (!stopped_) {
-        return true;
+        return WaitStatus(WaitStatus::Ready);
+      } else {
+        return WaitStatus(WaitStatus::Interrupted);
       }
+    } else {
+      return WaitStatus(WaitStatus::TimeOut);
     }
-    return false;
   }
 
   void stop() {

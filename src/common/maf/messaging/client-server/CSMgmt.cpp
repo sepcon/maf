@@ -11,7 +11,6 @@ namespace csmgmt {
 
 struct CSInit {
   CSInit() { global_threadpool::init(); }
-
   ~CSInit() { global_threadpool::deinit(); }
 };
 

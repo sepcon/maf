@@ -50,7 +50,7 @@ static thread_local Component *tlInstance_ = nullptr;
 static Execution makeExecution(GenericMsgHandlerFunction &&handler,
                                ComponentMessage &&msg) {
   auto executeMsgHandler = [handler = std::move(handler),
-                            msg = std::move(msg)] {
+                            msg = std::move(msg)]() mutable {
     auto &msgType = msg.type();
     try {
       handler(std::move(msg));
@@ -115,7 +115,9 @@ Component::StoppedSignal Component::runAsync(ThreadFunction threadInit,
 
 void Component::stop() {
   d_->pendingExecutions.close();
-  Router::instance().removeReceiver(shared_from_this());
+  if (!id().empty()) {
+    Router::instance().removeReceiver(shared_from_this());
+  }
 }
 
 bool Component::post(ComponentMessage &&msg) {

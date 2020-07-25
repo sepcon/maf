@@ -132,7 +132,7 @@ class Tester {
           serviceStatusSource.set_value();
         });
 
-    serviceStatusSignal(proxy)->waitTill(Availability::Available);
+    serviceStatusSignal(proxy)->waitIfNot(Availability::Available);
 
     MAF_TEST_CASE_BEGIN(service_status) {
       MAF_TEST_EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) == std::future_status::ready);

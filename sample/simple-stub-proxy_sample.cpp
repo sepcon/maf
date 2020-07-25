@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   auto serverWaiter = serverComponent->runAsync();
   stub->startServing();
 
-  if (dataTransmissionServiceStatusSignal->waitTill(Availability::Available)) {
+  if (dataTransmissionServiceStatusSignal->waitIfNot(Availability::Available).isReady()) {
     maf::util::TimeMeasurement tm{[](auto elapsedUs) {
       std::cout << "TIME OF execution = " << elapsedUs.count() / 1000 << "ms "
                 << std::endl;

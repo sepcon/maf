@@ -8,27 +8,28 @@
 #include "TimerManager.h"
 
 namespace maf {
-
 namespace messaging {
 
 using JobID = TimerManager::JobID;
 using TimerMgrPtr = std::shared_ptr<TimerManager>;
 
-static std::shared_ptr<TimerManager> mgr_() {
-  static auto mgr_ = std::make_shared<TimerManager>();
-  return mgr_;
+static TimerManager& mgr() {
+  static TimerManager _;
+  return _;
 }
 
 struct TimerDataPrv {
   TimerDataPrv(JobID _id, bool _cyclic) : id{_id}, cyclic{_cyclic} {}
-
-  TimerMgrPtr mgr = mgr_();
   JobID id;
   bool cyclic;
 };
 
 Timer::Timer(bool cyclic)
-    : d_{new TimerDataPrv{TimerManager::invalidJobID(), cyclic}} {}
+    : d_{new TimerDataPrv{TimerManager::invalidJobID(), cyclic}} {
+  // Timer manager must be constructed before all Timer instance
+  // to avoid problem of static variables destruction
+  mgr();
+}
 
 Timer::~Timer() { stop(); }
 void Timer::start(long long milliseconds, TimeOutCallback callback,
@@ -43,7 +44,7 @@ void Timer::start(std::chrono::milliseconds milliseconds,
     MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
   } else {
     if (running()) {
-      MAF_LOGGER_INFO("TimerImpl is still running, then stop!");
+      //      MAF_LOGGER_INFO("TimerImpl is still running, then stop!");
       stop();
     }
 
@@ -52,7 +53,7 @@ void Timer::start(std::chrono::milliseconds milliseconds,
     }
 
     auto onTimeout = [executor = std::move(executor),
-                      callback = std::move(callback), this] {
+                      callback = std::move(callback), this]() mutable {
       executor->execute(std::move(callback));
       if (!d_->cyclic) {
         // mark that timer is not running anymore
@@ -60,21 +61,21 @@ void Timer::start(std::chrono::milliseconds milliseconds,
       }
     };
 
-    d_->id = d_->mgr->start(milliseconds.count(), onTimeout, d_->cyclic);
-    MAF_LOGGER_INFO("Start new timer with id = ", d_->id);
+    d_->id = mgr().start(milliseconds.count(), onTimeout, d_->cyclic);
+    //    MAF_LOGGER_INFO("Start new timer with id = ", d_->id);
   }
 }
 
-void Timer::restart() { d_->mgr->restart(d_->id); }
+void Timer::restart() { mgr().restart(d_->id); }
 
-void Timer::stop() { d_->mgr->stop(d_->id); }
+void Timer::stop() { mgr().stop(d_->id); }
 
-bool Timer::running() { return d_->mgr->isRunning(d_->id); }
+bool Timer::running() { return mgr().isRunning(d_->id); }
 
 void Timer::setCyclic(bool cyclic) {
   if (cyclic != d_->cyclic) {
     d_->cyclic = cyclic;
-    d_->mgr->setCyclic(d_->id, cyclic);
+    mgr().setCyclic(d_->id, cyclic);
   }
 }
 

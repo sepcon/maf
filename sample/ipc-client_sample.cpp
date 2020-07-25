@@ -12,12 +12,12 @@ static const auto DataTransmissionServerAddress =
 
 int main() {
   std::cout.sync_with_stdio(false);
-  logging::init(
-      logging::LOG_LEVEL_FROM_INFO | maf::logging::LOG_LEVEL_DEBUG /*|
-                                     maf::logging::LOG_LEVEL_VERBOSE*/
-      ,
-      [](const std::string &msg) { std::cout << msg << std::endl; },
-      [](const std::string &msg) { std::cerr << msg << std::endl; });
+//  logging::init(
+//      logging::LOG_LEVEL_FROM_INFO | maf::logging::LOG_LEVEL_DEBUG /*|
+//                                     maf::logging::LOG_LEVEL_VERBOSE*/
+//      ,
+//      [](const std::string &msg) { std::cout << msg << std::endl; },
+//      [](const std::string &msg) { std::cerr << msg << std::endl; });
 
   util::TimeMeasurement tmeasure([](auto time) {
     std::cout << "Total execution time = "

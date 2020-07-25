@@ -132,15 +132,15 @@ LocalIPCBufferReceiverImpl::LocalIPCBufferReceiverImpl() {}
 
 bool LocalIPCBufferReceiverImpl::stop() {
   stopped_.store(true, std::memory_order_release);
-  disconnectAndClosePipeInstances(_pipeInstances);
-  for (auto &hE : _hEvents) {
+  disconnectAndClosePipeInstances(pipeInstances_);
+  for (auto &hE : hEvents_) {
     SetEvent(hE);
   }
   return true;
 }
 
 void LocalIPCBufferReceiverImpl::setObserver(BytesComeCallback &&callback) {
-  _bytesComeCallback = std::move(callback);
+  bytesComeCallback_ = std::move(callback);
 }
 
 bool LocalIPCBufferReceiverImpl::init(const Address &address) {
@@ -149,27 +149,27 @@ bool LocalIPCBufferReceiverImpl::init(const Address &address) {
 
 bool LocalIPCBufferReceiverImpl::initPipes() {
   for (int i = 0; i < MAX_INSTANCES; ++i) {
-    _pipeInstances.push_back(std::make_unique<PipeInstance>());
+    pipeInstances_.push_back(std::make_unique<PipeInstance>());
   }
 
   // The initial loop creates several instances of a named pipe
   // along with an event object for each instance.  An
   // overlapped ConnectNamedPipe operation is started for
   // each instance.
-  for (auto &instance : _pipeInstances) {
+  for (auto &instance : pipeInstances_) {
     // Create an event object for this instance.
 
-    _hEvents.push_back(CreateEvent(nullptr,    // default security attribute
+    hEvents_.push_back(CreateEvent(nullptr,    // default security attribute
                                    TRUE,       // manual-reset event
                                    TRUE,       // initial state = signaled
                                    nullptr));  // unnamed event object
 
-    if (_hEvents.back() == nullptr) {
+    if (hEvents_.back() == nullptr) {
       MAF_LOGGER_ERROR("CreateEvent failed with ", GetLastError());
       return false;
     }
 
-    instance->oOverlap.hEvent = _hEvents.back();
+    instance->oOverlap.hEvent = hEvents_.back();
 
     // clang-format off
     instance->hPipeInst = CreateNamedPipeA(
@@ -180,7 +180,7 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
         PIPE_TYPE_MESSAGE    |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
         PIPE_READMODE_MESSAGE|      // * block of bytes that greater than buffer_size
         PIPE_WAIT,                  // blocking mode
-        _2dw(_pipeInstances.size()),// number of instances
+        _2dw(pipeInstances_.size()),// number of instances
         0,                          // output buffer size
         BUFFER_SIZE*sizeof(char),   // input buffer size
         PIPE_TIMEOUT,               // client time-out
@@ -206,8 +206,8 @@ void LocalIPCBufferReceiverImpl::startListening() {
   DWORD dwWait;
   while (running()) {
     dwWait = WaitForMultipleObjects(
-        static_cast<DWORD>(_hEvents.size()),  // number of event objects
-        &_hEvents[0],                         // array of event objects
+        static_cast<DWORD>(hEvents_.size()),  // number of event objects
+        &hEvents_[0],                         // array of event objects
         FALSE,                                // does not wait for all
         INFINITE);                            // waits indefinitely
 
@@ -216,19 +216,19 @@ void LocalIPCBufferReceiverImpl::startListening() {
     }
 
     int i = static_cast<int>(dwWait - WAIT_OBJECT_0);  // determines which pipe
-    if (i < 0 || i > (static_cast<int>(_pipeInstances.size()) - 1)) {
+    if (i < 0 || i > (static_cast<int>(pipeInstances_.size()) - 1)) {
       MAF_LOGGER_ERROR(
-          "Index out of range, total pipes = ", _pipeInstances.size(),
+          "Index out of range, total pipes = ", pipeInstances_.size(),
           " but available pipe index is: ", i);
       return;
     }
 
     size_t index = static_cast<size_t>(i);
     if (readOnPipe(index)) {
-      _bytesComeCallback(std::move(_pipeInstances[index]->ba));
+      bytesComeCallback_(std::move(pipeInstances_[index]->ba));
     } else {
       MAF_LOGGER_WARN("Read nothing, GLE = ", GetLastError(), "-->",
-                      _pipeInstances[index]->ba, "<--");
+                      pipeInstances_[index]->ba, "<--");
     }
 
     disconnectAndReconnect(index);
@@ -237,19 +237,19 @@ void LocalIPCBufferReceiverImpl::startListening() {
 
 bool LocalIPCBufferReceiverImpl::readOnPipe(size_t index) {
   bool fSuccess = false;
-  auto &incommingBA = _pipeInstances[index]->ba;
+  auto &incommingBA = pipeInstances_[index]->ba;
   size_t bytesRead = 0;
   if (incommingBA.empty())  // read the written bytes count first
   {
     uint32_t totalComingBytes = 0;
     bytesRead = fillbuffer(
-        _pipeInstances[index]->hPipeInst, _pipeInstances[index]->oOverlap,
+        pipeInstances_[index]->hPipeInst, pipeInstances_[index]->oOverlap,
         reinterpret_cast<char *>(&totalComingBytes), sizeof(totalComingBytes));
 
     if (bytesRead == sizeof(totalComingBytes)) {
       incommingBA.resize(totalComingBytes);
-      bytesRead = fillbuffer(_pipeInstances[index]->hPipeInst,
-                             _pipeInstances[index]->oOverlap,
+      bytesRead = fillbuffer(pipeInstances_[index]->hPipeInst,
+                             pipeInstances_[index]->oOverlap,
                              incommingBA.data(), incommingBA.size());
       fSuccess = (incommingBA.size() == bytesRead);
     }
@@ -266,13 +266,13 @@ bool LocalIPCBufferReceiverImpl::readOnPipe(size_t index) {
 void LocalIPCBufferReceiverImpl::disconnectAndReconnect(size_t index) {
   // Disconnect the pipe instance.
 
-  if (!DisconnectNamedPipe(_pipeInstances[index]->hPipeInst)) {
+  if (!DisconnectNamedPipe(pipeInstances_[index]->hPipeInst)) {
     MAF_LOGGER_ERROR("DisconnectNamedPipe failed with", GetLastError());
   }
 
   // Call a subroutine to connect to the new client.
-  connectToNewClient(_pipeInstances[index]->hPipeInst,
-                     &_pipeInstances[index]->oOverlap);
+  connectToNewClient(pipeInstances_[index]->hPipeInst,
+                     &pipeInstances_[index]->oOverlap);
 }
 
 // ConnectToNewClient(HANDLE, LPOVERLAPPED)
