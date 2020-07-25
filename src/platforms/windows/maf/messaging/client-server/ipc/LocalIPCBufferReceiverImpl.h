@@ -33,9 +33,9 @@ class LocalIPCBufferReceiverImpl : public NamedPipeReceiverBase {
   void disconnectAndReconnect(size_t index);
   bool readOnPipe(size_t index);
 
-  BytesComeCallback _bytesComeCallback;
-  PipeInstances _pipeInstances;
-  Handles _hEvents;
+  BytesComeCallback bytesComeCallback_;
+  PipeInstances pipeInstances_;
+  Handles hEvents_;
 };
 }  // namespace local
 }  // namespace ipc

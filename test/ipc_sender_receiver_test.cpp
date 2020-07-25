@@ -81,8 +81,8 @@ void test() {
 }
 int main() {
   using namespace maf::logging;
-  maf::logging::init(LogLevel::LOG_LEVEL_ERROR | LogLevel::LOG_LEVEL_INFO,
-                     [](const auto& msg) { std::cout << msg << std::endl; });
+  //maf::logging::init(LOG_LEVEL_ERROR | LOG_LEVEL_INFO,
+  //                   [](const auto& msg) { std::cout << msg << std::endl; });
   maf::test::init_test_cases();
   test();
 }

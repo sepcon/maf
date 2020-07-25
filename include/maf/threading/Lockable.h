@@ -35,11 +35,8 @@ public:
   Lockable(DataType &&p) : _protected(std::move(p)) {}
 
   void lock() const { _mutex.lock(); }
-  void lock() { _mutex.lock(); }
   void unlock() const { _mutex.unlock(); }
-  void unlock() { _mutex.unlock(); }
   bool try_lock() const { return _mutex.try_lock(); }
-  bool try_lock() { return _mutex.try_lock(); }
 
   DataType *operator->() { return &_protected; }
   DataType &operator*() { return _protected; }

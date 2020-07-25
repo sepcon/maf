@@ -174,12 +174,12 @@ RegID ServiceRequesterImpl::sendMessageAsync(const OpID &operationID,
 CSPayloadIFPtr ServiceRequesterImpl::sendMessageSync(
     const OpID &operationID, OpCode opCode, const CSPayloadIFPtr &msgContent,
     ActionCallStatus *callStatus, RequestTimeoutMs timeout) {
-  auto promsise = std::make_shared<std::promise<CSPayloadIFPtr>>();
-  syncRequestPromises_.atomic()->push_back(promsise);
-  auto resultFuture = promsise->get_future();
-  auto onSyncMsgCallback = [&promsise, this](const CSPayloadIFPtr &msg) {
-    removeRequestPromies(promsise);
-    promsise->set_value(msg);
+  auto promise = std::make_shared<std::promise<CSPayloadIFPtr>>();
+  syncRequestPromises_.atomic()->push_back(promise);
+  auto resultFuture = promise->get_future();
+  auto onSyncMsgCallback = [promise, this](const CSPayloadIFPtr &msg) {
+    removeRequestPromies(promise);
+    promise->set_value(msg);
   };
 
   auto regID = sendMessageAsync(operationID, opCode, msgContent,
@@ -213,7 +213,7 @@ CSPayloadIFPtr ServiceRequesterImpl::sendMessageSync(
     }
   } else  // failed to send request to server
   {
-    removeRequestPromies(promsise);
+    removeRequestPromies(promise);
   }
 
   return {};

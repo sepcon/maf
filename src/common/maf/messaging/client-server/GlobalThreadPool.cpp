@@ -15,12 +15,9 @@ struct ThreadInterupt {};
 
 struct ThePool {
   ThePool() {}
+  ~ThePool() {}
 
-  void init() {
-    details = Component::create();
-  }
-
-  auto threadCount() { return threads.atomic()->size(); }
+  void init() { details = Component::create(); }
 
   void deinit() {
     details->stop();
@@ -32,6 +29,8 @@ struct ThePool {
     }
     atThreads->clear();
   }
+
+  auto threadCount() { return threads.atomic()->size(); }
 
   bool tryAddThread() {
     try {

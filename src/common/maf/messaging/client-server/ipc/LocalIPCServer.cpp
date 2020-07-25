@@ -123,15 +123,19 @@ bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
 }
 
 void LocalIPCServer::onBytesCome(srz::Buffer &&buff) {
-  global_threadpool::submit([this, buff = std::move(buff)]() mutable {
-    std::shared_ptr<LocalIPCMessage> csMsg =
-        std::make_shared<LocalIPCMessage>();
-    if (csMsg->fromBytes(std::move(buff))) {
-      onIncomingMessage(csMsg);
-    } else {
-      MAF_LOGGER_ERROR("incoming message is not wellformed");
-    }
-  });
+  global_threadpool::submit(
+      [thisw = weak_from_this(), buff = std::move(buff)]() mutable {
+        if (auto this_ = thisw.lock()) {
+          std::shared_ptr<LocalIPCMessage> csMsg =
+              std::make_shared<LocalIPCMessage>();
+          if (csMsg->fromBytes(std::move(buff))) {
+            std::static_pointer_cast<LocalIPCServer>(this_)->onIncomingMessage(
+                csMsg);
+          } else {
+            MAF_LOGGER_ERROR("incoming message is not wellformed");
+          }
+        }
+      });
 }
 
 void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,
