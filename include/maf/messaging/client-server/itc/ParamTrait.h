@@ -1,19 +1,22 @@
 #pragma once
 
-#include "Payload.h"
 #include <maf/messaging/client-server/CSMessage.h>
 #include <maf/messaging/client-server/ParamTraitBase.h>
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>
+#include <maf/utils/Pointers.h>
+
+#include "Payload.h"
 
 namespace maf {
 namespace messaging {
 namespace itc {
 
 class ParamTrait : public ParamTraitBase {
-public:
+ public:
   template <class Content>
-  static std::shared_ptr<Content> translate(const CSPayloadIFPtr &csMsgContent,
-                                            TranslationStatus * = nullptr) {
+  static std::shared_ptr<Content> translate(
+      const CSPayloadIFPtr &csMsgContent, TranslationStatus *status = nullptr) {
+    util::assign_ptr(status, TranslationStatus::Success);
     if (csMsgContent) {
       return static_cast<Payload<Content> *>(csMsgContent.get())->content();
     } else {
@@ -34,6 +37,6 @@ public:
   }
 };
 
-} // namespace itc
-} // namespace messaging
-} // namespace maf
+}  // namespace itc
+}  // namespace messaging
+}  // namespace maf
