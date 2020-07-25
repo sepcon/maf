@@ -32,6 +32,7 @@ bool LocalIPCBufferReceiverImpl::init(const Address &addr) {
         // Max 5 pending connections
         if (listen(fdMySock_, 5) == 0) {
           MAF_LOGGER_INFO("Listening on address ", myaddr_.dump());
+          setState(State::Initialized);
           startable = true;
         } else {
           MAF_LOGGER_ERROR("Could not listen on socket");
@@ -47,7 +48,12 @@ bool LocalIPCBufferReceiverImpl::init(const Address &addr) {
 
 bool LocalIPCBufferReceiverImpl::start() {
   try {
-    waitAndProcessConnections();
+    if (getState() == State::Initialized) {
+      setState(State::Running);
+      waitAndProcessConnections();
+    } else {
+      return false;
+    }
   } catch (StoppedInterruption) {
   } catch (...) {
     return false;
@@ -111,16 +117,13 @@ bool LocalIPCBufferReceiverImpl::waitAndProcessConnections() {
 
     timeval timeout = {1, 0};
 
-    interruptionPoint();
-
-    // wait for an activity on one of the sockets
-    setState(State::WaitingConnection);
+    changeCurrentStateAndInterruptIfStop(State::Running,
+                                         State::WaitingConnection);
 
     auto totalSD = select(maxSd + 1, &readfds, nullptr, nullptr, &timeout);
 
-    interruptionPoint();
-
-    setState(State::Running);
+    changeCurrentStateAndInterruptIfStop(State::WaitingConnection,
+                                         State::Running);
 
     if (totalSD <= 0) {
       continue;
@@ -182,8 +185,10 @@ bool LocalIPCBufferReceiverImpl::waitAndProcessConnections() {
   return true;
 }
 
-void LocalIPCBufferReceiverImpl::interruptionPoint() {
-  if (getState() == State::Stopped) {
+void LocalIPCBufferReceiverImpl::changeCurrentStateAndInterruptIfStop(
+    State expectedCurrentSate, State newStateState) {
+  state_.compare_exchange_strong(expectedCurrentSate, newStateState);
+  if (expectedCurrentSate == State::Stopped) {
     MAF_LOGGER_INFO("Finish running due to flag STOP was turned on, address: ",
                     myaddr_.dump());
     throw StoppedInterruption{};

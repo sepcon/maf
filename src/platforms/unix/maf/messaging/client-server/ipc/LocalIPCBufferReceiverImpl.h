@@ -41,7 +41,7 @@ class LocalIPCBufferReceiverImpl {
   void setState(State state) { state_.store(state, std::memory_order_release); }
 
   bool waitAndProcessConnections();
-  void interruptionPoint();
+  void changeCurrentStateAndInterruptIfStop(State expectedCurrentSate, State newStateState);
 
   BytesComeCallback bytesComeCallback_;
   Address myaddr_;
