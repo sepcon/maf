@@ -75,6 +75,12 @@ Component::Component(ComponentID id)
 Component::~Component() {}
 
 ComponentInstance Component::create(ComponentID name) {
+  if (!name.empty()) {
+    // Make sure the Router::instance is created before all Component instances
+    // that depend on it
+    Router::instance();
+  }
+
   auto comp = ComponentInstance{new Component{std::move(name)},
                                 &Component::deleteFunction};
   if (!comp->id().empty()) {
