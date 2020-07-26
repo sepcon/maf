@@ -82,4 +82,8 @@
 #		undef maf_restore_macro_VOID_SIGNAL
 #	endif
 
+#       ifdef MAF_CS_CONTRACT_PREFIX
+#               undef MAF_CS_CONTRACT_PREFIX
+#       endif
+
 // clang-format on
