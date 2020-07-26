@@ -87,6 +87,12 @@
 #		define maf_restore_macro_VOID_SIGNAL
 #		undef VOID_SIGNAL
 #	endif
+
+// User can provide custom prefix to reduce conflict between operationID
+#   ifndef MAF_CS_CONTRACT_PREFIX
+#       define MAF_CS_CONTRACT_PREFIX
+#   endif
+
 // clang-format on
 
 #include <maf/utils/serialization/SerializableObjectBegin.mc.h>
@@ -127,7 +133,8 @@
 // Implementations
 #define mc_maf_csc_declare_feature(type, name)                          \
   struct name##_##type : public maf::messaging::cs_##type {             \
-    static constexpr maf::messaging::OpIDConst ID = #name "." #type;    \
+    static constexpr maf::messaging::OpIDConst ID =                     \
+        MAF_CS_CONTRACT_PREFIX #name "." #type;                         \
     static constexpr maf::messaging::OpIDConst operationID() noexcept { \
       return ID;                                                        \
     }
