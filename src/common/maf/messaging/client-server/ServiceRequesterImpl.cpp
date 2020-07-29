@@ -33,8 +33,9 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg) {
         onNotification(csMsg);
         break;
       case OpCode::StatusRegister: {
-        onNotification(csMsg);
-        cachePropertyStatus(csMsg->operationID(), csMsg->payload());
+        if (onNotification(csMsg)) {
+          cachePropertyStatus(csMsg->operationID(), csMsg->payload());
+        }
       } break;
 
       case OpCode::Request:
@@ -331,8 +332,8 @@ ActionCallStatus ServiceRequesterImpl::unregister(const RegID &regID) {
     if (totalRemainer == 0) {
       // send unregister if no one from client side interested
       // in this propertyID anymore
-      sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
       removeCachedProperty(propertyID);
+      sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
     }
   } else {
     callstatus = ActionCallStatus::InvalidParam;
@@ -382,7 +383,7 @@ ActionCallStatus ServiceRequesterImpl::getStatus(
   return callstatus;
 }
 
-void ServiceRequesterImpl::onNotification(const CSMessagePtr &msg) {
+bool ServiceRequesterImpl::onNotification(const CSMessagePtr &msg) {
   std::vector<decltype(RegEntry::callback)> callbacks;
 
   {
@@ -399,6 +400,7 @@ void ServiceRequesterImpl::onNotification(const CSMessagePtr &msg) {
   for (auto &callback : callbacks) {
     callback(CSPayloadIFPtr(payload->clone()));
   }
+  return !callbacks.empty();
 }
 
 void ServiceRequesterImpl::onRequestResult(const CSMessagePtr &msg) {
@@ -542,10 +544,7 @@ CSPayloadIFPtr ServiceRequesterImpl::getCachedProperty(
 
 void ServiceRequesterImpl::cachePropertyStatus(const OpID &propertyID,
                                                CSPayloadIFPtr &&property) {
-  if (property) {
-    propertiesCache_.atomic()->insert_or_assign(propertyID,
-                                                std::move(property));
-  }
+  propertiesCache_.atomic()->insert_or_assign(propertyID, std::move(property));
 }
 
 void ServiceRequesterImpl::removeCachedProperty(const OpID &propertyID) {

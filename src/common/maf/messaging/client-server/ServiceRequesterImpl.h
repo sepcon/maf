@@ -117,7 +117,7 @@ struct ServiceRequesterImpl {
   CSMessagePtr createCSMessage(const OpID &opID, OpCode opCode,
                                const CSPayloadIFPtr &msgContent = nullptr);
 
-  void onNotification(const CSMessagePtr &msg);
+  bool onNotification(const CSMessagePtr &msg);
   void onRequestResult(const CSMessagePtr &msg);
   void abortAllSyncRequest();
   void clearAllAsyncRequests();

@@ -301,7 +301,7 @@
 /// ---------------------------------------------------------------------------
 /// ---------------------------------------------------------------------------------------------------------------------------------------
 
-#ifdef MAF_DISABLE_JSON
+#ifndef MAF_DISABLE_JSON
 #define mc_maf_load_json_on_each_property_(Type, Name, index)   \
   auto &Name##__ = get_##Name();                                \
   if (TheJsonTrait::template has<Type>(jsonIn, #Name)) {        \
