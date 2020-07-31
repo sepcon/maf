@@ -80,7 +80,7 @@ class ServiceStatusSignal : public ServiceStatusObserverIF {
   bool stopped_ = false;
 };
 
-std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
+inline std::shared_ptr<ServiceStatusSignal> serviceStatusSignal() {
   return std::shared_ptr<ServiceStatusSignal>{new ServiceStatusSignal{}};
 }
 

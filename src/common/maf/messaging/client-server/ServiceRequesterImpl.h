@@ -117,7 +117,7 @@ struct ServiceRequesterImpl {
   CSMessagePtr createCSMessage(const OpID &opID, OpCode opCode,
                                const CSPayloadIFPtr &msgContent = nullptr);
 
-  void onNotification(const CSMessagePtr &msg);
+  bool onRegistersUpdated(const CSMessagePtr &msg);
   void onRequestResult(const CSMessagePtr &msg);
   void abortAllSyncRequest();
   void clearAllAsyncRequests();
@@ -132,7 +132,7 @@ struct ServiceRequesterImpl {
   size_t storeRegEntry(RegEntriesMap &regInfoEntries, const OpID &propertyID,
                        CSPayloadProcessCallback callback, RegID &regID);
 
-  size_t removeRegEntry(RegEntriesMap &regInfoEntries, const RegID &regID);
+  size_t removeRegEntry(RegEntriesMap &regInfoEntriesMap, const RegID &regID);
 
   void removeRequestPromies(
       const std::shared_ptr<std::promise<CSPayloadIFPtr>> &promise);
@@ -140,6 +140,7 @@ struct ServiceRequesterImpl {
   CSPayloadIFPtr getCachedProperty(const OpID &propertyID) const;
   void cachePropertyStatus(const OpID &propertyID, CSPayloadIFPtr &&property);
   void removeCachedProperty(const OpID &propertyID);
+  bool cachedPropertyUpToDate(const OpID &propertyID) const;
 };
 
 }  // namespace messaging

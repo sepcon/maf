@@ -22,6 +22,7 @@ class IncomingPayload : public CSMsgPayloadIF {
     if (other && (other != this)) {
       if (other->type() == CSPayloadType::IncomingData) {
         auto otherAsThis = static_cast<const IncomingPayload *>(other);
+        // Don't compare content of stream
         return otherAsThis->stream() == this->stream();
       }
     }

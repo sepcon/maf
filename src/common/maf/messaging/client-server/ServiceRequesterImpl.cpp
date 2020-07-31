@@ -22,7 +22,7 @@ using util::assign_ptr;
 bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg) {
   bool handled = true;
   MAF_LOGGER_INFO(
-      "New Incoming message from server:"
+      "ServiceRequesterImpl - New Incoming message from server:"
       "\n\t\t sid     = ",
       csMsg->serviceID(), "\n\t\t opID    = ", csMsg->operationID(),
       "\n\t\t opCode  = ", csMsg->operationCode());
@@ -30,11 +30,12 @@ bool ServiceRequesterImpl::onIncomingMessage(const CSMessagePtr &csMsg) {
   if (csMsg && csMsg->serviceID() == serviceID()) {
     switch (csMsg->operationCode()) {
       case OpCode::SignalRegister:
-        onNotification(csMsg);
+        onRegistersUpdated(csMsg);
         break;
       case OpCode::StatusRegister: {
-        onNotification(csMsg);
-        cachePropertyStatus(csMsg->operationID(), csMsg->payload());
+        if (onRegistersUpdated(csMsg)) {
+          cachePropertyStatus(csMsg->operationID(), csMsg->payload());
+        }
       } break;
 
       case OpCode::Request:
@@ -331,8 +332,8 @@ ActionCallStatus ServiceRequesterImpl::unregister(const RegID &regID) {
     if (totalRemainer == 0) {
       // send unregister if no one from client side interested
       // in this propertyID anymore
-      sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
       removeCachedProperty(propertyID);
+      sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
     }
   } else {
     callstatus = ActionCallStatus::InvalidParam;
@@ -358,8 +359,8 @@ ActionCallStatus ServiceRequesterImpl::unregisterAll(const OpID &propertyID) {
 CSPayloadIFPtr ServiceRequesterImpl::getStatus(const OpID &propertyID,
                                                ActionCallStatus *callStatus,
                                                RequestTimeoutMs timeout) {
-  if (auto property = getCachedProperty(propertyID)) {
-    return property;
+  if (cachedPropertyUpToDate(propertyID)) {
+    return getCachedProperty(propertyID);
   } else {
     SET_ERROR_AND_RETURN_IF(serviceUnavailable(), callStatus,
                             ActionCallStatus::ServiceUnavailable, {});
@@ -371,9 +372,12 @@ CSPayloadIFPtr ServiceRequesterImpl::getStatus(const OpID &propertyID,
 
 ActionCallStatus ServiceRequesterImpl::getStatus(
     const OpID &propertyID, CSPayloadProcessCallback callback) {
+  //------------------------------------------------------------
   ActionCallStatus callstatus = ActionCallStatus::FailedUnknown;
-  if (auto status = getCachedProperty(propertyID)) {
-    callback(status);
+
+  if (cachedPropertyUpToDate(propertyID)) {
+    auto propStatus = getCachedProperty(propertyID);
+    callback(propStatus);
     callstatus = ActionCallStatus::Success;
   } else {
     sendMessageAsync(propertyID, OpCode::StatusGet, {}, std::move(callback),
@@ -382,7 +386,7 @@ ActionCallStatus ServiceRequesterImpl::getStatus(
   return callstatus;
 }
 
-void ServiceRequesterImpl::onNotification(const CSMessagePtr &msg) {
+bool ServiceRequesterImpl::onRegistersUpdated(const CSMessagePtr &msg) {
   std::vector<decltype(RegEntry::callback)> callbacks;
 
   {
@@ -397,8 +401,11 @@ void ServiceRequesterImpl::onNotification(const CSMessagePtr &msg) {
 
   auto payload = msg->payload();
   for (auto &callback : callbacks) {
+    // the payload must be cloned here due to state of
+    // IByteStream will change if deserialize it
     callback(CSPayloadIFPtr(payload->clone()));
   }
+  return !callbacks.empty();
 }
 
 void ServiceRequesterImpl::onRequestResult(const CSMessagePtr &msg) {
@@ -502,22 +509,30 @@ size_t ServiceRequesterImpl::storeRegEntry(RegEntriesMap &regInfoEntries,
   return regEntries.size();
 }
 
-size_t ServiceRequesterImpl::removeRegEntry(RegEntriesMap &regInfoEntries,
+size_t ServiceRequesterImpl::removeRegEntry(RegEntriesMap &regInfoEntriesMap,
                                             const RegID &regID) {
-  std::lock_guard lock(regInfoEntries);
-  auto it = regInfoEntries->find(regID.opID);
-  if (it != regInfoEntries->end()) {
-    it->second.erase(std::remove_if(it->second.begin(), it->second.end(),
-                                    [&regID](const RegEntry &regEntry) {
-                                      return regEntry.requestID ==
-                                             regID.requestID;
-                                    }),
-                     it->second.end());
+  std::lock_guard lock(regInfoEntriesMap);
+  auto itEntries = regInfoEntriesMap->find(regID.opID);
+  if (itEntries != regInfoEntriesMap->end()) {
+    auto &entries = itEntries->second;
+    for (auto itEntry = std::begin(entries); itEntry != std::end(entries);) {
+      if (itEntry->requestID == regID.requestID) {
+        entries.erase(itEntry);
+        break;
+      }
+      ++itEntry;
+    }
+
     RegID::reclaimID(regID, this->idMgr_);
-    return it->second.size();
-  } else {
-    return 0;
+
+    if (entries.empty()) {
+      regInfoEntriesMap->erase(itEntries);
+      return 0;
+    } else {
+      return itEntries->second.size();
+    }
   }
+  return 0;
 }
 
 void ServiceRequesterImpl::removeRequestPromies(
@@ -542,14 +557,17 @@ CSPayloadIFPtr ServiceRequesterImpl::getCachedProperty(
 
 void ServiceRequesterImpl::cachePropertyStatus(const OpID &propertyID,
                                                CSPayloadIFPtr &&property) {
-  if (property) {
-    propertiesCache_.atomic()->insert_or_assign(propertyID,
-                                                std::move(property));
-  }
+  propertiesCache_.atomic()->insert_or_assign(propertyID, std::move(property));
 }
 
 void ServiceRequesterImpl::removeCachedProperty(const OpID &propertyID) {
   propertiesCache_.atomic()->erase(propertyID);
+}
+
+bool ServiceRequesterImpl::cachedPropertyUpToDate(
+    const OpID &propertyID) const {
+  std::lock_guard lock(registerEntriesMap_);
+  return registerEntriesMap_->find(propertyID) != registerEntriesMap_->end();
 }
 
 }  // namespace messaging

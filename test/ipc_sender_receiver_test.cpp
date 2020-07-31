@@ -56,7 +56,7 @@ void test() {
 
     auto sendBuffers = [&sender, &buffers, &receiverAddr] {
       for (const auto& buffer : buffers) {
-        maf::test::log_rec() << sender.send(buffer, receiverAddr);
+        sender.send(buffer, receiverAddr);
       }
     };
     std::vector<std::thread> senderthreads;

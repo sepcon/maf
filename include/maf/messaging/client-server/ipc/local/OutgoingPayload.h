@@ -33,7 +33,7 @@ class OutgoingPayloadT : public OutgoingPayload {
       // assume that we always compare objects of same class
       auto otherOutgoing = static_cast<const OutgoingPayloadT *>(other);
       return this->content() && otherOutgoing->content() &&
-             this->content() != otherOutgoing->content();
+             (*(this->content()) == *(otherOutgoing->content()));
     } else {
       return false;
     }
