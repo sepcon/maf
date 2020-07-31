@@ -6,8 +6,9 @@
 #include <maf/messaging/DirectExecutor.h>
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 #include <maf/messaging/client-server/ServiceStatusSignal.h>
-#include <maf/utils/TimeMeasurement.h>
 #include <maf/threading/AtomicObject.h>
+#include <maf/utils/TimeMeasurement.h>
+
 #include <algorithm>
 #include <future>
 #include <iostream>
@@ -131,7 +132,7 @@ class Tester {
     std::promise<void> serviceStatusSource;
     auto ftServiceStatusChangedSignal = serviceStatusSource.get_future();
     proxy->onServiceStatusChanged(
-        [&serviceStatus,  &serviceStatusSource](auto, Availability newStatus) {
+        [&serviceStatus, &serviceStatusSource](auto, Availability newStatus) {
           serviceStatus = newStatus;
           serviceStatusSource.set_value();
         });
@@ -139,7 +140,8 @@ class Tester {
     serviceStatusSignal(proxy)->waitIfNot(Availability::Available);
 
     MAF_TEST_CASE_BEGIN(service_status) {
-      MAF_TEST_EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) == std::future_status::ready);
+      MAF_TEST_EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) ==
+                      std::future_status::ready);
       MAF_TEST_EXPECT(serviceStatus == Availability::Available);
     }
     MAF_TEST_CASE_END(service_status)
@@ -220,10 +222,11 @@ class Tester {
       auto sentAttribute =
           server_notify_signal::make_attributes(inputString, details);
 
-      auto regid = proxy->template registerSignal<server_notify_signal::attributes>(
-          [&receivedAttribute](server_notify_signal::attributes_cptr attr) {
-            receivedAttribute.set_value(std::move(*attr));
-          });
+      auto regid =
+          proxy->template registerSignal<server_notify_signal::attributes>(
+              [&receivedAttribute](server_notify_signal::attributes_cptr attr) {
+                receivedAttribute.set_value(std::move(*attr));
+              });
 
       // wait for signal register comes to server
       std::this_thread::sleep_for(1ms);
@@ -284,7 +287,9 @@ class Tester {
       sentStatus->set_its_status("sdfdsfdsfdsfds");
       stub_->setStatus(sentStatus);
 
-      std::this_thread::sleep_for(1000ms);
+      auto getBackedStatus =
+          stub_->template getStatus<some_string_property::status>();
+      MAF_TEST_EXPECT(getBackedStatus && *getBackedStatus == *sentStatus);
 
       auto gotStatus =
           proxy->template getStatus<some_string_property::status>();
@@ -292,29 +297,28 @@ class Tester {
       maf::test::log_rec() << gotStatus->dump();
       MAF_TEST_EXPECT(*gotStatus == *sentStatus)
 
-
       std::set<std::string> statusesToUpdate = {"1", "2", "3", "4", "5"};
       maf::threading::AtomicObject<std::set<std::string>> updatedStatuses;
       auto getAllSignalSource = std::make_shared<std::promise<void>>();
       auto getAllSignal = getAllSignalSource->get_future();
 
       proxy->template registerStatus<varied_string_property::status>(
-          [&updatedStatuses, getAllSignalSource, totalUpdate = statusesToUpdate.size()](
-			  varied_string_property::status_ptr status) {
-              updatedStatuses->insert(status->get_its_status());
-              if(updatedStatuses->size() == totalUpdate) {
-                  getAllSignalSource->set_value();
-              }
-      });
+          [&updatedStatuses, getAllSignalSource,
+           totalUpdate = statusesToUpdate.size()](
+              varied_string_property::status_ptr status) {
+            updatedStatuses->insert(status->get_its_status());
+            if (updatedStatuses->size() == totalUpdate) {
+              getAllSignalSource->set_value();
+            }
+          });
 
-      for(auto& s : statusesToUpdate) {
-          stub->template setStatus<varied_string_property::status>(s);
-          std::this_thread::sleep_for(1ms);
+      for (auto& s : statusesToUpdate) {
+        stub->template setStatus<varied_string_property::status>(s);
+        std::this_thread::sleep_for(1ms);
       }
 
       MAF_TEST_EXPECT(getAllSignal.wait_for(10ms) == std::future_status::ready);
       MAF_TEST_EXPECT(statusesToUpdate == updatedStatuses.lockee());
-
     }
     MAF_TEST_CASE_END(broad_cast_status_signal)
 
@@ -341,11 +345,10 @@ void testLocalIPC() {
 
   auto stub = createStub(addr, ServiceIDTest);
   while (!stub) {
-      std::this_thread::sleep_for(10ms);
-      stub = createStub(addr, ServiceIDTest);
-  } ;
-  Tester<localipc::ParamTrait> tester{ stub,
-                                      createProxy(addr, ServiceIDTest)};
+    std::this_thread::sleep_for(10ms);
+    stub = createStub(addr, ServiceIDTest);
+  };
+  Tester<localipc::ParamTrait> tester{stub, createProxy(addr, ServiceIDTest)};
   tester.test();
 }
 
@@ -360,11 +363,12 @@ void testITC() {
 }
 
 int main() {
-//  maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
-//                         maf::logging::LOG_LEVEL_VERBOSE |
-//                         maf::logging::LOG_LEVEL_DEBUG,
-//                     [](const auto& msg) { std::cout << msg << std::endl; });
-     
+  //  maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
+  //                         maf::logging::LOG_LEVEL_VERBOSE |
+  //                         maf::logging::LOG_LEVEL_DEBUG,
+  //                     [](const auto& msg) { std::cout << msg << std::endl;
+  //                     });
+
   maf::test::init_test_cases();
   testLocalIPC();
   testITC();

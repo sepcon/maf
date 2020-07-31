@@ -1,12 +1,13 @@
 #pragma once
 
-#include "IncomingPayload.h"
-#include "OutgoingPayload.h"
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ParamTraitBase.h>
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>
 #include <maf/utils/Pointers.h>
 #include <maf/utils/serialization/Serializer.h>
+
+#include "IncomingPayload.h"
+#include "OutgoingPayload.h"
 
 namespace maf {
 namespace messaging {
@@ -15,15 +16,18 @@ namespace local {
 
 using util::assign_ptr;
 class ParamTrait : public ParamTraitBase {
-public:
+ public:
   template <class Message>
-  static std::shared_ptr<Message>
-  translate(const CSPayloadIFPtr &payload,
-            TranslationStatus *status = nullptr) {
-
+  static std::shared_ptr<Message> translate(
+      const CSPayloadIFPtr &payload, TranslationStatus *status = nullptr) {
     if (!payload) {
       assign_ptr(status, TranslationStatus::NoSource);
       return {};
+    }
+
+    if (payload->type() == CSPayloadType::OutgoingData) {
+      return std::static_pointer_cast<OutgoingPayloadT<Message>>(payload)
+          ->content();
     }
 
     try {
@@ -35,7 +39,6 @@ public:
 
       std::shared_ptr<PureContentType> content;
       if (const auto &ibytestream = incomingPayload->stream()) {
-
         content.reset(new PureContentType);
         auto ds = srz::DSR{*ibytestream};
         ds >> *content;
@@ -64,7 +67,7 @@ public:
   }
 };
 
-} // namespace local
-} // namespace ipc
-} // namespace messaging
-} // namespace maf
+}  // namespace local
+}  // namespace ipc
+}  // namespace messaging
+}  // namespace maf
