@@ -94,6 +94,8 @@ class BasicProxy {
       ActionCallStatus *callStatus = nullptr,
       RequestTimeoutMs timeout = InfiniteWait) noexcept;
 
+  void abortRequest(const RegID &regID, ActionCallStatus *callStatus = nullptr);
+
   void registerServiceStatusObserver(
       ServiceStatusObserverPtr observer) noexcept;
   void unregisterServiceStatusObserver(
@@ -386,6 +388,12 @@ ActionCallStatus BasicProxy<PTrait>::unregisterAll(
 }
 
 template <class PTrait>
+void BasicProxy<PTrait>::abortRequest(const RegID &regID,
+                                      ActionCallStatus *callStatus) {
+  requester_->abortRequest(regID, callStatus);
+}
+
+template <class PTrait>
 template <class Status, AllowOnlyStatusT<PTrait, Status>>
 std::shared_ptr<Status> BasicProxy<PTrait>::getStatus(
     ActionCallStatus *callStatus, RequestTimeoutMs timeout) noexcept {
@@ -494,7 +502,6 @@ typename BasicProxy<PTrait>::ExecutorPtr BasicProxy<PTrait>::getExecutor()
   return executor_;
 }
 
-
 template <class PTrait>
 std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::with(
     BasicProxy::ExecutorPtr executor) noexcept {
@@ -511,7 +518,6 @@ typename BasicProxy<PTrait>::RequesterPtr BasicProxy<PTrait>::getRequester()
     const noexcept {
   return requester_;
 }
-
 
 }  // namespace messaging
 }  // namespace maf

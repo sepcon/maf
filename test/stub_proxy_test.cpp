@@ -34,6 +34,8 @@ using the_map = std::map<std::string, std::vector<int>>;
     OUTPUT((std::string, map_as_string))
 ENDREQUEST(map_string_vector)
 
+VOID_REQUEST(to_be_aborted)
+
 SIGNAL(server_notify)
     using DetailsMap = std::map<std::string, std::string>;
     ATTRIBUTES
@@ -212,6 +214,49 @@ class Tester {
     }
     MAF_TEST_CASE_END(request_but_failed_to_response)
 
+    MAF_TEST_CASE_BEGIN(abort_request) {
+      bool aborted = false;
+      auto requestComeEventSource = std::make_shared<std::promise<void>>();
+      auto requestComeEvent = requestComeEventSource->get_future();
+      std::shared_ptr<Request<to_be_aborted_request>> requestHolder;
+      stub->template registerRequestHandler<to_be_aborted_request>(
+          [&aborted, &requestComeEventSource,
+           &requestHolder](Request<to_be_aborted_request> request) {
+            requestComeEventSource->set_value();
+            request.onAborted([&aborted] { aborted = true; }, directExecutor());
+
+            // Keep the request to make it not auto respond error in its
+            // destructor
+            requestHolder = std::make_shared<Request<to_be_aborted_request>>(
+                std::move(request));
+          });
+
+      auto gotResponse = false;
+      auto regid = proxy->template sendRequestAsync<to_be_aborted_request>(
+          [&gotResponse](auto) { gotResponse = true; });
+
+      MAF_TEST_EXPECT(requestComeEvent.wait_for(10ms) ==
+                      std::future_status::ready);
+
+      MAF_TEST_EXPECT(aborted == false);
+
+      proxy->abortRequest(regid);
+      std::this_thread::sleep_for(1ms);
+
+      MAF_TEST_EXPECT(aborted == true);
+
+      // After aborted expect that the Request<to_be_aborted_request> cant
+      // respond anymore
+      MAF_TEST_EXPECT(requestHolder->respond() ==
+                      ActionCallStatus::InvalidCall);
+
+      //        std::this_thread::sleep_for(1ms);
+
+      // Due to request is aborted, then gotResponse will never meet
+      MAF_TEST_EXPECT(gotResponse == false);
+    }
+    MAF_TEST_CASE_END(abort_request)
+
     MAF_TEST_CASE_BEGIN(broad_cast_status_signal) {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"ignore_me"};
@@ -231,9 +276,9 @@ class Tester {
       // wait for signal register comes to server
       std::this_thread::sleep_for(1ms);
 
-      stub_->broadcastSignal(sentAttribute);
+      stub->broadcastSignal(sentAttribute);
 
-      MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(10ms) ==
+      MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(100ms) ==
                       std::future_status::ready)
       MAF_TEST_EXPECT(receivedAttributeFuture.get() == *sentAttribute);
 
@@ -362,6 +407,9 @@ void testITC() {
   tester.test();
 }
 
+static maf::util::TimeMeasurement tm([](auto elapsed) {
+  std::cout << "Total time = " << elapsed.count() / 1000 << "ms";
+});
 int main() {
   //  maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
   //                         maf::logging::LOG_LEVEL_VERBOSE |

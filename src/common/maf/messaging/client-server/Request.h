@@ -11,9 +11,8 @@ namespace messaging {
 
 class ServiceProviderIF;
 
-class Request : public RequestIF, public pattern::Unasignable {
-  friend struct ServiceProviderImpl;
-
+class Request : public RequestIF {
+ public:
   std::shared_ptr<CSMessage> _csMsg;
   std::weak_ptr<ServiceProviderIF> _svStub;
   AbortRequestCallback _abortCallback;
@@ -34,7 +33,7 @@ class Request : public RequestIF, public pattern::Unasignable {
   bool valid() const override;
   ActionCallStatus respond(const CSPayloadIFPtr &answer) override;
   CSPayloadIFPtr getInput() override;
-  void setAbortRequestHandler(AbortRequestCallback abortCallback) override;
+  void onAborted(AbortRequestCallback abortCallback) override;
 };
 
 }  // namespace messaging

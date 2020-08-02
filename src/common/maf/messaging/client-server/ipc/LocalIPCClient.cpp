@@ -57,7 +57,7 @@ ActionCallStatus LocalIPCClient::sendMessageToServer(const CSMessagePtr &msg) {
   try {
     msg->setSourceAddress(pReceiver_->address());
     return pSender_->send(
-        std::static_pointer_cast<local::LocalIPCMessage>(msg)->toBytes(),
+        std::static_pointer_cast<LocalIPCMessage>(msg)->toBytes(),
         myServerAddress_);
   } catch (const std::bad_alloc &e) {
     MAF_LOGGER_ERROR("Message is too large to be serialized: ", e.what());
@@ -69,7 +69,7 @@ void LocalIPCClient::onServerStatusChanged(Availability oldStatus,
                                            Availability newStatus) noexcept {
   ClientBase::onServerStatusChanged(oldStatus, newStatus);
   if (newStatus == Availability::Available) {
-    auto registeredMsg = messaging::createCSMessage<local::LocalIPCMessage>(
+    auto registeredMsg = messaging::createCSMessage<LocalIPCMessage>(
         ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
     if (sendMessageToServer(registeredMsg) == ActionCallStatus::Success) {
       MAF_LOGGER_INFO(
@@ -97,8 +97,8 @@ void LocalIPCClient::monitorServerStatus(long long tunedInterval) {
 
 void LocalIPCClient::onBytesCome(srz::Buffer &&buff) {
   global_threadpool::submit([this, buff = std::move(buff)]() mutable {
-    std::shared_ptr<local::LocalIPCMessage> csMsg =
-        std::make_shared<local::LocalIPCMessage>();
+    std::shared_ptr<LocalIPCMessage> csMsg =
+        std::make_shared<LocalIPCMessage>();
     if (csMsg->fromBytes(std::move(buff))) {
       onIncomingMessage(csMsg);
     } else {

@@ -36,7 +36,7 @@ static std::shared_ptr<CSError> decodeAsError(Deserializer &ds) {
   return std::shared_ptr<CSError>{new CSError{std::move(desc), code}};
 }
 
-srz::Buffer LocalIPCMessage::toBytes() {
+srz::Buffer LocalIPCMessage::toBytes() noexcept {
   srz::OByteStream oss;
   Serializer sr(oss);
 
