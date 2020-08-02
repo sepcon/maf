@@ -81,7 +81,7 @@ inline void init_test_cases() {
         log_rec() << "^^^^^^^^^^TOTAL TESTS PASSED: "
                   << test_cases_sumary().total_passed << "^^^^^^^";
         log_rec() << "------------------------------------------------";
-        exit(-1);
+        exit(1);
       } else {
         log_rec() << "*************ALL " << test_cases_sumary().total_passed
                   << " TESTS PASSED!*************** ";

@@ -1,27 +1,30 @@
 #pragma once
 
+#include <maf/logging/Logger.h>
+#include <maf/messaging/ExecutorIF.h>
+
+#include <cassert>
+
 #include "CSError.h"
 #include "CSParamConstrains.h"
 #include "RequestIF.h"
-
-#include <cassert>
-#include <maf/logging/Logger.h>
-#include <maf/messaging/ExecutorIF.h>
 
 namespace maf {
 namespace messaging {
 using namespace paco;
 
-template <class PTrait, class Input> class RequestT {
-  template <class MT> friend class BasicStub;
+template <class PTrait, class Input>
+class RequestT {
+  template <class MT>
+  friend class BasicStub;
 
-#define mc_maf_reqt_assert_is_output(Output)                                   \
-  static_assert(IsOutput<PTrait, Output>,                                      \
+#define mc_maf_reqt_assert_is_output(Output) \
+  static_assert(IsOutput<PTrait, Output>,    \
                 "the param must be a kind of output or status")
 
-#define mc_maf_reqt_assert_is_same_opid(Output, Input) /*                      \
-static_assert(PTrait::template getOperationID<Input>() ==                      \
-PTrait::template getOperationID<Output>(),                                     \
+#define mc_maf_reqt_assert_is_same_opid(Output, Input) /* \
+static_assert(PTrait::template getOperationID<Input>() == \
+PTrait::template getOperationID<Output>(),                \
 "Output class must has same operationID as Input")*/
 
   RequestT(std::shared_ptr<RequestIF> delegate)
@@ -30,7 +33,7 @@ PTrait::template getOperationID<Output>(),                                     \
   RequestT(const RequestT &) = delete;
   RequestT &operator=(const RequestT &) = delete;
 
-public:
+ public:
   RequestT(RequestT &&) = default;
   RequestT &operator=(RequestT &&) = default;
 
@@ -45,13 +48,11 @@ public:
   RequestID getRequestID() const { return delegate_->getRequestID(); }
   bool valid() const { return delegate_->valid(); }
 
-  void setAbortRequestHandler(AbortRequestCallback abortCallback,
-                              std::shared_ptr<ExecutorIF> executor) {
-
+  void onAborted(AbortRequestCallback abortCallback,
+                 std::shared_ptr<ExecutorIF> executor) {
     assert(executor && "Executor must not be null");
-    delegate_->setAbortRequestHandler(std::bind(&ExecutorIF::execute,
-                                                std::move(executor),
-                                                std::move(abortCallback)));
+    delegate_->onAborted(std::bind(&ExecutorIF::execute, std::move(executor),
+                                   std::move(abortCallback)));
   }
 
   std::shared_ptr<Input> getInput() const {
@@ -61,7 +62,7 @@ public:
                          "`: ", PTrait::template dump<Input>(input));
       return input;
     } else {
-      return {}; // means that this request doesn't contain any input
+      return {};  // means that this request doesn't contain any input
     }
   }
 
@@ -102,9 +103,9 @@ public:
     return error(std::make_shared<CSError>(std::move(desc), std::move(ec)));
   }
 
-private:
+ private:
   std::shared_ptr<RequestIF> delegate_;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

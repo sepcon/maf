@@ -1,4 +1,5 @@
 #include "Request.h"
+
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSError.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
@@ -61,7 +62,7 @@ CSPayloadIFPtr Request::getInput() {
   return _csMsg->payload();
 }
 
-void Request::setAbortRequestHandler(AbortRequestCallback abortCallback) {
+void Request::onAborted(AbortRequestCallback abortCallback) {
   std::lock_guard lock(_mutex);
   if (!_valid) {
     abortCallback();
@@ -99,5 +100,5 @@ void Request::setOperationCode(OpCode opCode) {
   _csMsg->setOperationCode(opCode);
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

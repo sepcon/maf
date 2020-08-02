@@ -11,7 +11,7 @@ namespace local {
 class LocalIPCMessage : public CSMessage {
  public:
   using CSMessage::CSMessage;
-  srz::Buffer toBytes();
+  srz::Buffer toBytes() noexcept;
   bool fromBytes(srz::Buffer &&bytes) noexcept;
 };
 

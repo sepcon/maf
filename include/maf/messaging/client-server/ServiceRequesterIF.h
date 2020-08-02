@@ -48,8 +48,8 @@ class MAF_EXPORT ServiceRequesterIF : public CSMessageReceiverIF,
                                      ActionCallStatus *callStatus,
                                      RequestTimeoutMs timeout) = 0;
 
-  virtual void abortAction(const RegID &regID,
-                           ActionCallStatus *callStatus) = 0;
+  virtual void abortRequest(const RegID &regID,
+                            ActionCallStatus *callStatus) = 0;
 
   virtual Availability serviceStatus() const = 0;
 
