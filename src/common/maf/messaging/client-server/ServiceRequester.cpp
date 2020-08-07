@@ -448,11 +448,13 @@ void ServiceRequester::onRequestResult(const CSMessagePtr &msg) {
 }
 
 void ServiceRequester::abortAllSyncRequest() {
-  int totalAborted = 0;
   std::lock_guard lock(syncRequestPromises_);
+  auto totalAborted = syncRequestPromises_->size();
+
   for (auto &promise : *syncRequestPromises_) {
     promise->set_value({});
   }
+
   syncRequestPromises_->clear();
 
   if (totalAborted > 0) {

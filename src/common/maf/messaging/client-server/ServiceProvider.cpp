@@ -79,7 +79,7 @@ ActionCallStatus ServiceProvider::setStatus(const OpID &propertyID,
     currentProperty = newProperty;
     return broadcast(propertyID, OpCode::StatusRegister, newProperty);
   } else {
-    MAF_LOGGER_INFO("Don't set status of property `", newProperty,
+    MAF_LOGGER_INFO("Don't set status of property `", propertyID,
                     "` due to unchanged!");
     return ActionCallStatus::NoAction;
   }

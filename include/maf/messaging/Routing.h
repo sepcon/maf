@@ -24,6 +24,8 @@ struct ReceiverStatusMsg {
 
 MAF_EXPORT bool routeMessage(Message&& msg, const ReceiverID& receiverID);
 MAF_EXPORT bool routeExecution(Execution exc, const ReceiverID& receiverID);
+MAF_EXPORT bool routeAndWaitExecution(Execution exc,
+                                      const ReceiverID& receiverID);
 MAF_EXPORT bool broadcast(Message&& msg);
 MAF_EXPORT ReceiverInstance findReceiver(const ReceiverID& id);
 

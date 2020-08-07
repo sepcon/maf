@@ -1,4 +1,4 @@
-#include <maf/messaging/Component.h>
+#include <maf/messaging/AsyncComponent.h>
 #include <maf/messaging/Routing.h>
 #include <maf/utils/StringifyableEnum.h>
 
@@ -30,8 +30,7 @@ struct TaskSubmitted {};
 using Text = std::string;
 
 static auto master = ComponentInstance{};
-static auto slaves = std::vector<ComponentInstance>{};
-static auto slaveStopSignals = std::vector<Component::StoppedSignal>{};
+static auto slaves = std::vector<AsyncComponent>{};
 
 static std::atomic_int greetCount = 0;
 static std::atomic_int taskSubmittedCount = 0;
@@ -94,8 +93,8 @@ CompLogRecord log() { return CompLogRecord(); }
 
 static void setupSlaves() {
   for (unsigned i = 0; i < TaskCount; ++i) {
-    slaves.push_back(Component::create(SlaveID + std::to_string(i)));
-    slaves.back()
+    slaves.emplace_back(Component::create(SlaveID + std::to_string(i)));
+    slaves.back().instance()
         ->onMessage<std::string>([](auto msg) {
           ++greetCount;
           log() << "Slave " << this_component::instance()->id()
@@ -163,7 +162,7 @@ static void test() {
     };
 
     for (auto &slave : slaves) {
-      slaveStopSignals.emplace_back(slave->runAsync());
+      slave.run();
     }
 
     master->run();
@@ -173,6 +172,11 @@ static void test() {
   }
   MAF_TEST_CASE_END()
   // clang-format on
+
+  for(auto& slave : slaves)
+  {
+      slave.wait();
+  }
 }
 int main() {
   maf::test::init_test_cases();

@@ -21,6 +21,10 @@ ReceiverInstance findReceiver(const ReceiverID &id) {
   return Router::instance().findReceiver(id);
 }
 
+bool routeAndWaitExecution(Execution exc, const ReceiverID &receiverID) {
+  return Router::instance().routeAndWaitExecution(std::move(exc), receiverID);
+}
+
 }  // namespace routing
 }  // namespace messaging
 }  // namespace maf

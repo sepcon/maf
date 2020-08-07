@@ -22,7 +22,6 @@ using Execution = std::function<void()>;
 
 template <class Msg>
 using ComponentMessageHandlerFunction = std::function<void(Msg)>;
-class ComponentMessageHandler;
 
 }  // namespace messaging
 }  // namespace maf

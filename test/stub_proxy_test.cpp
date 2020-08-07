@@ -278,7 +278,7 @@ class Tester {
 
       stub->broadcastSignal(sentAttribute);
 
-      MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(100ms) ==
+      MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
                       std::future_status::ready)
       MAF_TEST_EXPECT(receivedAttributeFuture.get() == *sentAttribute);
 

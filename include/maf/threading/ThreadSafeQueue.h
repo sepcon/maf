@@ -1,16 +1,18 @@
 #pragma once
 
-#include "Lockable.h"
 #include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <queue>
 
+#include "Lockable.h"
+
 namespace maf {
 namespace threading {
 
-template <class QueueClass> class ThreadSafeQueue {
-public:
+template <class QueueClass>
+class ThreadSafeQueue {
+ public:
   using reference = typename QueueClass::reference;
   using const_reference = typename QueueClass::const_reference;
   using value_type = typename QueueClass::value_type;
@@ -81,8 +83,9 @@ public:
   }
 
   void close() {
-    if (!isClosed()) {
-      closed_.store(true, std::memory_order_release);
+    bool alreadyClosed = false;
+    closed_.compare_exchange_strong(alreadyClosed, true);
+    if (!alreadyClosed) {
       queueNotEmpty_.notify_all();
     }
   }
@@ -106,20 +109,21 @@ public:
 
   size_t size() { return queue_.atomic()->size(); }
 
-private:
+ private:
   Lockable<QueueClass> queue_;
   std::condition_variable_any queueNotEmpty_;
   std::atomic_bool closed_;
 };
 
-} // namespace threading
+}  // namespace threading
 
 namespace stdwrap {
-template <typename T> using Queue = std::queue<T>;
+template <typename T>
+using Queue = std::queue<T>;
 
 template <typename T, typename Comp>
 class PriorityQueue : public std::priority_queue<T, std::vector<T>, Comp> {
-public:
+ public:
   using __Base = std::priority_queue<T, std::vector<T>, Comp>;
   using std::priority_queue<T, std::vector<T>, Comp>::priority_queue;
   using reference = typename __Base::reference;
@@ -128,5 +132,5 @@ public:
 
   const_reference front() const { return __Base::top(); }
 };
-} // namespace stdwrap
-} // namespace maf
+}  // namespace stdwrap
+}  // namespace maf

@@ -261,7 +261,7 @@
     }                                                            \
     strOut += maf::srz::getIndent(level, true) + "}";            \
   }                                                              \
-  std::string dump(int level = 0) const {                        \
+  std::string dump(int level = -1) const {                        \
     std::string output;                                          \
     dump(level, output);                                         \
     return output;                                               \

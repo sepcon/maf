@@ -1,12 +1,14 @@
-#include <iostream>
 #include <maf/ITCProxy.h>
 #include <maf/ITCStub.h>
 #include <maf/logging/Logger.h>
+#include <maf/messaging/AsyncComponent.h>
 #include <maf/utils/TimeMeasurement.h>
+
+#include <iostream>
+#include <string>
 
 #include "Client.h"
 #include "Server.h"
-#include <string>
 
 int main() {
   using namespace maf;
@@ -24,10 +26,11 @@ int main() {
   auto stub = itc::createStub("helloworld");
 
   ServerComponent<itc::Stub> server{stub};
+  auto asyncServer = AsyncComponent{server.component()};
   std::vector<std::unique_ptr<ClientComponent<itc::Proxy>>> clients;
-  auto serverFuture = server.runAsync();
-  auto client = ClientComponent{proxy};
-  client
+  asyncServer.run();
+
+  ClientComponent{proxy}
       .onMessage<EndOfRequestChainMsg>([&server](auto) {
         this_component::stop();
         server.stop();

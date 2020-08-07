@@ -6,24 +6,18 @@ namespace maf {
 namespace messaging {
 
 class ExtensibleComponent {
-protected:
+ protected:
   ~ExtensibleComponent() = default;
 
-public:
-  using StoppedSignal = Component::StoppedSignal;
-
+ public:
   ExtensibleComponent(ComponentID id = {}) {
     _comp = Component::create(std::move(id));
   }
 
   const std::string &id() const;
   void run();
-  StoppedSignal runAsync();
   void stop();
   void post(ComponentMessage &&msg);
-
-  void registerMessageHandler(ComponentMessageID msgid,
-                              std::weak_ptr<ComponentMessageHandler> handler);
 
   void registerMessageHandler(ComponentMessageID msgid,
                               GenericMsgHandlerFunction onMessageFunc);
@@ -41,13 +35,14 @@ public:
     return *this;
   }
 
-  template <class Msg> bool ignoreMessage() {
+  template <class Msg>
+  bool ignoreMessage() {
     return _comp->ignoreMessage<Msg>();
   }
 
   ComponentInstance component() const { return _comp; }
 
-protected:
+ protected:
   virtual void threadInit() {}
   virtual void threadDeinit() {}
 
@@ -62,10 +57,6 @@ inline void ExtensibleComponent::run() {
   return _comp->run([this] { threadInit(); }, [this] { threadDeinit(); });
 }
 
-inline ExtensibleComponent::StoppedSignal ExtensibleComponent::runAsync() {
-  return _comp->runAsync([this] { threadInit(); }, [this] { threadDeinit(); });
-}
-
 inline void ExtensibleComponent::stop() { _comp->stop(); }
 
 inline void ExtensibleComponent::post(ComponentMessage &&msg) {
@@ -73,14 +64,9 @@ inline void ExtensibleComponent::post(ComponentMessage &&msg) {
 }
 
 inline void ExtensibleComponent::registerMessageHandler(
-    ComponentMessageID msgid, std::weak_ptr<ComponentMessageHandler> handler) {
-  _comp->registerMessageHandler(std::move(msgid), handler);
-}
-
-inline void ExtensibleComponent::registerMessageHandler(
     ComponentMessageID msgid, GenericMsgHandlerFunction onMessageFunc) {
   _comp->registerMessageHandler(msgid, std::move(onMessageFunc));
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

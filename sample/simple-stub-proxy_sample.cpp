@@ -59,11 +59,11 @@ int main(int argc, char **argv) {
   auto proxy = localipc::createProxy(DataTransmissionServerAddress,
                                      DataTransmissionServiceID);
 
-  auto serverComponent = Component::create("Server");
+  AsyncComponent serverComponent = Component::create("Server");
 
   auto stub = localipc::createStub(DataTransmissionServerAddress,
                                    DataTransmissionServiceID,
-                                   serverComponent->getExecutor());
+                                   serverComponent.instance()->getExecutor());
 
   auto dataTransmissionServiceStatusSignal = serviceStatusSignal(proxy);
 
@@ -118,7 +118,8 @@ int main(int argc, char **argv) {
         request.respond();
       });
 
-  auto serverWaiter = serverComponent->runAsync();
+
+  serverComponent.run();
   stub->startServing();
 
   if (dataTransmissionServiceStatusSignal->waitIfNot(Availability::Available).isReady()) {
@@ -192,6 +193,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  serverComponent->stop();
+  serverComponent.stop();
   return 0;
 }

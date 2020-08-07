@@ -29,6 +29,15 @@ bool Router::routeExecution(Execution exc,
   }
   return false;
 }
+
+bool Router::routeAndWaitExecution(Execution exc,
+                                   const ReceiverID &receiverID) {
+  if (auto receiver = findReceiver(receiverID)) {
+    return receiver->executeAndWait(std::move(exc));
+  }
+  return false;
+}
+
 bool Router::broadcast(const Message &msg) noexcept {
   bool delivered = false;
   auto atReceivers = receivers_.atomic();
