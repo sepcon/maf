@@ -12,16 +12,31 @@ namespace maf {
 namespace messaging {
 
 class Component;
+struct HandlerRegID;
 using ComponentInstance = std::shared_ptr<Component>;
 using ComponentRef = std::weak_ptr<Component>;
 using ComponentID = std::string;
-using ComponentMessage = std::any;
-using ComponentMessageID = std::type_index;
-using GenericMsgHandlerFunction = std::function<void(ComponentMessage)>;
+using Message = std::any;
+using MessageID = std::type_index;
+using MessageHandler = std::function<void(const Message&)>;
 using Execution = std::function<void()>;
 
 template <class Msg>
-using ComponentMessageHandlerFunction = std::function<void(Msg)>;
+using SpecificMessageHandler = std::function<void(const Msg&)>;
+
+// -----------------------------------------------------------
+struct HandlerRegID {
+  using HandlerID = void*;
+  using MessageID = MessageID;
+  static inline constexpr HandlerID InvalidHandlerID = nullptr;
+
+  bool valid() const {
+    return hid_ != InvalidHandlerID && mid_ != typeid(std::nullptr_t);
+  }
+
+  HandlerID hid_ = InvalidHandlerID;
+  MessageID mid_ = typeid(std::nullptr_t);
+};
 
 }  // namespace messaging
 }  // namespace maf

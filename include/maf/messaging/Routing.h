@@ -12,7 +12,7 @@ using Receiver = Component;
 using ReceiverInstance = ComponentInstance;
 using ReceiverRef = ComponentRef;
 using ReceiverID = ComponentID;
-using Message = ComponentMessage;
+using Message = Message;
 
 struct ReceiverStatusMsg {
   enum Status { Available, Unavailable };

@@ -12,12 +12,12 @@ static const auto DataTransmissionServerAddress =
 
 int main() {
   std::cout.sync_with_stdio(false);
-//  logging::init(
-//      logging::LOG_LEVEL_FROM_INFO | maf::logging::LOG_LEVEL_DEBUG /*|
-//                                     maf::logging::LOG_LEVEL_VERBOSE*/
-//      ,
-//      [](const std::string &msg) { std::cout << msg << std::endl; },
-//      [](const std::string &msg) { std::cerr << msg << std::endl; });
+  logging::init(
+      logging::LOG_LEVEL_FROM_INFO | maf::logging::LOG_LEVEL_DEBUG /*|
+                                     maf::logging::LOG_LEVEL_VERBOSE*/
+      ,
+      [](const std::string &msg) { std::cout << msg << std::endl; },
+      [](const std::string &msg) { std::cerr << msg << std::endl; });
 
   util::TimeMeasurement tmeasure([](auto time) {
     std::cout << "Total execution time = "
@@ -26,10 +26,13 @@ int main() {
 
   MAF_LOGGER_DEBUG("Client is starting up!");
 
-  ClientComponent{
-      localipc::createProxy(DataTransmissionServerAddress, SID_WeatherService)}
-      .onMessage<EndOfRequestChainMsg>([](auto) { this_component::stop(); })
-      .run();
+  auto clientComponent = ClientComponent{
+      localipc::createProxy(DataTransmissionServerAddress, SID_WeatherService)};
+
+  clientComponent.onMessage<EndOfRequestChainMsg>(
+      [](auto) { this_component::stop(); });
+
+  clientComponent.run();
 
   MAF_LOGGER_DEBUG("Client shutdown!");
 

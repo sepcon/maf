@@ -26,15 +26,17 @@ int main() {
   auto stub = itc::createStub("helloworld");
 
   ServerComponent<itc::Stub> server{stub};
-  auto asyncServer = AsyncComponent{server.component()};
+  auto asyncServer = AsyncComponent{server.instance()};
   std::vector<std::unique_ptr<ClientComponent<itc::Proxy>>> clients;
   asyncServer.run();
 
-  ClientComponent{proxy}
-      .onMessage<EndOfRequestChainMsg>([&server](auto) {
-        this_component::stop();
-        server.stop();
-      })
-      .run();
+  auto clientComponent = ClientComponent{ proxy };
+
+  clientComponent.onMessage<EndOfRequestChainMsg>(
+      [](auto) { this_component::stop(); });
+
+  clientComponent.run();
+  asyncServer.stopAndWait();
+
   return 0;
 }

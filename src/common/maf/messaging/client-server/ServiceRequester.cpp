@@ -401,11 +401,16 @@ bool ServiceRequester::onRegistersUpdated(const CSMessagePtr &msg) {
     }
   }
 
-  auto payload = msg->payload();
-  for (auto &callback : callbacks) {
-    // the payload must be cloned here due to state of
-    // IByteStream will change if deserialize it
-    callback(CSPayloadIFPtr(payload->clone()));
+  if (auto payload = msg->payload()) {
+    for (auto &callback : callbacks) {
+      // the payload must be cloned here due to state of
+      // IByteStream will change if deserialize it
+      callback(CSPayloadIFPtr(payload->clone()));
+    }
+  } else {
+    for (auto &callback : callbacks) {
+      callback(payload);
+    }
   }
   return !callbacks.empty();
 }

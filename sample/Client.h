@@ -23,7 +23,7 @@ class ClientComponent : public ExtensibleComponent {
 
  public:
   ClientComponent(ProxyPtr proxy) : proxy_{std::move(proxy)} {
-    proxy_->setExecutor(component()->getExecutor());
+    proxy_->setExecutor(instance()->getExecutor());
 
     statusObserver_ = proxy_->onServiceStatusChanged(
         [this](Availability, Availability newStatus) {

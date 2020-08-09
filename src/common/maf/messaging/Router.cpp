@@ -14,16 +14,14 @@ static inline void broadcastExcept(Message &&msg,
   }
 }
 
-bool Router::routeMessage(Message &&msg,
-                          const ReceiverID &receiverID) noexcept {
+bool Router::routeMessage(Message &&msg, const ReceiverID &receiverID) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->post(std::move(msg));
   }
   return false;
 }
 
-bool Router::routeExecution(Execution exc,
-                            const ReceiverID &receiverID) noexcept {
+bool Router::routeExecution(Execution exc, const ReceiverID &receiverID) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->execute(std::move(exc));
   }
@@ -38,7 +36,7 @@ bool Router::routeAndWaitExecution(Execution exc,
   return false;
 }
 
-bool Router::broadcast(const Message &msg) noexcept {
+bool Router::broadcast(const Message &msg) {
   bool delivered = false;
   auto atReceivers = receivers_.atomic();
   for (const auto &receiver : *atReceivers) {
@@ -47,7 +45,7 @@ bool Router::broadcast(const Message &msg) noexcept {
   return delivered;
 }
 
-ReceiverInstance Router::findReceiver(const ReceiverID &id) const noexcept {
+ReceiverInstance Router::findReceiver(const ReceiverID &id) const {
   auto atReceivers = receivers_.atomic();
   if (auto itReceiver = atReceivers->find(id);
       itReceiver != atReceivers->end()) {
@@ -56,7 +54,7 @@ ReceiverInstance Router::findReceiver(const ReceiverID &id) const noexcept {
   return {};
 }
 
-bool Router::addReceiver(ReceiverInstance receiver) noexcept {
+bool Router::addReceiver(ReceiverInstance receiver) {
   if (receiver) {
     auto atmReceivers = receivers_.atomic();
     if (atmReceivers->insert(receiver).second) {
@@ -68,7 +66,7 @@ bool Router::addReceiver(ReceiverInstance receiver) noexcept {
   return false;
 }
 
-bool Router::removeReceiver(const ReceiverInstance &receiver) noexcept {
+bool Router::removeReceiver(const ReceiverInstance &receiver) {
   if (receivers_.atomic()->erase(receiver) != 0) {
     broadcast(ReceiverStatusMsg{receiver, ReceiverStatusMsg::Unavailable});
     return true;

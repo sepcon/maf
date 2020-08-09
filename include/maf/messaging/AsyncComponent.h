@@ -11,8 +11,8 @@ class AsyncComponent {
  public:
   using ThreadFunction = Component::ThreadFunction;
   using StoppedSignal = std::future<void>;
+  using Timeout = std::chrono::milliseconds;
 
-  AsyncComponent() = default;
   AsyncComponent(ComponentInstance comp) : instance_{std::move(comp)} {}
 
   AsyncComponent(AsyncComponent &&) = default;
@@ -29,35 +29,32 @@ class AsyncComponent {
   }
 
   void run(ThreadFunction threadInit = {}, ThreadFunction threadDeinit = {}) {
-    if (instance_) {
+    if (instance_ && !running()) {
       stopSignal_ =
           run(instance_, std::move(threadInit), std::move(threadDeinit));
     }
   }
 
-  void stop() noexcept {
+  void stop() {
     if (instance_) {
       instance_->stop();
     }
   }
 
-  void stopAndWait() noexcept {
-      stop();
-
+  void stopAndWait(const Timeout &duration = Timeout{0}) {
+    stop();
+    wait(duration);
   }
 
   bool running() const noexcept { return stopSignal_.valid(); }
 
-  void wait() noexcept {
+  void wait(const Timeout &duration = Timeout{0}) {
     if (stopSignal_.valid()) {
-      stopSignal_.get();
-    }
-  }
-
-  template <class Rep, class Per>
-  void waitFor(const std::chrono::duration<Rep, Per> &duration) noexcept {
-    if (stopSignal_.valid()) {
-      stopSignal_.wait_for(duration);
+      if (duration > Timeout{0}) {
+        stopSignal_.wait_for(duration);
+      } else {
+        stopSignal_.get();
+      }
     }
   }
 

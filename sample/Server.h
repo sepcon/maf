@@ -56,7 +56,7 @@ class ServerComponent : public maf::messaging::ExtensibleComponent {
 
 public:
   ServerComponent(std::shared_ptr<Stub> stub) : stub_{std::move(stub)} {
-    stub_->setExecutor(component()->getExecutor());
+    stub_->setExecutor(instance()->getExecutor());
     MAF_LOGGER_DEBUG("Service id is: ", stub_->serviceID());
 
     stub_->template registerRequestHandler<implicitly_response_request::input>(

@@ -17,10 +17,9 @@ class ExtensibleComponent {
   const std::string &id() const;
   void run();
   void stop();
-  void post(ComponentMessage &&msg);
+  void post(Message &&msg);
 
-  void registerMessageHandler(ComponentMessageID msgid,
-                              GenericMsgHandlerFunction onMessageFunc);
+  void registerMessageHandler(MessageID msgid, MessageHandler onMessageFunc);
 
   template <
       class Msg, typename... Args,
@@ -30,17 +29,11 @@ class ExtensibleComponent {
   }
 
   template <class Msg>
-  ExtensibleComponent &onMessage(ComponentMessageHandlerFunction<Msg> f) {
-    _comp->onMessage<Msg>(f);
-    return *this;
+  decltype(auto) onMessage(SpecificMessageHandler<Msg> f) {
+    return _comp->onMessage<Msg>(f);
   }
 
-  template <class Msg>
-  bool ignoreMessage() {
-    return _comp->ignoreMessage<Msg>();
-  }
-
-  ComponentInstance component() const { return _comp; }
+  ComponentInstance instance() const { return _comp; }
 
  protected:
   virtual void threadInit() {}
@@ -59,12 +52,12 @@ inline void ExtensibleComponent::run() {
 
 inline void ExtensibleComponent::stop() { _comp->stop(); }
 
-inline void ExtensibleComponent::post(ComponentMessage &&msg) {
+inline void ExtensibleComponent::post(Message &&msg) {
   _comp->post(std::move(msg));
 }
 
 inline void ExtensibleComponent::registerMessageHandler(
-    ComponentMessageID msgid, GenericMsgHandlerFunction onMessageFunc) {
+    MessageID msgid, MessageHandler onMessageFunc) {
   _comp->registerMessageHandler(msgid, std::move(onMessageFunc));
 }
 

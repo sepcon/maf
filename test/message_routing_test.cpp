@@ -93,57 +93,56 @@ CompLogRecord log() { return CompLogRecord(); }
 
 static void setupSlaves() {
   for (unsigned i = 0; i < TaskCount; ++i) {
-    slaves.emplace_back(Component::create(SlaveID + std::to_string(i)));
-    slaves.back().instance()
-        ->onMessage<std::string>([](auto msg) {
-          ++greetCount;
-          log() << "Slave " << this_component::instance()->id()
-                << " received string msg from master: " << msg;
-          routeMessage(TaskInputRequest{}, MasterID);
-        })
+    auto slave = Component::create(SlaveID + std::to_string(i));
+    slaves.emplace_back(slave);
+    slave->onMessage<std::string>([](auto msg) {
+      ++greetCount;
+      log() << "Slave " << this_component::instance()->id()
+            << " received string msg from master: " << msg;
+      routeMessage(TaskInputRequest{}, MasterID);
+    });
 
-        ->onMessage<Task>([](Task task) {
-          routeMessage(TaskResult{this_component::instance(), std::get<0>(task),
-                                  eval(task)},
-                       MasterID);
-        })
-        ->onMessage<TaskSubmitted>([](auto) {
-          log() << "Task submitted to master then quit!";
-          taskSubmittedCount++;
-          this_component::stop();
-        });
+    slave->onMessage<Task>([](Task task) {
+      routeMessage(
+          TaskResult{this_component::instance(), std::get<0>(task), eval(task)},
+          MasterID);
+    });
+    slave->onMessage<TaskSubmitted>([](auto) {
+      log() << "Task submitted to master then quit!";
+      taskSubmittedCount++;
+      this_component::stop();
+    });
   }
 }
 
 static void setupMaster() {
   master = Component::create(MasterID);
-  master
-      ->onMessage<ReceiverStatusMsg>([](ReceiverStatusMsg msg) {
-        static int availableSlaves = 0;
-        if (msg.isAvailable()) {
-          if (++availableSlaves == TaskCount) {
-            broadcast(std::string{"Master hellos all slaves!"});
-          }
-        } else {
-          if (--availableSlaves == 0) {
-            log() << "Sum all value = " << sumAll;
-            this_component::stop();
-          }
-        }
-      })
-      ->onMessage<TaskInputRequest>([](TaskInputRequest req) {
-        static int i = 0;
-        req.sender->post(
-            TasksForSlaves[i % (sizeof(TasksForSlaves) / sizeof(Task))]);
-        ++i;
-      })
-      ->onMessage<TaskResult>([](TaskResult result) {
-        auto &[slave, op, output] = result;
-        log() << "Slave " << slave->id() << " done operation " << op
-              << " with output = " << output;
-        sumAll += output;
-        slave->post<TaskSubmitted>();
-      });
+  master->onMessage<ReceiverStatusMsg>([](ReceiverStatusMsg msg) {
+    static int availableSlaves = 0;
+    if (msg.isAvailable()) {
+      if (++availableSlaves == TaskCount) {
+        broadcast(std::string{"Master hellos all slaves!"});
+      }
+    } else {
+      if (--availableSlaves == 0) {
+        log() << "Sum all value = " << sumAll;
+        this_component::stop();
+      }
+    }
+  });
+  master->onMessage<TaskInputRequest>([](TaskInputRequest req) {
+    static int i = 0;
+    req.sender->post(
+        TasksForSlaves[i % (sizeof(TasksForSlaves) / sizeof(Task))]);
+    ++i;
+  });
+  master->onMessage<TaskResult>([](TaskResult result) {
+    auto &[slave, op, output] = result;
+    log() << "Slave " << slave->id() << " done operation " << op
+          << " with output = " << output;
+    sumAll += output;
+    slave->post<TaskSubmitted>();
+  });
 }
 
 static void test() {
@@ -173,9 +172,8 @@ static void test() {
   MAF_TEST_CASE_END()
   // clang-format on
 
-  for(auto& slave : slaves)
-  {
-      slave.wait();
+  for (auto &slave : slaves) {
+    slave.wait();
   }
 }
 int main() {

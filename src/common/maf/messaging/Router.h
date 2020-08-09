@@ -34,14 +34,13 @@ class Router : public pattern::SingletonObject<Router> {
   using Receivers = std::set<ReceiverInstance, ReceiverCompare>;
 
   Router(Invisible) noexcept {}
-  bool routeMessage(Message &&msg, const ReceiverID &receiverID) noexcept;
-  bool routeExecution(Execution exc, const ReceiverID &receiverID) noexcept;
+  bool routeMessage(Message &&msg, const ReceiverID &receiverID);
+  bool routeExecution(Execution exc, const ReceiverID &receiverID);
   bool routeAndWaitExecution(Execution exc, const ReceiverID &receiverID);
-  bool broadcast(const Message &msg) noexcept;
-  ReceiverInstance findReceiver(const ReceiverID &id) const noexcept;
-
-  bool addReceiver(ReceiverInstance receiver) noexcept;
-  bool removeReceiver(const ReceiverInstance &receiver) noexcept;
+  bool broadcast(const Message &msg);
+  ReceiverInstance findReceiver(const ReceiverID &id) const;
+  bool addReceiver(ReceiverInstance receiver);
+  bool removeReceiver(const ReceiverInstance &receiver);
 
  private:
   using AtomicReceivers = threading::Lockable<Receivers, std::mutex>;

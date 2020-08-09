@@ -19,32 +19,31 @@ class Component final : pattern::Unasignable,
   using Executor = std::shared_ptr<ExecutorIF>;
 
   MAF_EXPORT static ComponentInstance create(ComponentID id = {});
-  MAF_EXPORT static ComponentInstance findComponent(
-      const ComponentID &id) noexcept;
+  MAF_EXPORT static ComponentInstance findComponent(const ComponentID &id);
 
   MAF_EXPORT const ComponentID &id() const noexcept;
 
   MAF_EXPORT void run(ThreadFunction threadInit = {},
                       ThreadFunction threadDeinit = {});
 
-  MAF_EXPORT void stop() noexcept;
+  MAF_EXPORT void stop();
 
-  MAF_EXPORT bool post(ComponentMessage msg) noexcept;
-  MAF_EXPORT bool execute(Execution exec) noexcept;
+  MAF_EXPORT bool post(Message msg);
+  MAF_EXPORT bool execute(Execution exec);
   MAF_EXPORT bool executeAndWait(Execution exec);
 
   MAF_EXPORT Executor getExecutor();
 
-  MAF_EXPORT void registerMessageHandler(
-      ComponentMessageID msgid, GenericMsgHandlerFunction onMessageFunc);
+  MAF_EXPORT HandlerRegID registerMessageHandler(MessageID msgid,
+                                                 MessageHandler onMessageFunc);
 
-  MAF_EXPORT bool unregisterHandler(ComponentMessageID msgid) noexcept;
+  MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
 
   template <class Msg>
-  Component *onMessage(ComponentMessageHandlerFunction<Msg> f) {
+  HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
     auto &msgID = typeid(Msg);
     auto translatorCallback = [msgName = msgID.name(), callback = std::move(f),
-                               this](ComponentMessage genericMsg) {
+                               this](Message genericMsg) {
       try {
         callback(std::any_cast<Msg>(std::move(genericMsg)));
       } catch (const std::bad_any_cast &) {
@@ -55,20 +54,14 @@ class Component final : pattern::Unasignable,
       }
     };
 
-    registerMessageHandler(msgID, std::move(translatorCallback));
-    return this;
+    return registerMessageHandler(msgID, std::move(translatorCallback));
   }
 
   template <
       class Msg, typename... Args,
       std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
-  bool post(Args &&... args) noexcept {
+  bool post(Args &&... args) {
     return post(Msg{std::forward<Args>(args)...});
-  }
-
-  template <class Msg>
-  bool ignoreMessage() noexcept {
-    return this->unregisterHandler(typeid(Msg));
   }
 
  private:
@@ -79,10 +72,10 @@ class Component final : pattern::Unasignable,
 };
 
 namespace this_component {
-MAF_EXPORT std::shared_ptr<Component> instance() noexcept;
-MAF_EXPORT std::weak_ptr<Component> ref() noexcept;
-MAF_EXPORT bool stop() noexcept;
-MAF_EXPORT bool post(ComponentMessage &&msg) noexcept;
+MAF_EXPORT std::shared_ptr<Component> instance();
+MAF_EXPORT std::weak_ptr<Component> ref();
+MAF_EXPORT bool stop();
+MAF_EXPORT bool post(Message &&msg);
 MAF_EXPORT Component::Executor getExecutor();
 
 template <class Msg, typename... Args,
@@ -92,11 +85,8 @@ static bool post(Args &&... args) {
 }
 
 template <class Msg>
-static bool ignoreMessage() {
-  if (auto comp = instance()) {
-    return comp->ignoreMessage<Msg>();
-  }
-  return false;
+HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
+  return instance()->onMessage<Msg>(std::move(f));
 }
 };  // namespace this_component
 
