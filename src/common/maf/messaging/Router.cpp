@@ -31,7 +31,12 @@ bool Router::routeExecution(Execution exc, const ReceiverID &receiverID) {
 bool Router::routeAndWaitExecution(Execution exc,
                                    const ReceiverID &receiverID) {
   if (auto receiver = findReceiver(receiverID)) {
-    return receiver->executeAndWait(std::move(exc));
+    if (receiver->id() != this_component::id()) {
+      return receiver->executeAndWait(std::move(exc));
+    } else {
+      exc();
+      return true;
+    }
   }
   return false;
 }

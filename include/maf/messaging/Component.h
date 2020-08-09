@@ -77,7 +77,7 @@ MAF_EXPORT std::weak_ptr<Component> ref();
 MAF_EXPORT bool stop();
 MAF_EXPORT bool post(Message &&msg);
 MAF_EXPORT Component::Executor getExecutor();
-
+MAF_EXPORT const ComponentID &id();
 template <class Msg, typename... Args,
           std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
 static bool post(Args &&... args) {

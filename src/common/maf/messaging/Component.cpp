@@ -83,10 +83,6 @@ class Handlers {
   threading::Lockable<HandlerList, std::recursive_mutex> handlers_;
 };
 
-static HandlerRegID makeRegID(Handlers::HandlerID hid, MessageID mid) {
-  return HandlerRegID{hid, mid};
-}
-
 struct ComponentDataPrv {
   ComponentDataPrv(ComponentID id) : id{std::move(id)} {}
   ComponentID id;
@@ -104,6 +100,15 @@ struct ComponentDataPrv {
 };
 
 static thread_local Component *tlInstance_ = nullptr;
+
+static HandlerRegID makeRegID(Handlers::HandlerID hid, MessageID mid) {
+  return HandlerRegID{hid, mid};
+}
+
+static const ComponentID &emptyComponentID() {
+  static ComponentID emptyID;
+  return emptyID;
+}
 
 Component::Component(ComponentID id)
     : d_{new ComponentDataPrv{std::move(id)}} {}
@@ -276,6 +281,13 @@ Component::Executor this_component::getExecutor() {
     return comp->getExecutor();
   }
   return {};
+}
+
+const ComponentID &this_component::id() {
+  if (auto comp = instance()) {
+    return comp->id();
+  }
+  return emptyComponentID();
 }
 
 }  // namespace messaging
