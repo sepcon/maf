@@ -27,7 +27,6 @@ using SpecificMessageHandler = std::function<void(const Msg&)>;
 // -----------------------------------------------------------
 struct HandlerRegID {
   using HandlerID = void*;
-  using MessageID = MessageID;
   static inline constexpr HandlerID InvalidHandlerID = nullptr;
 
   bool valid() const {

@@ -34,8 +34,6 @@ class CallbackExecutor : public ExecutorIF {
 
 class Handlers {
  public:
-  using Message = Message;
-  using MessageID = MessageID;
   using Handler = MessageHandler;
   using HandlerList = std::forward_list<Handler>;
   using HandlerID = HandlerList::pointer;
@@ -269,7 +267,7 @@ bool this_component::stop() {
   return false;
 }
 
-bool this_component::post(Message &&msg) {
+bool this_component::post(Message msg) {
   if (auto comp = instance()) {
     return comp->post(std::move(msg));
   }

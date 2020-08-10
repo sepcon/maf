@@ -75,7 +75,7 @@ namespace this_component {
 MAF_EXPORT std::shared_ptr<Component> instance();
 MAF_EXPORT std::weak_ptr<Component> ref();
 MAF_EXPORT bool stop();
-MAF_EXPORT bool post(Message &&msg);
+MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
 MAF_EXPORT const ComponentID &id();
 template <class Msg, typename... Args,
