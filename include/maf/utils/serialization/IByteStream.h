@@ -6,25 +6,23 @@
 
 namespace maf {
 namespace srz {
-
-class IByteStream {
+namespace details {
+template <class Buff>
+class BasicIByteStream {
+ protected:
   using State = uint8_t;
+  using BufferType = Buff;
   static constexpr State Good = 1;
   static constexpr State Failed = 2;
   static constexpr State Eof = 4;
 
  public:
   using SizeType = size_t;
-  // NOTES: for purpose of IPC serialization in maf, IByteStream should be copy
-  // constructible and assignable for storing state of current stream
-  IByteStream(Buffer &&ba) noexcept : data_{std::move(ba)} {}
-  IByteStream(const Buffer &ba) noexcept : data_{ba} {}
-  IByteStream(const IByteStream &) = default;
-  IByteStream &operator=(const IByteStream &) = default;
+  BasicIByteStream(BufferType buff, SizeType readingPos = 0, State state = Good)
+      : buffer_(std::move(buff)), readingPos_{readingPos}, state_{state} {}
 
-  IByteStream(IByteStream &&other) noexcept { other.moveTo(*this); }
-
-  IByteStream &operator=(IByteStream &&other) noexcept {
+  BasicIByteStream(BasicIByteStream &&other) noexcept { other.moveTo(*this); }
+  BasicIByteStream &operator=(BasicIByteStream &&other) noexcept {
     if (&other != this) {
       other.moveTo(*this);
     }
@@ -33,13 +31,13 @@ class IByteStream {
 
   void read(char *buf, SizeType size) noexcept {
     if (good()) {
-      if (readingPos_ + size > data_.size()) {
+      if (readingPos_ + size > buffer_.size()) {
         state_ &= Failed;
         return;
       }
-      std::memcpy(buf, data_.data() + readingPos_, size);
+      std::memcpy(buf, buffer_.data() + readingPos_, size);
       readingPos_ += size;
-      if (readingPos_ == data_.size()) {
+      if (readingPos_ == buffer_.size()) {
         state_ &= Eof;
       }
     }
@@ -48,28 +46,52 @@ class IByteStream {
   bool eof() const noexcept { return state_ & Eof; }
   bool good() const noexcept { return state_ & Good; }
   bool fail() const noexcept { return state_ & Failed; }
-  Buffer &bytes() noexcept { return data_; }
-  const Buffer &bytes() const noexcept { return data_; }
-
   void reset() noexcept {
     readingPos_ = 0;
     state_ = Good;
-    data_.clear();
+    buffer_.clear();
   }
 
+  State state() const noexcept { return state_; }
   SizeType readingPos() const noexcept { return readingPos_; }
 
- private:
-  void moveTo(IByteStream &other) noexcept {
-    other.data_ = std::move(data_);
+ protected:
+  void moveTo(BasicIByteStream &other) noexcept {
+    other.buffer_ = std::move(buffer_);
     other.readingPos_ = readingPos_;
     other.state_ = state_;
     state_ = Good;
     readingPos_ = 0;
   }
-  Buffer data_;
+  BufferType buffer_;
   SizeType readingPos_ = 0;
   State state_ = Good;
+};
+}  // namespace details
+
+class IByteStream : public details::BasicIByteStream<Buffer> {
+ public:
+  // NOTES: for purpose of IPC serialization in maf, BasicIByteStream should be
+  // copy constructible and assignable for storing state of current stream
+  using BasicIByteStream<Buffer>::BasicIByteStream;
+  IByteStream(const IByteStream &other)
+      : BasicIByteStream<Buffer>(other.buffer_, other.readingPos_,
+                                 other.state_) {}
+  Buffer &bytes() noexcept { return buffer_; }
+  const Buffer &bytes() const noexcept { return buffer_; }
+  decltype(auto) buffer() const { return bytes(); }
+
+ private:
+};
+
+class IByteStreamView : public details::BasicIByteStream<const Buffer &> {
+  using Base = BasicIByteStream<const Buffer &>;
+
+ public:
+  using Base::BasicIByteStream;
+  IByteStreamView(const IByteStream &ibs)
+      : BasicIByteStream<const Buffer &>(ibs.buffer(), ibs.readingPos(),
+                                         ibs.state()) {}
 };
 
 }  // namespace srz

@@ -109,8 +109,8 @@ inline void init_test_cases() {
         log_rec() << "Test case [" << testNumber << "]: " << test_case_name \
                   << " PASSED (" << expectation_met << " expectations)";    \
       } else {                                                              \
-        std::cerr << "Test case: " << test_case_name                        \
-                  << " FAILED! at line: " << linefailed << std::endl;       \
+        log_rec() << "Test case: " << test_case_name                        \
+                  << " FAILED! at line: " << linefailed;                    \
       }                                                                     \
     };
 

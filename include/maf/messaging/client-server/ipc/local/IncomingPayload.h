@@ -13,7 +13,9 @@ namespace local {
 
 class IncomingPayload : public CSMsgPayloadIF {
   using StreamType = srz::IByteStream;
-  using StreamPtrType = std::unique_ptr<srz::IByteStream>;
+  using StreamPtrType = std::shared_ptr<srz::IByteStream>;
+  using StreamViewType = srz::IByteStreamView;
+
   StreamPtrType stream_;
 
  public:
@@ -31,9 +33,11 @@ class IncomingPayload : public CSMsgPayloadIF {
   CSPayloadType type() const override { return CSPayloadType::IncomingData; }
   CSMsgPayloadIF *clone() const override {
     assert(stream_);
-    return new IncomingPayload(std::make_unique<StreamType>(*stream_));
+    return new IncomingPayload(stream());
   }
+
   const StreamPtrType &stream() const { return stream_; }
+  StreamViewType streamView() const { return StreamViewType(*stream_); }
 };
 
 }  // namespace local

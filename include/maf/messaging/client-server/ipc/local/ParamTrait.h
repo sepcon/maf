@@ -15,6 +15,7 @@ namespace ipc {
 namespace local {
 
 using util::assign_ptr;
+
 class ParamTrait : public ParamTraitBase {
  public:
   template <class Message>
@@ -38,12 +39,15 @@ class ParamTrait : public ParamTraitBase {
       auto incomingPayload = static_cast<IncomingPayload *>(payload.get());
 
       std::shared_ptr<PureContentType> content;
-      if (const auto &ibytestream = incomingPayload->stream()) {
+      if (incomingPayload->stream()) {
         content.reset(new PureContentType);
-        auto ds = srz::DSR{*ibytestream};
+        auto streamView = incomingPayload->streamView();
+
+        auto ds = srz::DSR{streamView};
+
         ds >> *content;
 
-        if (!ibytestream->fail()) {
+        if (!streamView.fail()) {
           assign_ptr(status, TranslationStatus::Success);
         } else {
           assign_ptr(status, TranslationStatus::SourceCorrupted);

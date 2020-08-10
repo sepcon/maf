@@ -61,7 +61,8 @@ srz::Buffer LocalIPCMessage::toBytes() noexcept {
 }
 
 bool LocalIPCMessage::fromBytes(Buffer &&bytes) noexcept {
-  auto iss = std::make_unique<IByteStream>(std::move(bytes));
+  using namespace std;
+  auto iss = make_shared<IByteStream>(std::move(bytes));
   Deserializer ds(*iss);
   try {
     ContentType contentType = ContentType::NA;
@@ -70,10 +71,10 @@ bool LocalIPCMessage::fromBytes(Buffer &&bytes) noexcept {
     if (contentType == ContentType::Error) {
       setPayload(decodeAsError(ds));
     } else {
-      setPayload(std::make_unique<IncomingPayload>(std::move(iss)));
+      setPayload(make_shared<IncomingPayload>(std::move(iss)));
     }
     return true;
-  } catch (const std::exception &e) {
+  } catch (const exception &e) {
     MAF_LOGGER_ERROR(
         "Error occurred when trying to translate LocalIPCMessage from bytes: ",
         e.what());
