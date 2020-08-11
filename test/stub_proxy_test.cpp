@@ -36,6 +36,8 @@ ENDREQUEST(map_string_vector)
 
 VOID_REQUEST(to_be_aborted)
 
+VOID_REQUEST(no_response)
+
 SIGNAL(server_notify)
     using DetailsMap = std::map<std::string, std::string>;
     ATTRIBUTES
@@ -80,6 +82,8 @@ class Tester {
       maf::test::log_rec() << "Total time for test = " << elapsed.count() / 1000
                            << "ms";
     });
+
+    std::shared_ptr<Request<no_response_request>> noResponseRequestKeeper;
 
     auto stub = stub_->with(maf::messaging::directExecutor());
     auto proxy = proxy_->with(maf::messaging::directExecutor());
@@ -127,6 +131,15 @@ class Tester {
           output->set_map_as_string(input->dump());
           // 4. Respond output to request
           request.respond(std::move(output));
+        });
+
+    stub->template registerRequestHandler<no_response_request>(
+        [&noResponseRequestKeeper, stub](auto request) {
+          // Keep request to make it never be able to respond
+          noResponseRequestKeeper =
+              std::make_shared<Request<no_response_request>>(
+                  std::move(request));
+          stub->stopServing();
         });
 
     stub_->startServing();
@@ -367,9 +380,16 @@ class Tester {
     }
     MAF_TEST_CASE_END(broad_cast_status_signal)
 
-    stub_->stopServing();
+    auto callstatus = ActionCallStatus{};
+    auto response =
+        proxy->template sendRequest<no_response_request>(&callstatus);
 
-    std::this_thread::sleep_for(10ms);
+    MAF_TEST_CASE_BEGIN(stopable_sync_request) {
+      MAF_TEST_EXPECT(callstatus == ActionCallStatus::ActionBroken);
+    }
+
+    MAF_TEST_CASE_END(stopable_sync_request)
+
     MAF_TEST_CASE_BEGIN(service_status) {
       MAF_TEST_EXPECT(serviceStatus == Availability::Unavailable);
     }

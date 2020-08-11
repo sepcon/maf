@@ -60,9 +60,9 @@ class BasicProxy {
   ActionCallStatus unregisterAll(const OpID &propertyID) noexcept;
 
   template <class Status, AllowOnlyStatusT<PTrait, Status> = true>
-  std::shared_ptr<Status> getStatus(
-      ActionCallStatus *callStatus = nullptr,
-      RequestTimeoutMs timeout = InfiniteWait) noexcept;
+  std::shared_ptr<Status> getStatus(ActionCallStatus *callStatus = nullptr,
+                                    RequestTimeoutMs timeout = RequestTimeoutMs{
+                                        0}) noexcept;
 
   template <class Status, AllowOnlyStatusT<PTrait, Status> = true>
   ActionCallStatus getStatus(
@@ -88,13 +88,13 @@ class BasicProxy {
   Response<RequestOrOutput> sendRequest(
       const std::shared_ptr<Input> &requestInput,
       ActionCallStatus *callStatus = nullptr,
-      RequestTimeoutMs timeout = InfiniteWait) noexcept;
+      RequestTimeoutMs timeout = RequestTimeoutMs{0}) noexcept;
 
   template <class RequestOrOutput,
             AllowOnlyRequestOrOutputT<PTrait, RequestOrOutput> = true>
   Response<RequestOrOutput> sendRequest(
       ActionCallStatus *callStatus = nullptr,
-      RequestTimeoutMs timeout = InfiniteWait) noexcept;
+      RequestTimeoutMs timeout = RequestTimeoutMs{0}) noexcept;
 
   void abortRequest(const RegID &regID, ActionCallStatus *callStatus = nullptr);
 

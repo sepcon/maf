@@ -62,7 +62,6 @@ ServiceRequester::ServiceRequester(const ServiceID &sid,
 ServiceRequester::~ServiceRequester() {
   MAF_LOGGER_INFO("Clean up service requester of service id: ", serviceID(),
                   "...");
-  abortAllSyncRequest();
 }
 
 RegID ServiceRequester::sendRequestAsync(const OpID &opID,
@@ -176,20 +175,28 @@ RegID ServiceRequester::sendMessageAsync(const OpID &operationID,
 CSPayloadIFPtr ServiceRequester::sendMessageSync(
     const OpID &operationID, OpCode opCode, const CSPayloadIFPtr &msgContent,
     ActionCallStatus *callStatus, RequestTimeoutMs timeout) {
-  auto promise = std::make_shared<std::promise<CSPayloadIFPtr>>();
-  syncRequestPromises_.atomic()->push_back(promise);
-  auto resultFuture = promise->get_future();
-  auto onSyncMsgCallback = [promise, this](const CSPayloadIFPtr &msg) {
-    removeRequestPromies(promise);
-    promise->set_value(msg);
-  };
+  //-------------------------------------------------------
+  using namespace std;
+  using ResponsePromise = promise<CSPayloadIFPtr>;
+
+  // IMPORTANT: asyncResponse and the onSyncMsgCallback must be moved all
+  // To make sure the std::promise object to be destroyed when the request is
+  // cleared when service goes down unavailable or when server stops, then the
+  // sync request will have chance to stop waiting in case of no timeout
+  // specified
+  auto asyncResponse = std::shared_ptr<ResponsePromise>(new ResponsePromise);
+  auto resultFuture = asyncResponse->get_future();
+  auto onSyncMsgCallback =
+      [asyncResponse = move(asyncResponse)](const CSPayloadIFPtr &msg) {
+        asyncResponse->set_value(msg);
+      };
 
   auto regID = sendMessageAsync(operationID, opCode, msgContent,
                                 std::move(onSyncMsgCallback), callStatus);
 
   if (regID.valid()) {
     try {
-      if (timeout == RequestTimeoutMs::max()) {
+      if (timeout == RequestTimeoutMs{0}) {
         return resultFuture.get();
       } else {
         if (resultFuture.wait_for(timeout) == std::future_status::ready) {
@@ -205,6 +212,11 @@ CSPayloadIFPtr ServiceRequester::sendMessageSync(
           assign_ptr(callStatus, ActionCallStatus::Timeout);
         }
       }
+    } catch (const std::future_error &e) {
+      assign_ptr(callStatus, ActionCallStatus::ActionBroken);
+      MAF_LOGGER_WARN(
+          "The sync request has just been aborted due to broken promise: ",
+          e.what());
     } catch (const std::exception &e) {
       assign_ptr(callStatus, ActionCallStatus::FailedUnknown);
       MAF_LOGGER_ERROR(
@@ -213,9 +225,6 @@ CSPayloadIFPtr ServiceRequester::sendMessageSync(
       assign_ptr(callStatus, ActionCallStatus::FailedUnknown);
       MAF_LOGGER_ERROR("Unknown exception when sending sync request to server");
     }
-  } else  // failed to send request to server
-  {
-    removeRequestPromies(promise);
   }
 
   return {};
@@ -229,8 +238,7 @@ void ServiceRequester::onServiceStatusChanged(const ServiceID &sid,
     serviceStatus_ = newStatus;
     if (newStatus == Availability::Unavailable) {
       serviceStatus_ = Availability::Unavailable;
-      abortAllSyncRequest();
-      clearAllAsyncRequests();
+      clearAllRequests();
       clearAllRegisterEntries();
     }
     forwardServiceStatusToObservers(sid, oldStatus, newStatus);
@@ -452,22 +460,7 @@ void ServiceRequester::onRequestResult(const CSMessagePtr &msg) {
   }
 }
 
-void ServiceRequester::abortAllSyncRequest() {
-  std::lock_guard lock(syncRequestPromises_);
-  auto totalAborted = syncRequestPromises_->size();
-
-  for (auto &promise : *syncRequestPromises_) {
-    promise->set_value({});
-  }
-
-  syncRequestPromises_->clear();
-
-  if (totalAborted > 0) {
-    MAF_LOGGER_INFO("Aborting ", totalAborted, " Sync requests!");
-  }
-}
-
-void ServiceRequester::clearAllAsyncRequests() {
+void ServiceRequester::clearAllRequests() {
   requestEntriesMap_.atomic()->clear();
 }
 
@@ -542,16 +535,6 @@ size_t ServiceRequester::removeRegEntry(RegEntriesMap &regInfoEntriesMap,
     }
   }
   return 0;
-}
-
-void ServiceRequester::removeRequestPromies(
-    const std::shared_ptr<std::promise<CSPayloadIFPtr>> &promise) {
-  std::lock_guard lock(syncRequestPromises_);
-  if (auto it = std::find(syncRequestPromises_->begin(),
-                          syncRequestPromises_->end(), promise);
-      it != syncRequestPromises_->end()) {
-    syncRequestPromises_->erase(it);
-  }
 }
 
 CSPayloadIFPtr ServiceRequester::getCachedProperty(

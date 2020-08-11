@@ -31,14 +31,13 @@ struct ServiceRequester : public ServiceRequesterIF {
     std::promise<std::shared_ptr<CSMessage>> _msgPromise;
   };
 
+  using AtomicAvailability = std::atomic<Availability>;
   template <typename ValueType>
   using OpIDMap = threading::Lockable<std::map<OpID, ValueType>>;
   using RegEntriesMap = OpIDMap<std::list<RegEntry>>;
   using SyncRegEntriesMap = OpIDMap<std::list<SyncRegEntry>>;
   using CSMsgContentMap = OpIDMap<CSPayloadIFPtr>;
   using ServiceStatusObserverPtr = ServiceRequesterIF::ServiceStatusObserverPtr;
-  using SyncRequestPromises = threading::Lockable<
-      std::list<std::shared_ptr<std::promise<CSPayloadIFPtr>>>>;
   using ServiceStatusObservers =
       threading::Lockable<std::list<ServiceStatusObserverPtr>>;
 
@@ -111,8 +110,7 @@ struct ServiceRequester : public ServiceRequesterIF {
 
   bool onRegistersUpdated(const CSMessagePtr &msg);
   void onRequestResult(const CSMessagePtr &msg);
-  void abortAllSyncRequest();
-  void clearAllAsyncRequests();
+  void clearAllRequests();
   void clearAllRegisterEntries();
   ActionCallStatus sendMessageToServer(const CSMessagePtr &outgoingMsg);
 
@@ -126,9 +124,6 @@ struct ServiceRequester : public ServiceRequesterIF {
 
   size_t removeRegEntry(RegEntriesMap &regInfoEntriesMap, const RegID &regID);
 
-  void removeRequestPromies(
-      const std::shared_ptr<std::promise<CSPayloadIFPtr>> &promise);
-
   CSPayloadIFPtr getCachedProperty(const OpID &propertyID) const;
   void cachePropertyStatus(const OpID &propertyID, CSPayloadIFPtr &&property);
   void removeCachedProperty(const OpID &propertyID);
@@ -136,13 +131,12 @@ struct ServiceRequester : public ServiceRequesterIF {
 
   RegEntriesMap registerEntriesMap_;
   RegEntriesMap requestEntriesMap_;
-  SyncRequestPromises syncRequestPromises_;
   ServiceStatusObservers serviceStatusObservers_;
   CSMsgContentMap propertiesCache_;
   std::weak_ptr<ClientIF> client_;
   CSIDManager idMgr_;
   ServiceID sid_;
-  std::atomic<Availability> serviceStatus_ = Availability::Unavailable;
+  AtomicAvailability serviceStatus_ = Availability::Unavailable;
 };
 
 }  // namespace messaging

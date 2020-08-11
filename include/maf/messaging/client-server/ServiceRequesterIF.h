@@ -11,7 +11,6 @@ namespace maf {
 namespace messaging {
 
 using RequestTimeoutMs = std::chrono::milliseconds;
-inline constexpr auto InfiniteWait = RequestTimeoutMs::max();
 
 class MAF_EXPORT ServiceRequesterIF : public CSMessageReceiverIF,
                                       public ServiceStatusObserverIF {
