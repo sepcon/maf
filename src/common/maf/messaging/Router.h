@@ -36,6 +36,7 @@ class Router : public pattern::SingletonObject<Router> {
   Router(Invisible) noexcept {}
   bool routeMessage(Message &&msg, const ReceiverID &receiverID);
   bool routeExecution(Execution exc, const ReceiverID &receiverID);
+  bool routeMessageAndWait(Message &&msg, const ReceiverID &receiverID);
   bool routeAndWaitExecution(Execution exc, const ReceiverID &receiverID);
   bool broadcast(const Message &msg);
   ReceiverInstance findReceiver(const ReceiverID &id) const;

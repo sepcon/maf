@@ -116,6 +116,8 @@ void testPostingMessages() {
 void testSyncExecution() {
   using namespace std;
   using namespace std::chrono_literals;
+  struct waitable_msg {};
+  auto msgHandled = false;
 
   AsyncComponent logicComponent = Component::create("logic");
   logicComponent.run();
@@ -124,8 +126,6 @@ void testSyncExecution() {
   {
     TimeMeasurement tm([](auto elapsedUS) {
       MAF_TEST_CASE_BEGIN(sync_execute) {
-        maf::test::log_rec()
-            << "Total time to response = " << elapsedUS.count() << "us";
         MAF_TEST_EXPECT(elapsedUS > WAIT_TIME);
       }
       MAF_TEST_CASE_END(sync_execute)
@@ -134,6 +134,19 @@ void testSyncExecution() {
     logicComponent.instance()->executeAndWait(
         [] { this_thread::sleep_for(WAIT_TIME); });
   }
+
+  MAF_TEST_CASE_BEGIN(post_sync_message) {
+    logicComponent.instance()->onMessage<waitable_msg>(
+        [&msgHandled](const auto&) {
+          this_thread::sleep_for(1ms);
+          msgHandled = true;
+          this_component::unregisterAllHandlers<waitable_msg>();
+        });
+
+    MAF_TEST_EXPECT(logicComponent.instance()->postAndWait<waitable_msg>());
+    MAF_TEST_EXPECT(msgHandled);
+  }
+  MAF_TEST_CASE_END(post_sync_message)
 
   MAF_TEST_CASE_BEGIN(sync_execute_with_exception) {
     bool caughtException = false;
@@ -147,6 +160,21 @@ void testSyncExecution() {
   }
   MAF_TEST_CASE_END(sync_execute_with_exception)
 
+  MAF_TEST_CASE_BEGIN(non_block_posting_wait_from_this_component) {
+    auto firedCount = 0;
+    logicComponent.instance()->onMessage<waitable_msg>(
+        [&firedCount](const auto&) {
+          firedCount++;
+          if (firedCount < 2) {
+            this_component::instance()->postAndWait(waitable_msg{});
+            this_component::unregisterAllHandlers<waitable_msg>();
+          }
+        });
+
+    logicComponent.instance()->postAndWait(waitable_msg{});
+    MAF_TEST_EXPECT(firedCount == 2);
+  }
+  MAF_TEST_CASE_END(non_block_posting_wait_from_this_component)
   MAF_TEST_CASE_BEGIN(stop_async_component) {
     logicComponent.instance()->execute([] {
       std::this_thread::sleep_for(3ms);
@@ -158,6 +186,17 @@ void testSyncExecution() {
 
     MAF_TEST_EXPECT(!success);
 
+    auto fired = false;
+    logicComponent.instance()->onMessage<waitable_msg>([&fired](const auto&) {
+      fired = true;
+      this_thread::sleep_for(100000h);
+    });
+
+    success = logicComponent.instance()->postAndWait<waitable_msg>();
+
+    MAF_TEST_EXPECT(!success);
+    MAF_TEST_EXPECT(!fired);
+
     logicComponent.wait();
     MAF_TEST_EXPECT(!logicComponent.running())
   }
@@ -165,10 +204,6 @@ void testSyncExecution() {
 }
 
 void testRegisterUnregisterHandlers() {
-  maf::util::TimeMeasurement tm([](auto elapsed) {
-    maf::test::log_rec() << "total time = " << elapsed.count() << "us";
-  });
-
   auto c = Component::create();
 
   static std::map<int, int> num2countMap;

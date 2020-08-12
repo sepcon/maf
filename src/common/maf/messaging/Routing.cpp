@@ -25,6 +25,10 @@ bool routeAndWaitExecution(Execution exc, const ReceiverID &receiverID) {
   return Router::instance().routeAndWaitExecution(std::move(exc), receiverID);
 }
 
+bool routeMessageAndWait(Message &&msg, const ReceiverID &receiverID) {
+  return Router::instance().routeMessageAndWait(std::move(msg), receiverID);
+}
+
 }  // namespace routing
 }  // namespace messaging
 }  // namespace maf

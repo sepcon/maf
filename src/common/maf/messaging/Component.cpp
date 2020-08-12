@@ -18,6 +18,8 @@ using HandlersPtr = std::shared_ptr<Handlers>;
 using PendingExecutions = threading::Queue<Execution>;
 using MsgHandlersMap = threading::Lockable<std::map<MessageID, HandlersPtr>>;
 
+static constexpr auto anonymous_postfix = ".anonymous";
+
 class CallbackExecutor : public ExecutorIF {
   ComponentRef compref;
 
@@ -108,21 +110,29 @@ static const ComponentID &emptyComponentID() {
   return emptyID;
 }
 
+static ComponentID generateAnonymousID() {
+  static std::atomic_int counter = 0;
+  return std::to_string(++counter) + anonymous_postfix;
+}
+
 Component::Component(ComponentID id)
     : d_{new ComponentDataPrv{std::move(id)}} {}
 
 Component::~Component() {}
 
-ComponentInstance Component::create(ComponentID name) {
-  if (!name.empty()) {
+ComponentInstance Component::create(ComponentID id) {
+  auto joinRouting = !id.empty();
+  if (joinRouting) {
     // Make sure the Router::instance is created before all Component instances
     // that depend on it
     Router::instance();
+  } else {
+    id = generateAnonymousID();
   }
 
-  auto comp = ComponentInstance{new Component{std::move(name)},
-                                &Component::deleteFunction};
-  if (!comp->id().empty()) {
+  auto comp = ComponentInstance{new Component{std::move(id)}};
+
+  if (joinRouting) {
     if (!Router::instance().addReceiver(comp)) {
       comp.reset();
     }
@@ -165,12 +175,43 @@ bool Component::post(Message msg) {
   using namespace std;
   if (!d_->pendingExecutions.isClosed()) {
     auto &msgType = msg.type();
-    assert(msgType != typeid(nullptr_t));
-
     if (auto handlers = d_->findHandlers(msgType)) {
       return execute([handlers = move(handlers), msg = move(msg)] {
         handlers->handle(msg);
       });
+    } else {
+      MAF_LOGGER_WARN("There's no handler for message ", msgType.name());
+    }
+  }
+  return false;
+}
+
+bool Component::postAndWait(Message msg) {
+  using namespace std;
+  if (!d_->pendingExecutions.isClosed()) {
+    auto &msgType = msg.type();
+    if (auto handlers = d_->findHandlers(msgType)) {
+      if (id() == this_component::id()) {
+        handlers->handle(msg);
+        return true;
+      }
+      auto handlersInvoker = make_shared<packaged_task<void()>>(
+          [handlers = move(handlers), msg = move(msg)] {
+            handlers->handle(msg);
+          });
+
+      auto handledEvent = handlersInvoker->get_future();
+      if (execute([msgHandler = move(handlersInvoker)] { (*msgHandler)(); })) {
+        try {
+          handledEvent.get();
+          return true;
+        } catch (const std::future_error &fe) {
+          MAF_LOGGER_WARN(
+              "Seems that the component that was asked for executing function "
+              "has been stopped, exception: ",
+              fe.what());
+        }
+      }
     } else {
       MAF_LOGGER_WARN("There's no handler for message ", msgType.name());
     }
@@ -195,6 +236,10 @@ bool Component::executeAndWait(Execution exec) {
   auto ret = false;
 
   if (!d_->pendingExecutions.isClosed()) {
+    if (id() == this_component::id()) {
+      exec();
+      return true;
+    }
     auto task = make_shared<packaged_task<void()>>(move(exec));
     auto ft = task->get_future();
     if (execute([task = move(task)] { (*task)(); })) {
@@ -241,7 +286,9 @@ void Component::unregisterHandler(const HandlerRegID &regid) {
   }
 }
 
-void Component::deleteFunction(Component *comp) { delete comp; }
+void Component::unregisterAllHandlers(MessageID msgid) {
+  d_->msgHandlersMap.atomic()->erase(msgid);
+}
 
 ComponentInstance this_component::instance() {
   if (tlInstance_) {
@@ -286,6 +333,17 @@ const ComponentID &this_component::id() {
     return comp->id();
   }
   return emptyComponentID();
+}
+
+void this_component::unregisterHandler(const HandlerRegID &regid) {
+  if (auto comp = instance()) {
+    comp->unregisterHandler(regid);
+  }
+}
+void this_component::unregisterAllHandlers(const MessageID &regid) {
+    if (auto comp = instance()) {
+        comp->unregisterAllHandlers(regid);
+    }
 }
 
 }  // namespace messaging

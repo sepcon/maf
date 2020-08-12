@@ -28,15 +28,17 @@ bool Router::routeExecution(Execution exc, const ReceiverID &receiverID) {
   return false;
 }
 
+bool Router::routeMessageAndWait(Message &&msg, const ReceiverID &receiverID) {
+  if (auto receiver = findReceiver(receiverID)) {
+    return receiver->postAndWait(std::move(msg));
+  }
+  return false;
+}
+
 bool Router::routeAndWaitExecution(Execution exc,
                                    const ReceiverID &receiverID) {
   if (auto receiver = findReceiver(receiverID)) {
-    if (receiver->id() != this_component::id()) {
-      return receiver->executeAndWait(std::move(exc));
-    } else {
-      exc();
-      return true;
-    }
+    return receiver->executeAndWait(std::move(exc));
   }
   return false;
 }

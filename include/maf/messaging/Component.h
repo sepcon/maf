@@ -29,6 +29,7 @@ class Component final : pattern::Unasignable,
   MAF_EXPORT void stop();
 
   MAF_EXPORT bool post(Message msg);
+  MAF_EXPORT bool postAndWait(Message msg);
   MAF_EXPORT bool execute(Execution exec);
   MAF_EXPORT bool executeAndWait(Execution exec);
 
@@ -38,6 +39,7 @@ class Component final : pattern::Unasignable,
                                                  MessageHandler onMessageFunc);
 
   MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
+  MAF_EXPORT void unregisterAllHandlers(MessageID msgid);
 
   template <class Msg>
   HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
@@ -64,20 +66,34 @@ class Component final : pattern::Unasignable,
     return post(Msg{std::forward<Args>(args)...});
   }
 
- private:
-  MAF_EXPORT ~Component();
-  static void deleteFunction(Component *comp);
+  template <
+      class Msg, typename... Args,
+      std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+  bool postAndWait(Args &&... args) {
+    return postAndWait(Msg{std::forward<Args>(args)...});
+  }
 
+  template <class Msg>
+  void unregisterAllHandlers() {
+    unregisterAllHandlers(typeid(Msg));
+  }
+
+  ~Component();
+
+ private:
   std::unique_ptr<struct ComponentDataPrv> d_;
 };
 
 namespace this_component {
 MAF_EXPORT std::shared_ptr<Component> instance();
+MAF_EXPORT const ComponentID &id();
 MAF_EXPORT std::weak_ptr<Component> ref();
 MAF_EXPORT bool stop();
 MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
-MAF_EXPORT const ComponentID &id();
+MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
+MAF_EXPORT void unregisterAllHandlers(const MessageID &regid);
+
 template <class Msg, typename... Args,
           std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
 static bool post(Args &&... args) {
@@ -88,6 +104,12 @@ template <class Msg>
 HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
   return instance()->onMessage<Msg>(std::move(f));
 }
+
+template <class Msg>
+void unregisterAllHandlers() {
+  unregisterAllHandlers(typeid(Msg));
+}
+
 };  // namespace this_component
 
 }  // namespace messaging
