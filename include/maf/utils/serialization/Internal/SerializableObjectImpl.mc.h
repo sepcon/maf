@@ -61,7 +61,7 @@
 #define mc_maf_sb_set_member_value_impl(...) \
   mc_maf_msvc_expand_va_args(mc_maf_sb_set_member_value_impl_(__VA_ARGS__))
 #define mc_maf_sb_set_member_value_impl_(type, name, ...) \
-  name##_ = std::move(name);
+  mc_maf_sb_get_member_var_name(name) = std::move(name);
 
 #define mc_maf_sb_take_2_first_params_param_(first, second, ...) /*(*/ \
   first, second                                                  /*)*/
@@ -82,12 +82,18 @@
 #define mc_maf_sb_define_get_set_func_impl(...) \
   mc_maf_msvc_expand_va_args(mc_maf_sb_define_get_set_func_impl_(__VA_ARGS__))
 
-#define mc_maf_sb_define_get_set_func_impl_(type, name, ...)  \
- public:                                                      \
-  void set_##name(type &&name) { name##_ = std::move(name); } \
-  void set_##name(const type &name) { name##_ = name; }       \
-  const type &get_##name() const { return name##_; }          \
-  type &get_##name() { return name##_; }
+#define mc_maf_sb_define_get_set_func_impl_(type, name, ...) \
+ public:                                                     \
+  void set_##name(type &&name) {                             \
+    mc_maf_sb_get_member_var_name(name) = std::move(name);   \
+  }                                                          \
+  void set_##name(const type &name) {                        \
+    mc_maf_sb_get_member_var_name(name) = name;              \
+  }                                                          \
+  const type &get_##name() const {                           \
+    return mc_maf_sb_get_member_var_name(name);              \
+  }                                                          \
+  type &get_##name() { return mc_maf_sb_get_member_var_name(name); }
 
 #define mc_maf_sb_declare_member_vars(...) \
  private:                                  \
@@ -101,10 +107,11 @@
       __VA_ARGS__, mc_maf_sb_declare_member_var_default,      \
       mc_maf_sb_declare_member_var_no_default)(__VA_ARGS__))
 
-#define mc_maf_sb_declare_member_var_no_default(type, name) type name##_;
+#define mc_maf_sb_declare_member_var_no_default(type, name) \
+  type mc_maf_sb_get_member_var_name(name);
 
 #define mc_maf_sb_declare_member_var_default(type, name, default_val) \
-  type name##_ = default_val;
+  type mc_maf_sb_get_member_var_name(name) = default_val;
 
 #define mc_maf_sb_define_as_tuple_funcs(...)                      \
  public:                                                          \
@@ -204,9 +211,10 @@
 #define mc_maf_sb_load_from_json_each_property(...) \
   mc_maf_msvc_expand_va_args(mc_maf_sb_load_json_on_each_member_(__VA_ARGS__))
 
-#define mc_maf_sb_load_json_on_each_member_(type, name)        \
-  if (TheJsonTrait::template has<type>(jsonIn, #name)) {       \
-    name##_ = TheJsonTrait::template get<type>(jsonIn, #name); \
+#define mc_maf_sb_load_json_on_each_member_(type, name)  \
+  if (TheJsonTrait::template has<type>(jsonIn, #name)) { \
+    mc_maf_sb_get_member_var_name(name) =                \
+        TheJsonTrait::template get<type>(jsonIn, #name); \
   }
 
 #else

@@ -20,9 +20,13 @@ using Message = std::any;
 using MessageID = std::type_index;
 using MessageHandler = std::function<void(const Message&)>;
 using Execution = std::function<void()>;
-
 template <class Msg>
 using SpecificMessageHandler = std::function<void(const Msg&)>;
+
+template <class Msg, typename... Args>
+constexpr bool isMessageConstructible =
+    std::is_trivially_constructible_v<Msg, Args...> ||
+    std::is_constructible_v<Msg, Args...>;
 
 // -----------------------------------------------------------
 struct HandlerRegID {
@@ -36,6 +40,19 @@ struct HandlerRegID {
   HandlerID hid_ = InvalidHandlerID;
   MessageID mid_ = typeid(std::nullptr_t);
 };
+
+template <class SpecificMsg, class... Args>
+decltype(auto) makeMessage(Args&&... args) {
+  using namespace std;
+  constexpr bool isMessageConstructible =
+      is_trivially_constructible_v<SpecificMsg, Args...> ||
+      is_constructible_v<SpecificMsg, Args...>;
+  if constexpr (isMessageConstructible) {
+    return make_any<SpecificMsg>(forward<Args>(args)...);
+  } else {
+    return make_any<SpecificMsg>(SpecificMsg{forward<Args>(args)...});
+  }
+}
 
 }  // namespace messaging
 }  // namespace maf

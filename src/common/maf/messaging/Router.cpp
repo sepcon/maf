@@ -14,29 +14,29 @@ static inline void broadcastExcept(Message &&msg,
   }
 }
 
-bool Router::routeMessage(Message &&msg, const ReceiverID &receiverID) {
+bool Router::routeMessage(const ReceiverID &receiverID, Message &&msg) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->post(std::move(msg));
   }
   return false;
 }
 
-bool Router::routeExecution(Execution exc, const ReceiverID &receiverID) {
+bool Router::routeExecution(const ReceiverID &receiverID, Execution exc) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->execute(std::move(exc));
   }
   return false;
 }
 
-bool Router::routeMessageAndWait(Message &&msg, const ReceiverID &receiverID) {
+bool Router::routeMessageAndWait(const ReceiverID &receiverID, Message &&msg) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->postAndWait(std::move(msg));
   }
   return false;
 }
 
-bool Router::routeAndWaitExecution(Execution exc,
-                                   const ReceiverID &receiverID) {
+bool Router::routeAndWaitExecution(const ReceiverID &receiverID,
+                                   Execution exc) {
   if (auto receiver = findReceiver(receiverID)) {
     return receiver->executeAndWait(std::move(exc));
   }

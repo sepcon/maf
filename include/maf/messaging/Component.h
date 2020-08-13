@@ -45,9 +45,9 @@ class Component final : pattern::Unasignable,
   HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
     auto &msgID = typeid(Msg);
     auto translatorCallback = [msgName = msgID.name(), callback = std::move(f),
-                               this](Message genericMsg) {
+                               this](const Message &genericMsg) {
       try {
-        callback(std::any_cast<Msg>(std::move(genericMsg)));
+        callback(std::any_cast<const Msg &>(genericMsg));
       } catch (const std::bad_any_cast &) {
         MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgName);
       } catch (const std::exception &e) {
@@ -59,18 +59,14 @@ class Component final : pattern::Unasignable,
     return registerMessageHandler(msgID, std::move(translatorCallback));
   }
 
-  template <
-      class Msg, typename... Args,
-      std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+  template <class Msg, typename... Args>
   bool post(Args &&... args) {
-    return post(Msg{std::forward<Args>(args)...});
+    return post(makeMessage<Msg>(std::forward<Args>(args)...));
   }
 
-  template <
-      class Msg, typename... Args,
-      std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+  template <class Msg, typename... Args>
   bool postAndWait(Args &&... args) {
-    return postAndWait(Msg{std::forward<Args>(args)...});
+    return postAndWait(makeMessage<Msg>(std::forward<Args>(args)...));
   }
 
   template <class Msg>
@@ -94,10 +90,9 @@ MAF_EXPORT Component::Executor getExecutor();
 MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
 MAF_EXPORT void unregisterAllHandlers(const MessageID &regid);
 
-template <class Msg, typename... Args,
-          std::enable_if_t<std::is_constructible_v<Msg, Args...>, bool> = true>
+template <class Msg, typename... Args>
 static bool post(Args &&... args) {
-  return post(Msg{std::forward<Args>(args)...});
+  return post(makeMessage<Msg>(std::forward<Args>(args)...));
 }
 
 template <class Msg>

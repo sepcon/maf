@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BufferReceiverIF.h"
+#include <memory>
 
 namespace maf {
 namespace messaging {

@@ -18,7 +18,7 @@ using HandlersPtr = std::shared_ptr<Handlers>;
 using PendingExecutions = threading::Queue<Execution>;
 using MsgHandlersMap = threading::Lockable<std::map<MessageID, HandlersPtr>>;
 
-static constexpr auto anonymous_postfix = ".anonymous";
+static const ComponentID anonymous_prefix = "[anonymous].";
 
 class CallbackExecutor : public ExecutorIF {
   ComponentRef compref;
@@ -112,7 +112,13 @@ static const ComponentID &emptyComponentID() {
 
 static ComponentID generateAnonymousID() {
   static std::atomic_int counter = 0;
-  return std::to_string(++counter) + anonymous_postfix;
+  return anonymous_prefix + std::to_string(++counter);
+}
+
+static bool isAnonymous(const ComponentID &id) {
+  return id.length() > anonymous_prefix.length() &&
+         strncmp(id.c_str(), anonymous_prefix.c_str(),
+                 anonymous_prefix.length()) == 0;
 }
 
 Component::Component(ComponentID id)
@@ -165,7 +171,7 @@ void Component::stop() {
   if (!d_->pendingExecutions.isClosed()) {
     d_->pendingExecutions.close();
     d_->pendingExecutions.clear();
-    if (!id().empty()) {
+    if (!isAnonymous(id())) {
       Router::instance().removeReceiver(shared_from_this());
     }
   }
@@ -341,9 +347,9 @@ void this_component::unregisterHandler(const HandlerRegID &regid) {
   }
 }
 void this_component::unregisterAllHandlers(const MessageID &regid) {
-    if (auto comp = instance()) {
-        comp->unregisterAllHandlers(regid);
-    }
+  if (auto comp = instance()) {
+    comp->unregisterAllHandlers(regid);
+  }
 }
 
 }  // namespace messaging

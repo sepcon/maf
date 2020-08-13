@@ -99,13 +99,12 @@ static void setupSlaves() {
       ++greetCount;
       log() << "Slave " << this_component::instance()->id()
             << " received string msg from master: " << msg;
-      routeMessage(TaskInputRequest{}, MasterID);
+      routeMessage(MasterID, TaskInputRequest{});
     });
 
     slave->onMessage<Task>([](Task task) {
-      routeMessage(
-          TaskResult{this_component::instance(), std::get<0>(task), eval(task)},
-          MasterID);
+      routeMessage(MasterID, TaskResult{this_component::instance(),
+                                        std::get<0>(task), eval(task)});
     });
     slave->onMessage<TaskSubmitted>([](auto) {
       log() << "Task submitted to master then quit!";
