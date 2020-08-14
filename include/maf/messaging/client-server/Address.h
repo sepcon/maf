@@ -4,6 +4,7 @@
 #include <maf/utils/serialization/Tuplizable.h>
 
 #include <string>
+#include <tuple>
 
 namespace maf {
 namespace messaging {

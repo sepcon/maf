@@ -1,6 +1,6 @@
 #include <maf/messaging/AsyncComponent.h>
 #include <maf/messaging/Component.h>
-#include <maf/messaging/ShortLivedHandlersManager.h>
+#include <maf/messaging/MessageHandlerManager.h>
 #include <maf/utils/TimeMeasurement.h>
 
 #include <map>
@@ -93,10 +93,10 @@ static void postingMessages() {
 
   auto stopSignals = std::vector<AsyncComponent::StoppedSignal>{};
 
-  stopSignals.emplace_back(AsyncComponent::run(producerComp));
+  stopSignals.emplace_back(AsyncComponent::runAsync(producerComp));
 
   for (auto& consumer : consumerComponents) {
-    stopSignals.emplace_back(AsyncComponent::run(consumer));
+    stopSignals.emplace_back(AsyncComponent::runAsync(consumer));
   }
 
   mainComponent->run();
@@ -252,7 +252,7 @@ void testRegisterUnregisterHandlers() {
 void testAutoUnregister() {
   using namespace std;
   auto comp = Component::create();
-  auto handlersMgr = new ShortLivedHandlersManager{comp};
+  auto handlersMgr = new MessageHandlerManager{comp};
 
   static map<int, int> i2count;
   static map<long, int> ld2count;

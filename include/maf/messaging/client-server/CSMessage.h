@@ -2,6 +2,8 @@
 
 #include <maf/export/MafExport_global.h>
 
+#include <memory>
+
 #include "Address.h"
 #include "CSMsgPayloadIF.h"
 #include "CSTypes.h"

@@ -20,43 +20,37 @@ class Component final : pattern::Unasignable,
 
   MAF_EXPORT static ComponentInstance create(ComponentID id = {});
   MAF_EXPORT static ComponentInstance findComponent(const ComponentID &id);
-
   MAF_EXPORT const ComponentID &id() const noexcept;
-
   MAF_EXPORT void run(ThreadFunction threadInit = {},
                       ThreadFunction threadDeinit = {});
-
   MAF_EXPORT void stop();
-
   MAF_EXPORT bool post(Message msg);
+  MAF_EXPORT bool hasHandler(MessageID mid) const;
   MAF_EXPORT bool postAndWait(Message msg);
   MAF_EXPORT bool execute(Execution exec);
   MAF_EXPORT bool executeAndWait(Execution exec);
-
   MAF_EXPORT Executor getExecutor();
-
   MAF_EXPORT HandlerRegID registerMessageHandler(MessageID msgid,
                                                  MessageHandler onMessageFunc);
-
   MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
   MAF_EXPORT void unregisterAllHandlers(MessageID msgid);
 
   template <class Msg>
   HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
-    auto &msgID = typeid(Msg);
-    auto translatorCallback = [msgName = msgID.name(), callback = std::move(f),
+    auto translatorCallback = [callback = std::move(f),
                                this](const Message &genericMsg) {
       try {
         callback(std::any_cast<const Msg &>(genericMsg));
       } catch (const std::bad_any_cast &) {
-        MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgName);
+        MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgid<Msg>().name());
       } catch (const std::exception &e) {
-        MAF_LOGGER_ERROR("Invoking the handler function of message ", msgName,
-                         " with exception: ", e.what());
+        MAF_LOGGER_FATAL("EXCEPTION when handling message ",
+                         msgid<Msg>().name(), ": ", e.what());
+        throw;
       }
     };
 
-    return registerMessageHandler(msgID, std::move(translatorCallback));
+    return registerMessageHandler(msgid<Msg>(), std::move(translatorCallback));
   }
 
   template <class Msg, typename... Args>
@@ -71,7 +65,7 @@ class Component final : pattern::Unasignable,
 
   template <class Msg>
   void unregisterAllHandlers() {
-    unregisterAllHandlers(typeid(Msg));
+    unregisterAllHandlers(msgid<Msg>());
   }
 
   ~Component();
@@ -82,8 +76,8 @@ class Component final : pattern::Unasignable,
 
 namespace this_component {
 MAF_EXPORT std::shared_ptr<Component> instance();
-MAF_EXPORT const ComponentID &id();
 MAF_EXPORT std::weak_ptr<Component> ref();
+MAF_EXPORT const ComponentID &id();
 MAF_EXPORT bool stop();
 MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
@@ -102,7 +96,7 @@ HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
 
 template <class Msg>
 void unregisterAllHandlers() {
-  unregisterAllHandlers(typeid(Msg));
+  unregisterAllHandlers(msgid<Msg>());
 }
 
 };  // namespace this_component

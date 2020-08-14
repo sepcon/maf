@@ -29,10 +29,10 @@ struct ReceiverCompare {
   }
 };
 
+using Receivers = std::set<ReceiverInstance, ReceiverCompare>;
+
 class Router : public pattern::SingletonObject<Router> {
  public:
-  using Receivers = std::set<ReceiverInstance, ReceiverCompare>;
-
   Router(Invisible) noexcept {}
   bool routeMessage(const ReceiverID &receiverID, Message &&msg);
   bool routeExecution(const ReceiverID &receiverID, Execution exc);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <maf/utils/CallOnExit.h>
 
 #include <functional>
 #include <iostream>
@@ -10,22 +11,8 @@
 namespace maf {
 namespace test {
 
+using util::CallOnExit;
 using log_callback_t = std::function<void(const std::string&)>;
-class call_on_exit {
- public:
-  using callback_type = std::function<void()>;
-  template <typename Callable>
-  call_on_exit(Callable&& f) : f_{std::forward<Callable>(f)} {}
-
-  ~call_on_exit() {
-    if (f_) {
-      f_();
-    }
-  }
-
- private:
-  callback_type f_;
-};
 
 struct test_cases_sumary_t {
   int total_passed = 0;
@@ -50,7 +37,7 @@ inline log_callback_t& log_callback() {
 
 struct log_record_t {
   std::ostringstream ss;
-  call_on_exit c = [this] { log_callback()(ss.str()); };
+  CallOnExit c = [this] { log_callback()(ss.str()); };
 
  public:
   template <typename T>
@@ -100,8 +87,8 @@ inline void init_test_cases() {
     std::string test_case_name = #TestCaseName "_test";                     \
     int expectation_met = 0;                                                \
     int linefailed = -1;                                                    \
-    call_on_exit print_test_result = [testNumber, &test_case_name,          \
-                                      &expectation_met, &linefailed] {      \
+    CallOnExit print_test_result = [testNumber, &test_case_name,            \
+                                    &expectation_met, &linefailed] {        \
       assert(expectation_met != 0 &&                                        \
              (test_case_name + " does not have any expectation!").c_str()); \
       if (expectation_met > 0) {                                            \

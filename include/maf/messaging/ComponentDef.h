@@ -23,23 +23,36 @@ using Execution = std::function<void()>;
 template <class Msg>
 using SpecificMessageHandler = std::function<void(const Msg&)>;
 
-template <class Msg, typename... Args>
-constexpr bool isMessageConstructible =
-    std::is_trivially_constructible_v<Msg, Args...> ||
-    std::is_constructible_v<Msg, Args...>;
-
 // -----------------------------------------------------------
+
+template <class Msg>
+MessageID msgid();
+template <class Msg>
+MessageID msgid(Msg&& msg);
+template <class SpecificMsg, class... Args>
+decltype(auto) makeMessage(Args&&... args);
+
 struct HandlerRegID {
   using HandlerID = void*;
   static inline constexpr HandlerID InvalidHandlerID = nullptr;
 
   bool valid() const {
-    return hid_ != InvalidHandlerID && mid_ != typeid(std::nullptr_t);
+    return hid_ != InvalidHandlerID && mid_ != msgid<std::nullptr_t>();
   }
 
   HandlerID hid_ = InvalidHandlerID;
-  MessageID mid_ = typeid(std::nullptr_t);
+  MessageID mid_ = msgid<std::nullptr_t>();
 };
+
+template <class Msg>
+MessageID msgid() {
+  return typeid(Msg);
+}
+
+template <class Msg>
+MessageID msgid(Msg&& msg) {
+  return typeid(std::forward<Msg>(msg));
+}
 
 template <class SpecificMsg, class... Args>
 decltype(auto) makeMessage(Args&&... args) {
@@ -53,6 +66,5 @@ decltype(auto) makeMessage(Args&&... args) {
     return make_any<SpecificMsg>(SpecificMsg{forward<Args>(args)...});
   }
 }
-
 }  // namespace messaging
 }  // namespace maf

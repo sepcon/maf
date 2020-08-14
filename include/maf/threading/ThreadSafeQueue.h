@@ -96,7 +96,7 @@ class ThreadSafeQueue {
     std::lock_guard lock(queue_);
     if (onClearCallback) {
       while (!queue_->empty()) {
-        auto v = queue_->front();
+        auto v = std::move(queue_->front());
         onClearCallback(v);
         queue_->pop();
       }

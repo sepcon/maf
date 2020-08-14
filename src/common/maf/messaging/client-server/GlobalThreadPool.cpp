@@ -61,19 +61,19 @@ static ThePool& thepool() {
   return _;
 }
 
-bool submit(TaskType task) noexcept {
+bool submit(TaskType task) {
   return thepool().details->execute(std::move(task));
 }
 
-bool tryAddThread() noexcept { return thepool().tryAddThread(); }
+bool tryAddThread() { return thepool().tryAddThread(); }
 
-void init() noexcept { thepool().init(); }
+void init() { thepool().init(); }
 
-void deinit() noexcept { thepool().deinit(); }
+void deinit() { thepool().deinit(); }
 
-bool tryRemoveThread() noexcept { return thepool().tryRemoveThread(); }
+bool tryRemoveThread() { return thepool().tryRemoveThread(); }
 
-size_t threadCount() noexcept { return thepool().threadCount(); }
+size_t threadCount() { return thepool().threadCount(); }
 
 }  // namespace global_threadpool
 }  // namespace messaging

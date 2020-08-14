@@ -7,23 +7,23 @@
 namespace maf {
 namespace messaging {
 
-class ShortLivedHandlersManager {
+class MessageHandlerManager {
  public:
   using RegID = HandlerRegID;
   using RegIDList = std::forward_list<RegID>;
 
-  explicit ShortLivedHandlersManager(ComponentRef compref)
+  explicit MessageHandlerManager(ComponentRef compref)
       : compref_(std::move(compref)) {}
-  ~ShortLivedHandlersManager() { unregisterAll(); }
+  ~MessageHandlerManager() { unregisterAll(); }
 
-  ShortLivedHandlersManager() = default;
-  ShortLivedHandlersManager(ShortLivedHandlersManager&&) = default;
-  ShortLivedHandlersManager& operator=(ShortLivedHandlersManager&&) = default;
+  MessageHandlerManager() = default;
+  MessageHandlerManager(MessageHandlerManager&&) = default;
+  MessageHandlerManager& operator=(MessageHandlerManager&&) = default;
 
-  ShortLivedHandlersManager(const ShortLivedHandlersManager&) = delete;
-  ShortLivedHandlersManager& operator=(const ShortLivedHandlersManager&) = delete;
+  MessageHandlerManager(const MessageHandlerManager&) = delete;
+  MessageHandlerManager& operator=(const MessageHandlerManager&) = delete;
 
-  ShortLivedHandlersManager& operator<<(RegID regID) {
+  MessageHandlerManager& operator<<(RegID regID) {
     if (auto comp = compref_.lock()) {
       regids_.push_front(std::move(regID));
     }
@@ -31,7 +31,7 @@ class ShortLivedHandlersManager {
   }
 
   template <class Msg>
-  ShortLivedHandlersManager& onMessage(SpecificMessageHandler<Msg> f) {
+  MessageHandlerManager& onMessage(SpecificMessageHandler<Msg> f) {
     if (auto comp = compref_.lock()) {
       regids_.push_front(comp->onMessage<Msg>(std::move(f)));
     }
@@ -39,11 +39,11 @@ class ShortLivedHandlersManager {
   }
 
   template <class Msg>
-  ShortLivedHandlersManager& unregisterHandler() {
-    return unregisterHandler(typeid(Msg));
+  MessageHandlerManager& unregisterHandler() {
+    return unregisterHandler(msgid<Msg>());
   }
 
-  ShortLivedHandlersManager& unregisterHandler(const MessageID& mid) {
+  MessageHandlerManager& unregisterHandler(const MessageID& mid) {
     using namespace std;
     if (auto comp = compref_.lock()) {
       auto beg = begin(regids_);

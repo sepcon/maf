@@ -95,14 +95,14 @@ static void setupSlaves() {
   for (unsigned i = 0; i < TaskCount; ++i) {
     auto slave = Component::create(SlaveID + std::to_string(i));
     slaves.emplace_back(slave);
-    slave->onMessage<std::string>([](auto msg) {
+    slave->onMessage<std::string>([](const auto &msg) {
       ++greetCount;
       log() << "Slave " << this_component::instance()->id()
             << " received string msg from master: " << msg;
       routeMessage(MasterID, TaskInputRequest{});
     });
 
-    slave->onMessage<Task>([](Task task) {
+    slave->onMessage<Task>([](const Task &task) {
       routeMessage(MasterID, TaskResult{this_component::instance(),
                                         std::get<0>(task), eval(task)});
     });
@@ -116,26 +116,27 @@ static void setupSlaves() {
 
 static void setupMaster() {
   master = Component::create(MasterID);
-  master->onMessage<ReceiverStatusMsg>([](ReceiverStatusMsg msg) {
-    static int availableSlaves = 0;
-    if (msg.isAvailable()) {
-      if (++availableSlaves == TaskCount) {
-        broadcast(std::string{"Master hellos all slaves!"});
-      }
-    } else {
-      if (--availableSlaves == 0) {
-        log() << "Sum all value = " << sumAll;
-        this_component::stop();
-      }
-    }
-  });
+  master->onMessage<receiver_status_update>(
+      [](const receiver_status_update &msg) {
+        static int availableSlaves = 0;
+        if (msg.is_available()) {
+          if (++availableSlaves == TaskCount) {
+            broadcast(std::string{"Master hellos all slaves!"});
+          }
+        } else {
+          if (--availableSlaves == 0) {
+            log() << "Sum all value = " << sumAll;
+            this_component::stop();
+          }
+        }
+      });
   master->onMessage<TaskInputRequest>([](TaskInputRequest req) {
     static int i = 0;
     req.sender->post(
         TasksForSlaves[i % (sizeof(TasksForSlaves) / sizeof(Task))]);
     ++i;
   });
-  master->onMessage<TaskResult>([](TaskResult result) {
+  master->onMessage<TaskResult>([](const TaskResult &result) {
     auto &[slave, op, output] = result;
     log() << "Slave " << slave->id() << " done operation " << op
           << " with output = " << output;
@@ -144,7 +145,7 @@ static void setupMaster() {
   });
 }
 
-static void test() {
+static void routingTest() {
   // clang-format off
   MAF_TEST_CASE_BEGIN(message_routing)
   {
@@ -175,7 +176,52 @@ static void test() {
     slave.wait();
   }
 }
+
+static void receiverStatusTest() {
+  using namespace std;
+  vector<AsyncComponent> asyncComponents;
+  static const int asyncCount = 10;
+  for (int i = 0; i < asyncCount; ++i) {
+    asyncComponents.emplace_back(Component::create("async" + to_string(i)));
+  }
+
+  for (auto &comp : asyncComponents) {
+    comp.run();
+  }
+
+  auto mainComponent = Component::create("main");
+  int totalAvailable = 0;
+  int totalUnavailable = 0;
+
+  mainComponent->onMessage<routing::receiver_status_update>(
+      [&totalAvailable,
+       &totalUnavailable](const routing::receiver_status_update &msg) {
+        if (msg.is_available()) {
+          ++totalAvailable;
+          msg.receiver.lock()->stop();
+        } else {
+          ++totalUnavailable;
+          if (totalUnavailable == asyncCount) {
+            this_component::stop();
+          }
+        }
+      });
+
+  mainComponent->run();
+
+  MAF_TEST_CASE_BEGIN(receiver_status) {
+    MAF_TEST_EXPECT(totalAvailable == asyncCount);
+    MAF_TEST_EXPECT(totalUnavailable == asyncCount);
+  }
+
+  MAF_TEST_CASE_END(receiver_status)
+  for (auto &comp : asyncComponents) {
+    comp.stopAndWait();
+  }
+}
+
 int main() {
   maf::test::init_test_cases();
-  test();
+  routingTest();
+  receiverStatusTest();
 }

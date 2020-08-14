@@ -14,12 +14,12 @@ using ReceiverRef = ComponentRef;
 using ReceiverID = ComponentID;
 using Message = Message;
 
-struct ReceiverStatusMsg {
-  enum Status { Available, Unavailable };
+struct receiver_status_update {
+  enum availability { available, unavailable };
   ReceiverRef receiver;
-  Status status = Available;
-  bool isAvailable() const { return status == Available; }
-  bool isUnavailable() const { return status == Unavailable; }
+  availability status = available;
+  bool is_available() const { return status == available; }
+  bool is_unavailable() const { return status == unavailable; }
 };
 
 MAF_EXPORT bool routeMessage(const ReceiverID& receiverID, Message msg);

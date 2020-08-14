@@ -20,9 +20,9 @@ class AsyncComponent {
 
   const ComponentInstance &instance() const noexcept { return instance_; }
 
-  static StoppedSignal run(const ComponentInstance &comp,
-                           ThreadFunction threadInit = {},
-                           ThreadFunction threadDeinit = {}) {
+  static StoppedSignal runAsync(const ComponentInstance &comp,
+                                ThreadFunction threadInit = {},
+                                ThreadFunction threadDeinit = {}) {
     return std::async(std::launch::async,
                       std::bind(&Component::run, comp, std::move(threadInit),
                                 std::move(threadDeinit)));
@@ -31,7 +31,7 @@ class AsyncComponent {
   void run(ThreadFunction threadInit = {}, ThreadFunction threadDeinit = {}) {
     if (instance_ && !running()) {
       stopSignal_ =
-          run(instance_, std::move(threadInit), std::move(threadDeinit));
+          runAsync(instance_, std::move(threadInit), std::move(threadDeinit));
     }
   }
 

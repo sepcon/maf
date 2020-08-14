@@ -8,12 +8,12 @@ namespace global_threadpool {
 
 using TaskType = Execution;
 
-void init() noexcept;
-void deinit() noexcept;
-bool submit(TaskType task) noexcept;
-bool tryAddThread() noexcept;
-bool tryRemoveThread() noexcept;
-size_t threadCount() noexcept;
+void init();
+void deinit();
+bool submit(TaskType task);
+bool tryAddThread();
+bool tryRemoveThread();
+size_t threadCount();
 
 }  // namespace global_threadpool
 }  // namespace messaging

@@ -253,10 +253,12 @@ struct Serializer {
       using ElemType = typename Container::value_type;
       using DSBElemType = typename internal::DeserializableType<ElemType>::Type;
       using SizeTypeSerializer = SerializerT<SizeType>;
+
       constexpr bool pushBackable = nstl::is_back_insertible_v<Container>;
       auto success = false;
       auto esr = SerializerT<DSBElemType>{};
-      auto size = typename Container::size_type{0};
+      SizeType size = 0;
+
       if (success |= SizeTypeSerializer{}.deserialize(is, size);
           success && size > 0) {
         internal::ContainerReserver<Container>::reserve(c, size);
