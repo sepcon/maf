@@ -6,6 +6,7 @@
 #include <typeindex>
 #include <string>
 #include <any>
+#include <chrono>
 // clang-format on
 
 namespace maf {
@@ -20,8 +21,11 @@ using Message = std::any;
 using MessageID = std::type_index;
 using MessageHandler = std::function<void(const Message&)>;
 using Execution = std::function<void()>;
+using ExecutionTimeout = std::chrono::milliseconds;
+using ExecutionDeadline = std::chrono::system_clock::time_point;
 template <class Msg>
 using SpecificMessageHandler = std::function<void(const Msg&)>;
+using DontCareMsgContentHandler = std::function<void()>;
 
 // -----------------------------------------------------------
 

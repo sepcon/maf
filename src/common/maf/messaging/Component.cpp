@@ -16,8 +16,10 @@ namespace maf {
 namespace messaging {
 
 namespace this_component {
+static bool testAndSetThreadLocalInstance(Component *inst);
+static void clearTLInstanceIfSet(bool set);
 static thread_local Component *instance_ = nullptr;
-}
+}  // namespace this_component
 
 using ExecutionUPtr = std::unique_ptr<Execution>;
 class Handlers;
@@ -179,16 +181,16 @@ ComponentInstance Component::findComponent(const ComponentID &id) {
 const ComponentID &Component::id() const noexcept { return d_->id; }
 
 void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
-  this_component::instance_ = this;
+  auto justSet = this_component::testAndSetThreadLocalInstance(this);
   if (threadInit) {
     threadInit();
   }
 
-  CallOnExit deinit = [threadDeinit = std::move(threadDeinit)] {
+  CallOnExit deinit = [justSet, threadDeinit = std::move(threadDeinit)] {
     if (threadDeinit) {
       threadDeinit();
     }
-    this_component::instance_ = nullptr;
+    this_component::clearTLInstanceIfSet(justSet);
   };
 
   joinRoutingIfNotAnonymous(shared_from_this());
@@ -205,16 +207,41 @@ void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
   }
 }
 
+void Component::runFor(ExecutionTimeout duration) {
+  using namespace std::chrono;
+  runUntil(system_clock::now() + duration);
+}
+
+void Component::runUntil(ExecutionDeadline deadline) {
+  ExecutionUPtr exc;
+  auto justSet = this_component::testAndSetThreadLocalInstance(this);
+  CallOnExit deinit = [justSet] {
+    this_component::clearTLInstanceIfSet(justSet);
+  };
+
+  while (d_->pendingExecutions.waitUntil(exc, deadline)) {
+    try {
+      invoke(exc);
+    } catch (const std::exception &e) {
+      MAF_LOGGER_FATAL("EXCEPTION when executing pending execution: ",
+                       e.what());
+      throw;
+    }
+  }
+}
+
 void Component::stop() {
-  if (!d_->pendingExecutions.isClosed()) {
+  if (!stopped()) {
     d_->closeAndClearExecutionsQueue();
     leaveRoutingIfNotAnonymous(shared_from_this());
   }
 }
 
+bool Component::stopped() const { return d_->pendingExecutions.isClosed(); }
+
 bool Component::post(Message msg) {
   using namespace std;
-  if (!d_->pendingExecutions.isClosed()) {
+  if (!stopped()) {
     auto &msgType = msg.type();
     if (auto handlers = d_->findHandlers(msgType)) {
       return execute([handlers = move(handlers), msg = move(msg)] {
@@ -233,7 +260,7 @@ bool Component::hasHandler(MessageID mid) const {
 
 bool Component::postAndWait(Message msg) {
   using namespace std;
-  if (!d_->pendingExecutions.isClosed()) {
+  if (!stopped()) {
     auto &msgType = msg.type();
     if (auto handlers = d_->findHandlers(msgType)) {
       if (id() == this_component::id()) {
@@ -266,7 +293,7 @@ bool Component::postAndWait(Message msg) {
 
 bool Component::execute(Execution exec) {
   using namespace std;
-  if (!d_->pendingExecutions.isClosed()) {
+  if (!stopped()) {
     try {
       d_->pendingExecutions.push(make_unique<Execution>(move(exec)));
       return true;
@@ -281,7 +308,7 @@ bool Component::executeAndWait(Execution exec) {
   using namespace std;
   auto ret = false;
 
-  if (!d_->pendingExecutions.isClosed()) {
+  if (!stopped()) {
     if (id() == this_component::id()) {
       exec();
       return true;
@@ -336,7 +363,25 @@ void Component::unregisterAllHandlers(MessageID msgid) {
   d_->msgHandlersMap.atomic()->erase(msgid);
 }
 
-ComponentInstance this_component::instance() {
+size_t Component::pendingCout() const { return d_->pendingExecutions.size(); }
+
+namespace this_component {
+
+static bool testAndSetThreadLocalInstance(Component *inst) {
+  if (!instance_) {
+    instance_ = inst;
+    return true;
+  }
+  return false;
+}
+
+static void clearTLInstanceIfSet(bool set) {
+  if (set) {
+    instance_ = nullptr;
+  }
+}
+
+ComponentInstance instance() {
   if (instance_) {
     return instance_->shared_from_this();
   } else {
@@ -344,7 +389,7 @@ ComponentInstance this_component::instance() {
   }
 }
 
-std::weak_ptr<Component> this_component::ref() {
+std::weak_ptr<Component> ref() {
   if (instance_) {
     return instance_->weak_from_this();
   } else {
@@ -352,7 +397,7 @@ std::weak_ptr<Component> this_component::ref() {
   }
 }
 
-bool this_component::stop() {
+bool stop() {
   if (auto comp = instance()) {
     comp->stop();
     return true;
@@ -360,37 +405,43 @@ bool this_component::stop() {
   return false;
 }
 
-bool this_component::post(Message msg) {
+bool stopped() {
+  if (auto comp = instance()) {
+    return comp->stopped();
+  }
+  return false;
+}
+bool post(Message msg) {
   if (auto comp = instance()) {
     return comp->post(std::move(msg));
   }
   return false;
 }
 
-Component::Executor this_component::getExecutor() {
+Component::Executor getExecutor() {
   if (auto comp = instance()) {
     return comp->getExecutor();
   }
   return {};
 }
 
-const ComponentID &this_component::id() {
+const ComponentID &id() {
   if (auto comp = instance()) {
     return comp->id();
   }
   return emptyComponentID();
 }
 
-void this_component::unregisterHandler(const HandlerRegID &regid) {
+void unregisterHandler(const HandlerRegID &regid) {
   if (auto comp = instance()) {
     comp->unregisterHandler(regid);
   }
 }
-void this_component::unregisterAllHandlers(const MessageID &regid) {
+void unregisterAllHandlers(const MessageID &regid) {
   if (auto comp = instance()) {
     comp->unregisterAllHandlers(regid);
   }
 }
-
+}  // namespace this_component
 }  // namespace messaging
 }  // namespace maf

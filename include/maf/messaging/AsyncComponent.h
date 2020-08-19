@@ -13,6 +13,7 @@ class AsyncComponent {
   using StoppedSignal = std::future<void>;
   using Timeout = std::chrono::milliseconds;
 
+  AsyncComponent() = default;
   AsyncComponent(ComponentInstance comp) : instance_{std::move(comp)} {}
 
   AsyncComponent(AsyncComponent &&) = default;

@@ -23,7 +23,10 @@ class Component final : pattern::Unasignable,
   MAF_EXPORT const ComponentID &id() const noexcept;
   MAF_EXPORT void run(ThreadFunction threadInit = {},
                       ThreadFunction threadDeinit = {});
+  MAF_EXPORT void runFor(ExecutionTimeout duration);
+  MAF_EXPORT void runUntil(ExecutionDeadline deadline);
   MAF_EXPORT void stop();
+  MAF_EXPORT bool stopped() const;
   MAF_EXPORT bool post(Message msg);
   MAF_EXPORT bool hasHandler(MessageID mid) const;
   MAF_EXPORT bool postAndWait(Message msg);
@@ -34,6 +37,7 @@ class Component final : pattern::Unasignable,
                                                  MessageHandler onMessageFunc);
   MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
   MAF_EXPORT void unregisterAllHandlers(MessageID msgid);
+  MAF_EXPORT size_t pendingCout() const;
 
   template <class Msg>
   HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
@@ -51,6 +55,12 @@ class Component final : pattern::Unasignable,
     };
 
     return registerMessageHandler(msgid<Msg>(), std::move(translatorCallback));
+  }
+
+  template <class Msg>
+  HandlerRegID onMessage(DontCareMsgContentHandler f) {
+    return registerMessageHandler(msgid<Msg>(),
+                                  [f{std::move(f)}](const auto &) { f(); });
   }
 
   template <class Msg, typename... Args>
@@ -79,6 +89,7 @@ MAF_EXPORT std::shared_ptr<Component> instance();
 MAF_EXPORT std::weak_ptr<Component> ref();
 MAF_EXPORT const ComponentID &id();
 MAF_EXPORT bool stop();
+MAF_EXPORT bool stopped();
 MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
 MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);

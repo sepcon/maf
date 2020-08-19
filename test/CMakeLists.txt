@@ -25,6 +25,7 @@ macro(maf_add_test test_name)
 endmacro(maf_add_test)
 
 maf_add_test(component)
+maf_add_test(timer)
 maf_add_test(serialization)
 maf_add_test(stub_proxy)
 maf_add_test(message_routing)

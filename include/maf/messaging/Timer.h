@@ -1,11 +1,13 @@
 #pragma once
 
-#include "ExecutorIF.h"
-#include <chrono>
-#include <functional>
 #include <maf/export/MafExport_global.h>
 #include <maf/patterns/Patterns.h>
+
+#include <chrono>
+#include <functional>
 #include <memory>
+
+#include "ExecutorIF.h"
 
 namespace maf {
 namespace messaging {
@@ -13,7 +15,7 @@ namespace messaging {
 class Timer : public pattern::Unasignable {
   using ExecutorPtr = std::shared_ptr<ExecutorIF>;
 
-public:
+ public:
   typedef std::function<void()> TimeOutCallback;
   MAF_EXPORT Timer(bool cyclic = false);
   MAF_EXPORT ~Timer();
@@ -27,9 +29,9 @@ public:
   MAF_EXPORT bool running();
   MAF_EXPORT void setCyclic(bool cyclic = true);
 
-private:
-  std::unique_ptr<struct TimerDataPrv> d_;
+ private:
+  std::shared_ptr<struct TimerData> d_;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

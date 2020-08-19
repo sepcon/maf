@@ -36,8 +36,22 @@ class ThreadSafeQueue {
     }
   }
 
-  template <class std_chrono_duration>
-  bool waitFor(value_type &value, std_chrono_duration interval) {
+  template <class TimePoint>
+  bool waitUntil(value_type &value, const TimePoint &absTime) {
+    std::unique_lock lock(queue_);
+    if (!queueNotEmpty_.wait_until(
+            lock, absTime, [this] { return !queue_->empty() || isClosed(); })) {
+      return false;
+    } else if (!isClosed()) {
+      value = std::move(queue_->front());
+      queue_->pop();
+      return true;
+    }
+    return false;
+  }
+
+  template <class Duration>
+  bool waitFor(value_type &value, const Duration &interval) {
     std::unique_lock lock(queue_);
     if (!queueNotEmpty_.wait_for(lock, interval, [this] {
           return !queue_->empty() || isClosed();
