@@ -1,7 +1,7 @@
 #include <maf/ITCProxy.h>
 #include <maf/ITCStub.h>
 #include <maf/logging/Logger.h>
-#include <maf/messaging/AsyncComponent.h>
+#include <maf/messaging/ComponentEx.h>
 #include <maf/utils/TimeMeasurement.h>
 
 #include <iostream>
@@ -28,11 +28,11 @@ int main() {
   ServerComponent<itc::Stub> server{stub};
   auto asyncServer = AsyncComponent{server.instance()};
   std::vector<std::unique_ptr<ClientComponent<itc::Proxy>>> clients;
-  asyncServer.run();
+  asyncServer.launch();
 
-  auto clientComponent = ClientComponent{ proxy };
+  auto clientComponent = ClientComponent{proxy};
 
-  clientComponent.onMessage<EndOfRequestChainMsg>(
+  clientComponent->connect<EndOfRequestChainMsg>(
       [](auto) { this_component::stop(); });
 
   clientComponent.run();

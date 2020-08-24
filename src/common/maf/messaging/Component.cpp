@@ -46,7 +46,7 @@ class CallbackExecutor : public ExecutorIF {
 
 class Handlers {
  public:
-  using Handler = MessageHandler;
+  using Handler = MessageProcessingCallback;
   using HandlerList = std::forward_list<Handler>;
   using HandlerID = HandlerList::pointer;
   using HandlerIt = HandlerList::iterator;
@@ -116,8 +116,8 @@ struct ComponentDataPrv {
 
 static decltype(auto) invoke(const ExecutionUPtr &exc) { return (*exc)(); }
 
-static HandlerRegID makeRegID(Handlers::HandlerID hid, MessageID mid) {
-  return HandlerRegID{hid, mid};
+static ConnectionID makeRegID(Handlers::HandlerID hid, MessageID mid) {
+  return ConnectionID{hid, mid};
 }
 
 static const ComponentID &emptyComponentID() {
@@ -138,13 +138,13 @@ static bool isAnonymous(const ComponentID &id) {
 
 static void joinRoutingIfNotAnonymous(ComponentInstance comp) {
   if (!isAnonymous(comp->id())) {
-    Router::instance().addReceiver(comp);
+    Router::instance().addComponent(comp);
   }
 }
 
 static void leaveRoutingIfNotAnonymous(ComponentInstance comp) {
   if (!isAnonymous(comp->id())) {
-    Router::instance().removeReceiver(comp);
+    Router::instance().removeComponent(comp);
   }
 }
 
@@ -167,7 +167,7 @@ ComponentInstance Component::create(ComponentID id) {
   auto comp = ComponentInstance{new Component{std::move(id)}};
 
   if (willJoinRouting) {
-    if (Router::instance().findReceiver(comp->id())) {
+    if (Router::instance().findComponent(comp->id())) {
       comp.reset();
     }
   }
@@ -175,7 +175,7 @@ ComponentInstance Component::create(ComponentID id) {
 }
 
 ComponentInstance Component::findComponent(const ComponentID &id) {
-  return Router::instance().findReceiver(id);
+  return Router::instance().findComponent(id);
 }
 
 const ComponentID &Component::id() const noexcept { return d_->id; }
@@ -254,41 +254,32 @@ bool Component::post(Message msg) {
   return false;
 }
 
-bool Component::hasHandler(MessageID mid) const {
-  return d_->msgHandlersMap.atomic()->count(mid) > 0;
-}
-
-bool Component::postAndWait(Message msg) {
+Component::MessageHandledSignal Component::send(Message msg) {
   using namespace std;
+  MessageHandledSignal doneSignal;
   if (!stopped()) {
     auto &msgType = msg.type();
     if (auto handlers = d_->findHandlers(msgType)) {
-      if (id() == this_component::id()) {
-        handlers->handle(msg);
-        return true;
-      }
-      auto handlersInvoker = make_shared<packaged_task<void()>>(
+      auto msgHandlingTask = make_shared<packaged_task<void()>>(
           [handlers = move(handlers), msg = move(msg)] {
             handlers->handle(msg);
           });
 
-      auto handledEvent = handlersInvoker->get_future();
-      if (execute([msgHandler = move(handlersInvoker)] { (*msgHandler)(); })) {
-        try {
-          handledEvent.get();
-          return true;
-        } catch (const future_error &fe) {
-          MAF_LOGGER_WARN(
-              "Seems that the component that was asked for executing function "
-              "has been stopped, exception: ",
-              fe.what());
-        }
+      doneSignal = MessageHandledSignal{msgHandlingTask->get_future()};
+      if (this_component::id() != id()) {
+        execute([task{move(msgHandlingTask)}] { (*task)(); });
+      } else {
+        (*msgHandlingTask)();
       }
     } else {
       MAF_LOGGER_WARN("There's no handler for message ", msgType.name());
     }
   }
-  return false;
+  return doneSignal;
+}
+
+bool Component::connected(const MessageID &mid) const {
+  return d_->msgHandlersMap.atomic()->count(mid) > 0;
 }
 
 bool Component::execute(Execution exec) {
@@ -304,39 +295,12 @@ bool Component::execute(Execution exec) {
   return false;
 }
 
-bool Component::executeAndWait(Execution exec) {
-  using namespace std;
-  auto ret = false;
-
-  if (!stopped()) {
-    if (id() == this_component::id()) {
-      exec();
-      return true;
-    }
-    auto task = make_shared<packaged_task<void()>>(move(exec));
-    auto ft = task->get_future();
-    if (execute([task = move(task)] { (*task)(); })) {
-      try {
-        ft.get();
-        ret = true;
-      } catch (const future_error &fe) {
-        MAF_LOGGER_WARN(
-            "Seems that the component that was asked for executing function "
-            "has been stopped, exception: ",
-            fe.what());
-      }
-    }
-  }
-
-  return ret;
-}
-
 Component::Executor Component::getExecutor() {
   return std::make_shared<CallbackExecutor>(weak_from_this());
 }
 
-HandlerRegID Component::registerMessageHandler(MessageID msgid,
-                                               MessageHandler handler) {
+ConnectionID Component::connect(const MessageID &msgid,
+                                MessageProcessingCallback processMessage) {
   using namespace std;
   lock_guard lock(d_->msgHandlersMap);
   auto &handlers = (*d_->msgHandlersMap)[msgid];
@@ -344,10 +308,10 @@ HandlerRegID Component::registerMessageHandler(MessageID msgid,
     handlers = make_shared<Handlers>();
   }
 
-  return makeRegID(handlers->add(move(handler)), msgid);
+  return makeRegID(handlers->add(move(processMessage)), msgid);
 }
 
-void Component::unregisterHandler(const HandlerRegID &regid) {
+void Component::disconnect(const ConnectionID &regid) {
   std::lock_guard lock(d_->msgHandlersMap);
   if (auto itHandlers = d_->msgHandlersMap->find(regid.mid_);
       itHandlers != d_->msgHandlersMap->end()) {
@@ -359,7 +323,7 @@ void Component::unregisterHandler(const HandlerRegID &regid) {
   }
 }
 
-void Component::unregisterAllHandlers(MessageID msgid) {
+void Component::disconnect(const MessageID &msgid) {
   d_->msgHandlersMap.atomic()->erase(msgid);
 }
 
@@ -432,14 +396,14 @@ const ComponentID &id() {
   return emptyComponentID();
 }
 
-void unregisterHandler(const HandlerRegID &regid) {
+void disconnect(const ConnectionID &regid) {
   if (auto comp = instance()) {
-    comp->unregisterHandler(regid);
+    comp->disconnect(regid);
   }
 }
-void unregisterAllHandlers(const MessageID &regid) {
+void disconnect(const MessageID &regid) {
   if (auto comp = instance()) {
-    comp->unregisterAllHandlers(regid);
+    comp->disconnect(regid);
   }
 }
 }  // namespace this_component

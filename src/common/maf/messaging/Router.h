@@ -10,48 +10,49 @@
 
 namespace maf {
 namespace messaging {
-namespace impl {
+namespace details {
 using namespace routing;
 
-struct ReceiverCompare {
+struct ComponentCompare {
   typedef int is_transparent;
-  bool operator()(const ReceiverInstance &r1,
-                  const ReceiverInstance &r2) const {
+  bool operator()(const ComponentInstance &r1,
+                  const ComponentInstance &r2) const {
     return r1 != r2 && r1->id() < r2->id();
   }
 
-  bool operator()(const ReceiverInstance &r, const ReceiverID &id) const {
+  bool operator()(const ComponentInstance &r, const ComponentID &id) const {
     return r->id() < id;
   }
 
-  bool operator()(const ReceiverID &id, const ReceiverInstance &r) const {
+  bool operator()(const ComponentID &id, const ComponentInstance &r) const {
     return id < r->id();
   }
 };
 
-using Receivers = std::set<ReceiverInstance, ReceiverCompare>;
+using Components = std::set<ComponentInstance, ComponentCompare>;
 
 class Router : public pattern::SingletonObject<Router> {
  public:
   Router(Invisible) noexcept {}
-  bool routeMessage(const ReceiverID &receiverID, Message &&msg);
-  bool routeExecution(const ReceiverID &receiverID, Execution exc);
-  bool routeMessageAndWait(const ReceiverID &receiverID, Message &&msg);
-  bool routeAndWaitExecution(const ReceiverID &receiverID, Execution exc);
-  bool broadcast(const Message &msg);
-  ReceiverInstance findReceiver(const ReceiverID &id) const;
-  bool addReceiver(ReceiverInstance receiver);
-  bool removeReceiver(const ReceiverInstance &receiver);
+  bool postMsg(const ComponentID &componentID, Message &&msg);
+  Component::MessageHandledSignal sendMsg(const ComponentID &componentID,
+                                          Message msg);
+  bool postMsg(const Message &msg);
+  Component::MessageHandledSignal sendMsg(const Message &msg);
+
+  ComponentInstance findComponent(const ComponentID &id) const;
+  bool addComponent(ComponentInstance comp);
+  bool removeComponent(const ComponentInstance &comp);
 
  private:
-  using AtomicReceivers = threading::Lockable<Receivers, std::mutex>;
+  using AtomicComponents = threading::Lockable<Components, std::mutex>;
 
-  AtomicReceivers receivers_;
+  AtomicComponents components_;
 };
 
-}  // namespace impl
+}  // namespace details
 
-using impl::Router;
+using details::Router;
 
 }  // namespace messaging
 }  // namespace maf

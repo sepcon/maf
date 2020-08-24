@@ -107,7 +107,8 @@ class ThreadSafeQueue {
   bool isClosed() const { return closed_.load(std::memory_order_acquire); }
 
   void clear(ApplyAction onClearCallback = nullptr) {
-    std::lock_guard lock(queue_);
+    using namespace std;
+    lock_guard lock(queue_);
     if (onClearCallback) {
       while (!queue_->empty()) {
         auto v = std::move(queue_->front());
@@ -115,9 +116,7 @@ class ThreadSafeQueue {
         queue_->pop();
       }
     } else {
-      while (!queue_->empty()) {
-        queue_->pop();
-      }
+      *queue_ = {};
     }
   }
 

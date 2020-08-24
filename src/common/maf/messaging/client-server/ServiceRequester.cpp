@@ -1,9 +1,9 @@
 #include "ServiceRequester.h"
 
 #include <maf/logging/Logger.h>
-#include <maf/messaging/Exceptions.h>
 #include <maf/messaging/client-server/CSError.h>
 #include <maf/messaging/client-server/ClientIF.h>
+#include <maf/messaging/client-server/Exceptions.h>
 #include <maf/utils/Pointers.h>
 
 #define SET_ERROR_AND_RETURN_IF(condition, pErrorStore, errorValue, \

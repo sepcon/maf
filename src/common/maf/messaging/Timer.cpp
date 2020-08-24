@@ -94,7 +94,7 @@ struct TimerMgr {
   decltype(auto) end() const { return std::end(records_); }
 };
 
-static TimerMgr& recMgr() {
+static TimerMgr& mgr() {
   static thread_local TimerMgr _;
   return _;
 }
@@ -114,7 +114,7 @@ void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
   } else {
     if (auto comp = this_component::instance()) {
       d_->reset(move(callback), move(executor), interval, d_->cyclic);
-      recMgr().start(d_);
+      mgr().start(d_);
     }
   }
 }
@@ -122,8 +122,8 @@ void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
 void Timer::restart() {
   if (auto comp = this_component::instance()) {
     if (d_->running) {
-      recMgr().restart(d_);
-      recMgr().interruptCurrentTimer(comp);
+      mgr().restart(d_);
+      mgr().interruptCurrentTimer(comp);
     }
   }
 }
@@ -132,8 +132,8 @@ void Timer::stop() {
   if (d_->running) {
     d_->running = false;
     if (auto comp = this_component::instance()) {
-      recMgr().remove(d_);
-      recMgr().interruptCurrentTimer(comp);
+      mgr().remove(d_);
+      mgr().interruptCurrentTimer(comp);
     }
   }
 }
@@ -159,6 +159,7 @@ void TimerMgr::refresh() {
 void TimerMgr::runAllTimers() {
   util::CallOnExit onExit = [this] { cleanup(); };
   setRunningOnThisThread();
+  auto comp = this_component::instance();
   do {
     auto timer = getShortestTimer();
     if (!timer) {
@@ -166,7 +167,6 @@ void TimerMgr::runAllTimers() {
     }
 
     try {
-      auto comp = this_component::instance();
       if (!timer->expired()) {
         comp->runUntil(timer->deadline);
         if (!timer->expired()) {

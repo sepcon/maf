@@ -154,26 +154,26 @@ class Tester {
 
     serviceStatusSignal(proxy)->waitIfNot(Availability::Available);
 
-    MAF_TEST_CASE_BEGIN(service_status) {
-      MAF_TEST_EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) ==
+    TEST_CASE_B(service_status) {
+      EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) ==
                       std::future_status::ready);
-      MAF_TEST_EXPECT(serviceStatus == Availability::Available);
+      EXPECT(serviceStatus == Availability::Available);
     }
-    MAF_TEST_CASE_END(service_status)
+    TEST_CASE_E(service_status)
 
-    MAF_TEST_CASE_BEGIN(request_response_string) {
+    TEST_CASE_B(request_response_string) {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"Hello world"};
       auto response = proxy->template sendRequest<string_request::output>(
           string_request::make_input(inputString));
       // 2. Confirm having output
-      MAF_TEST_EXPECT(response.isOutput());
+      EXPECT(response.isOutput());
       // 3. Confirm response's output == inputString
-      MAF_TEST_EXPECT(response.getOutput()->get_string_output() == inputString);
+      EXPECT(response.getOutput()->get_string_output() == inputString);
     }
-    MAF_TEST_CASE_END(String_request_response)
+    TEST_CASE_E(String_request_response)
 
-    MAF_TEST_CASE_BEGIN(request_response_vector) {
+    TEST_CASE_B(request_response_vector) {
       auto ints = std::vector<int>{1, 2, 3};
       auto expectedStrings = std::vector<std::string>{};
       std::transform(std::begin(ints), std::end(ints),
@@ -185,14 +185,14 @@ class Tester {
           proxy->template sendRequest<convert_ints_2_strings_request::output>(
               convert_ints_2_strings_request::make_input(std::move(ints)));
       // 2. Confirm having output
-      MAF_TEST_EXPECT(response.isOutput());
+      EXPECT(response.isOutput());
 
       // 3. Confirm response's output == expectedStrings
-      MAF_TEST_EXPECT(response.getOutput()->get_sints() == expectedStrings);
+      EXPECT(response.getOutput()->get_sints() == expectedStrings);
     }
-    MAF_TEST_CASE_END(request_response_vector)
+    TEST_CASE_E(request_response_vector)
 
-    MAF_TEST_CASE_BEGIN(request_response_map_string_2_vector) {
+    TEST_CASE_B(request_response_map_string_2_vector) {
       map_string_vector_2_string_request::the_map themap = {
           {"one two three", {1, 2, 3}}, {"four five six", {4, 5, 6}}};
 
@@ -206,28 +206,28 @@ class Tester {
       auto response = proxy->template sendRequest<
           map_string_vector_2_string_request::output>(input);
       // 2. Confirm having output
-      MAF_TEST_EXPECT(response.isOutput());
+      EXPECT(response.isOutput());
 
       // 3. Confirm response's output == expectedResponseString
-      MAF_TEST_EXPECT(response.getOutput()->get_map_as_string() ==
+      EXPECT(response.getOutput()->get_map_as_string() ==
                       input->dump());
     }
-    MAF_TEST_CASE_END(request_response_map_string_2_vector)
+    TEST_CASE_E(request_response_map_string_2_vector)
 
-    MAF_TEST_CASE_BEGIN(request_but_failed_to_response) {
+    TEST_CASE_B(request_but_failed_to_response) {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"ignore_me"};
       auto response = proxy->template sendRequest<string_request::output>(
           string_request::make_input(inputString));
       // 2. Confirm having output
-      MAF_TEST_EXPECT(response.isError());
+      EXPECT(response.isError());
       // 3. Confirm response's output == inputString
-      MAF_TEST_EXPECT(response.getError()->code() ==
+      EXPECT(response.getError()->code() ==
                       CSErrorCode::ResponseIgnored);
     }
-    MAF_TEST_CASE_END(request_but_failed_to_response)
+    TEST_CASE_E(request_but_failed_to_response)
 
-    MAF_TEST_CASE_BEGIN(abort_request) {
+    TEST_CASE_B(abort_request) {
       bool aborted = false;
       auto requestComeEventSource = std::make_shared<std::promise<void>>();
       auto requestComeEvent = requestComeEventSource->get_future();
@@ -248,29 +248,29 @@ class Tester {
       auto regid = proxy->template sendRequestAsync<to_be_aborted_request>(
           [&gotResponse](auto) { gotResponse = true; });
 
-      MAF_TEST_EXPECT(requestComeEvent.wait_for(10ms) ==
+      EXPECT(requestComeEvent.wait_for(10ms) ==
                       std::future_status::ready);
 
-      MAF_TEST_EXPECT(aborted == false);
+      EXPECT(aborted == false);
 
       proxy->abortRequest(regid);
       std::this_thread::sleep_for(1ms);
 
-      MAF_TEST_EXPECT(aborted == true);
+      EXPECT(aborted == true);
 
       // After aborted expect that the Request<to_be_aborted_request> cant
       // respond anymore
-      MAF_TEST_EXPECT(requestHolder->respond() ==
+      EXPECT(requestHolder->respond() ==
                       ActionCallStatus::InvalidCall);
 
       //        std::this_thread::sleep_for(1ms);
 
       // Due to request is aborted, then gotResponse will never meet
-      MAF_TEST_EXPECT(gotResponse == false);
+      EXPECT(gotResponse == false);
     }
-    MAF_TEST_CASE_END(abort_request)
+    TEST_CASE_E(abort_request)
 
-    MAF_TEST_CASE_BEGIN(broad_cast_status_signal) {
+    TEST_CASE_B(broad_cast_status_signal) {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"ignore_me"};
       server_notify_signal::DetailsMap details = {{"key", "value"},
@@ -291,9 +291,9 @@ class Tester {
 
       stub->broadcastSignal(sentAttribute);
 
-      MAF_TEST_EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
+      EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
                       std::future_status::ready)
-      MAF_TEST_EXPECT(receivedAttributeFuture.get() == *sentAttribute);
+      EXPECT(receivedAttributeFuture.get() == *sentAttribute);
 
       proxy->unregister(regid);
 
@@ -324,7 +324,7 @@ class Tester {
       for (size_t i = 0; i < MAX_REGISTERS - 1; ++i) {
         auto& regIDi = std::get<0>(propertyRegs[i]);
         auto& regIDi1 = std::get<0>(propertyRegs[i + 1]);
-        MAF_TEST_EXPECT(regIDi != regIDi1);
+        EXPECT(regIDi != regIDi1);
       }
 
       // wait for signal register comes to server
@@ -335,9 +335,9 @@ class Tester {
 
       for (auto& [regID, propFuture] : propertyRegs) {
         do {
-          MAF_TEST_EXPECT(propFuture.wait_for(100ms) ==
+          EXPECT(propFuture.wait_for(100ms) ==
                           std::future_status::ready)
-          MAF_TEST_EXPECT(propFuture.get() == *sentStatus);
+          EXPECT(propFuture.get() == *sentStatus);
         } while (false);
         proxy->unregister(regID);
       }
@@ -347,13 +347,13 @@ class Tester {
 
       auto getBackedStatus =
           stub_->template getStatus<some_string_property::status>();
-      MAF_TEST_EXPECT(getBackedStatus && *getBackedStatus == *sentStatus);
+      EXPECT(getBackedStatus && *getBackedStatus == *sentStatus);
 
       auto gotStatus =
           proxy->template getStatus<some_string_property::status>();
-      MAF_TEST_EXPECT(gotStatus)
+      EXPECT(gotStatus)
       maf::test::log_rec() << gotStatus->dump();
-      MAF_TEST_EXPECT(*gotStatus == *sentStatus)
+      EXPECT(*gotStatus == *sentStatus)
 
       std::set<std::string> statusesToUpdate = {"1", "2", "3", "4", "5"};
       maf::threading::AtomicObject<std::set<std::string>> updatedStatuses;
@@ -375,25 +375,25 @@ class Tester {
         std::this_thread::sleep_for(1ms);
       }
 
-      MAF_TEST_EXPECT(getAllSignal.wait_for(10ms) == std::future_status::ready);
-      MAF_TEST_EXPECT(statusesToUpdate == updatedStatuses.lockee());
+      EXPECT(getAllSignal.wait_for(10ms) == std::future_status::ready);
+      EXPECT(statusesToUpdate == updatedStatuses.lockee());
     }
-    MAF_TEST_CASE_END(broad_cast_status_signal)
+    TEST_CASE_E(broad_cast_status_signal)
 
     auto callstatus = ActionCallStatus{};
     auto response =
         proxy->template sendRequest<no_response_request>(&callstatus);
 
-    MAF_TEST_CASE_BEGIN(stopable_sync_request) {
-      MAF_TEST_EXPECT(callstatus == ActionCallStatus::ActionBroken);
+    TEST_CASE_B(stopable_sync_request) {
+      EXPECT(callstatus == ActionCallStatus::ActionBroken);
     }
 
-    MAF_TEST_CASE_END(stopable_sync_request)
+    TEST_CASE_E(stopable_sync_request)
 
-    MAF_TEST_CASE_BEGIN(service_status) {
-      MAF_TEST_EXPECT(serviceStatus == Availability::Unavailable);
+    TEST_CASE_B(service_status) {
+      EXPECT(serviceStatus == Availability::Unavailable);
     }
-    MAF_TEST_CASE_END(service_status)
+    TEST_CASE_E(service_status)
   }
 
  private:

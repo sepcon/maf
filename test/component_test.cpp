@@ -1,8 +1,11 @@
-#include <maf/messaging/AsyncComponent.h>
 #include <maf/messaging/Component.h>
-#include <maf/messaging/MessageHandlerManager.h>
+#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ComponentRequest.h>
+#include <maf/messaging/MessageHandler.h>
+#include <maf/messaging/Routing.h>
 #include <maf/utils/TimeMeasurement.h>
 
+#include <cstring>
 #include <map>
 
 #include "test.h"
@@ -44,11 +47,11 @@ static void postingMessages() {
   auto mainComponent = Component::create("main");
 
   for (auto consumerComp : consumerComponents) {
-    consumerComp->onMessage<program_start_msg>([producerComp](auto) {
+    consumerComp->connect<program_start_msg>([producerComp](auto) {
       producerComp->post(data_convert_req_msg{this_component::instance(), "0"});
     });
 
-    consumerComp->onMessage<data_produced_msg>(
+    consumerComp->connect<data_produced_msg>(
         [producerComp, mainComponent](data_produced_msg msg) {
           static thread_local int currentInteger = range_begin;
           total += msg.integer;
@@ -60,7 +63,7 @@ static void postingMessages() {
           }
         });
 
-    consumerComp->onMessage<program_end_msg>([mainComponent](auto) {
+    consumerComp->connect<program_end_msg>([mainComponent](auto) {
       auto currentComponent = this_component::instance();
       mainComponent->post(data_sum_msg{currentComponent->id(), total});
       this_component::stop();
@@ -69,11 +72,11 @@ static void postingMessages() {
     consumerComp->post(program_start_msg{});
   }
 
-  producerComp->onMessage<data_convert_req_msg>([](data_convert_req_msg msg) {
+  producerComp->connect<data_convert_req_msg>([](data_convert_req_msg msg) {
     msg.requester->post(data_produced_msg{std::stoi(msg.integer_string)});
   });
 
-  mainComponent->onMessage<cal_sume_done_msg>([&consumerComponents](auto) {
+  mainComponent->connect<cal_sume_done_msg>([&consumerComponents](auto) {
     static size_t totalConsumerDone = 0;
     if (++totalConsumerDone == consumerComponents.size()) {
       for (auto consumer : consumerComponents) {
@@ -82,7 +85,7 @@ static void postingMessages() {
     }
   });
 
-  mainComponent->onMessage<data_sum_msg>(
+  mainComponent->connect<data_sum_msg>(
       [totalMsgCount = consumerComponents.size()](data_sum_msg msg) {
         static size_t totalMsgCame = 0;
         sum_of_all_consumers += msg.sum;
@@ -93,10 +96,10 @@ static void postingMessages() {
 
   auto stopSignals = std::vector<AsyncComponent::StoppedSignal>{};
 
-  stopSignals.emplace_back(AsyncComponent::runAsync(producerComp));
+  stopSignals.emplace_back(AsyncComponent::launchComponent(producerComp));
 
   for (auto& consumer : consumerComponents) {
-    stopSignals.emplace_back(AsyncComponent::runAsync(consumer));
+    stopSignals.emplace_back(AsyncComponent::launchComponent(consumer));
   }
 
   mainComponent->run();
@@ -104,103 +107,186 @@ static void postingMessages() {
 }
 
 void testPostingMessages() {
-  MAF_TEST_CASE_BEGIN(tes_with_range_1_1000) {
+  TEST_CASE_B(tes_with_range_1_1000) {
     range_begin = 1;
     range_end = 1000;
     postingMessages();
-    MAF_TEST_EXPECT(sum_of_all_consumers == (range_end * (range_end + 1)))
+    EXPECT(sum_of_all_consumers == (range_end * (range_end + 1)))
   }
-  MAF_TEST_CASE_END()
+  TEST_CASE_E()
 }
 
-void testSyncExecution() {
+void messageHandlerTest() {
+  using namespace std;
+  struct StringRequest {};
+  struct SomeMsg {};
+
+  struct HasParamMsg {
+    int i;
+    string s;
+    double d;
+  };
+
+  AsyncComponent c = Component::create();
+  c.launch();
+  ComponentRequestSync<string, StringRequest> request(c.instance());
+  ComponentRequestSync<void, HasParamMsg> hasParamRequest(c.instance());
+
+  TEST_CASE_B(send_with_param) {
+    HasParamMsg TestMsg = {1, "hello", 1.00};
+    auto equal = false;
+    RequestHandler<void, HasParamMsg> handler(c.instance());
+    handler.connect([&TestMsg, &equal](const HasParamMsg& msg) {
+      equal = msg.i == TestMsg.i && msg.s == TestMsg.s && msg.d == TestMsg.d;
+    });
+
+    hasParamRequest.send(TestMsg.i, TestMsg.s, TestMsg.d).wait();
+    EXPECT(equal);
+  }
+  TEST_CASE_E(send_with_param)
+
+  TEST_CASE_B(msg_handler) {
+    {
+      auto msgHandled = false;
+      MessageHandler<SomeMsg> someMsgHandler{c.instance()};
+      someMsgHandler.connect([&msgHandled] { msgHandled = true; });
+      c->send<SomeMsg>().wait();
+      EXPECT(msgHandled);
+    }
+    auto msgHandledSignal = c->send<SomeMsg>();
+    // invalid due to request has already disconnected when handler goes out of
+    // scope
+    EXPECT(!msgHandledSignal.valid());
+  }
+  TEST_CASE_E(msg_handler)
+
+  TEST_CASE_B(request_handler) {
+    {
+      const auto TestString = "This is test string";
+      RequestHandler<string, StringRequest> stringRequestHandler{c.instance()};
+      stringRequestHandler.connect([TestString](auto) { return TestString; });
+
+      auto duplicateConnection = false;
+      try {
+        stringRequestHandler.connect([](auto) { return ""; });
+      } catch (const DuplicateHandlerEx&) {
+        duplicateConnection = true;
+      }
+
+      auto ret = request.send().get();
+      EXPECT(duplicateConnection);
+
+      EXPECT(ret.has_value() && ret.value() == TestString);
+    }
+
+    auto upcoming = request.send();
+    // invalid due to request has already disconnected when handler goes out of
+    // scope
+    EXPECT(!upcoming.valid());
+  }
+  TEST_CASE_E(request_handler)
+}
+void requestTest() {
   using namespace std;
   using namespace std::chrono_literals;
   struct waitable_msg {};
   auto msgHandled = false;
 
-  AsyncComponent logicComponent = Component::create("logic");
-  logicComponent.run();
+  AsyncComponent logic = Component::create("logic");
+  RequestHandlerGroup requestHandlers{logic.instance()};
+
+  auto voidRequest = ComponentRequestSync<void, waitable_msg>{logic.instance()};
+  auto intRequest = ComponentRequestSync<int, waitable_msg>{logic.instance()};
+
+  logic.launch({});
 
   static constexpr auto WAIT_TIME = 1ms;
   {
     TimeMeasurement tm([](auto elapsedUS) {
-      MAF_TEST_CASE_BEGIN(sync_execute) {
-        MAF_TEST_EXPECT(elapsedUS > WAIT_TIME);
-      }
-      MAF_TEST_CASE_END(sync_execute)
+      TEST_CASE_B(sync_execute) { EXPECT(elapsedUS > WAIT_TIME); }
+      TEST_CASE_E(sync_execute)
     });
 
-    logicComponent.instance()->executeAndWait(
-        [] { this_thread::sleep_for(WAIT_TIME); });
+    requestHandlers.connect<waitable_msg>(
+        [](waitable_msg) { this_thread::sleep_for(WAIT_TIME); });
+
+    voidRequest.send(waitable_msg{}).wait();
+    requestHandlers.disconnect();
   }
 
-  MAF_TEST_CASE_BEGIN(post_sync_message) {
-    logicComponent.instance()->onMessage<waitable_msg>(
-        [&msgHandled](const auto&) {
+  TEST_CASE_B(sync_request) {
+    requestHandlers.connect<waitable_msg>(
+        [&msgHandled, &requestHandlers](const auto&) {
           this_thread::sleep_for(1ms);
           msgHandled = true;
-          this_component::unregisterAllHandlers<waitable_msg>();
+          requestHandlers.disconnect();
         });
+    auto upcoming = voidRequest.send(waitable_msg{});
 
-    MAF_TEST_EXPECT(logicComponent.instance()->postAndWait<waitable_msg>());
-    MAF_TEST_EXPECT(msgHandled);
+    EXPECT(upcoming.valid());
+    upcoming.get();
+    EXPECT(msgHandled);
   }
-  MAF_TEST_CASE_END(post_sync_message)
+  TEST_CASE_E(sync_request)
 
-  MAF_TEST_CASE_BEGIN(sync_execute_with_exception) {
-    bool caughtException = false;
+  TEST_CASE_B(async_request) {
+    auto outputSource = promise<string>{};
+    auto outputSink = outputSource.get_future();
+    static const auto teststring = string{"hello world"};
+    requestHandlers.connect<waitable_msg>([](auto) { return teststring; });
+
+    auto asyncRequest =
+        ComponentRequestAsync<string, waitable_msg>(logic.instance());
+    asyncRequest.send(
+        waitable_msg{},
+        [&outputSource](string output) {
+          outputSource.set_value(move(output));
+        },
+        logic->getExecutor());
+
+    EXPECT(outputSink.valid());
+    outputSink.wait_for(10ms);
     try {
-      logicComponent.instance()->executeAndWait([] { throw 1; });
-    } catch (int) {
-      caughtException = true;
+      EXPECT(outputSink.get() == teststring);
+    } catch (...) {
     }
-
-    MAF_TEST_EXPECT(caughtException);
+    requestHandlers.disconnect();
   }
-  MAF_TEST_CASE_END(sync_execute_with_exception)
+  TEST_CASE_E(async_request)
 
-  MAF_TEST_CASE_BEGIN(non_block_posting_wait_from_this_component) {
-    auto firedCount = 0;
-    logicComponent.instance()->onMessage<waitable_msg>(
-        [&firedCount](const auto&) {
-          firedCount++;
-          if (firedCount < 2) {
-            this_component::instance()->postAndWait(waitable_msg{});
-            this_component::unregisterAllHandlers<waitable_msg>();
-          }
-        });
+  TEST_CASE_B(stop_async_component) {
+    requestHandlers.connect<waitable_msg>([](auto) {
+      maf::test::log_rec() << "This will never show!";
+      return 1;
+    });
 
-    logicComponent.instance()->postAndWait(waitable_msg{});
-    MAF_TEST_EXPECT(firedCount == 2);
-  }
-  MAF_TEST_CASE_END(non_block_posting_wait_from_this_component)
-  MAF_TEST_CASE_BEGIN(stop_async_component) {
-    logicComponent.instance()->execute([] {
+    logic->execute([] {
       std::this_thread::sleep_for(3ms);
       this_component::stop();
     });
 
-    auto success = logicComponent.instance()->executeAndWait(
-        [] { maf::test::log_rec() << "This will never show!"; });
+    auto upcomingInt = intRequest.send(waitable_msg{});
 
-    MAF_TEST_EXPECT(!success);
+    EXPECT(upcomingInt.valid());
+    EXPECT(!upcomingInt.get().has_value());
+
+    requestHandlers.disconnect();
 
     auto fired = false;
-    logicComponent.instance()->onMessage<waitable_msg>([&fired](const auto&) {
+    logic->connect<waitable_msg>([&fired](const auto&) {
       fired = true;
       this_thread::sleep_for(100000h);
     });
 
-    success = logicComponent.instance()->postAndWait<waitable_msg>();
+    auto upcoming = voidRequest.send(waitable_msg{});
 
-    MAF_TEST_EXPECT(!success);
-    MAF_TEST_EXPECT(!fired);
+    EXPECT(!upcoming.valid());
+    EXPECT(!fired);
 
-    logicComponent.wait();
-    MAF_TEST_EXPECT(!logicComponent.running())
+    logic.wait();
+    EXPECT(!logic.running())
   }
-  MAF_TEST_CASE_END(stop_async_component)
+  TEST_CASE_E(stop_async_component)
 }
 
 void testRegisterUnregisterHandlers() {
@@ -208,24 +294,24 @@ void testRegisterUnregisterHandlers() {
 
   static std::map<int, int> num2countMap;
 
-  auto reg1 = c->onMessage<int>([](int x) { num2countMap[x]++; });
-  auto reg2 = c->onMessage<int>([](int x) { num2countMap[x]++; });
-  auto reg3 = c->onMessage<int>([](int x) { num2countMap[x]++; });
+  auto reg1 = c->connect<int>([](int x) { num2countMap[x]++; });
+  auto reg2 = c->connect<int>([](int x) { num2countMap[x]++; });
+  auto reg3 = c->connect<int>([](int x) { num2countMap[x]++; });
 
-  HandlerRegID reg4;
-  reg4 = c->onMessage<int>([&](int x) {
+  ConnectionID reg4;
+  reg4 = c->connect<int>([&](int x) {
     num2countMap[x]++;
     switch (x) {
       case 1:
-        this_component::instance()->unregisterHandler(reg1);
+        this_component::instance()->disconnect(reg1);
         this_component::post(2);
         break;
       case 2:
-        this_component::instance()->unregisterHandler(reg2);
+        this_component::instance()->disconnect(reg2);
         this_component::post(3);
         break;
       case 3:
-        this_component::instance()->unregisterHandler(reg3);
+        this_component::instance()->disconnect(reg3);
         this_component::post(4);
         break;
       case 4:
@@ -239,45 +325,45 @@ void testRegisterUnregisterHandlers() {
 
   c->run([] { this_component::post(1); });
 
-  MAF_TEST_CASE_BEGIN(register_unregister) {
-    MAF_TEST_EXPECT(num2countMap[1] == 4);
-    MAF_TEST_EXPECT(num2countMap[2] == 3);
-    MAF_TEST_EXPECT(num2countMap[3] == 2);
-    MAF_TEST_EXPECT(num2countMap[4] == 1);
-    MAF_TEST_EXPECT(num2countMap[5] == 0);
+  TEST_CASE_B(register_unregister) {
+    EXPECT(num2countMap[1] == 4);
+    EXPECT(num2countMap[2] == 3);
+    EXPECT(num2countMap[3] == 2);
+    EXPECT(num2countMap[4] == 1);
+    EXPECT(num2countMap[5] == 0);
   }
-  MAF_TEST_CASE_END(register_unregister)
+  TEST_CASE_E(register_unregister)
 }
 
 void testAutoUnregister() {
   using namespace std;
   auto comp = Component::create();
-  auto handlersMgr = new MessageHandlerManager{comp};
+  auto handlersMgr = new MessageHandlerGroup{comp};
 
   static map<int, int> i2count;
   static map<long, int> ld2count;
   static map<double, int> lf2count;
   static map<string, int> s2count;
 
-  handlersMgr->onMessage<int>([](int x) { i2count[x]++; })
-      .onMessage<int>([](int x) { i2count[x]++; })
-      .onMessage<string>([](const string& s) { s2count[s]++; })
-      .onMessage<string>([](const string& s) { s2count[s]++; })
-      .onMessage<double>([](const double d) { lf2count[d]++; })
-      .onMessage<long>([](const long l) { ld2count[l]++; })
-      .onMessage<long>([](const long l) { ld2count[l]++; });
+  handlersMgr->connect<int>([](int x) { i2count[x]++; })
+      .connect<int>([](int x) { i2count[x]++; })
+      .connect<string>([](const string& s) { s2count[s]++; })
+      .connect<string>([](const string& s) { s2count[s]++; })
+      .connect<double>([](const double d) { lf2count[d]++; })
+      .connect<long>([](const long l) { ld2count[l]++; })
+      .connect<long>([](const long l) { ld2count[l]++; });
 
-  comp->onMessage<string>([handlersMgr](const string& s) {
+  comp->connect<string>([handlersMgr](const string& s) {
     if (s == "unreg_s") {
-      handlersMgr->unregisterHandler<string>();
+      handlersMgr->disconnect<string>();
     } else if (s == "unreg_i") {
-      handlersMgr->unregisterHandler<int>();
+      handlersMgr->disconnect<int>();
     } else if (s == "unreg_all") {
       delete handlersMgr;  // delete to unreg all
     }
   });
 
-  comp->onMessage<string>([](const string& s) {
+  comp->connect<string>([](const string& s) {
     if (s == "quit") {
       this_component::stop();
     }
@@ -310,29 +396,87 @@ void testAutoUnregister() {
     this_component::post(string{"quit"});
   });
 
-  MAF_TEST_CASE_BEGIN(auto_unreg) {
-    MAF_TEST_EXPECT(i2count[1] == 2);
-    MAF_TEST_EXPECT(i2count[2] == 2);
-    MAF_TEST_EXPECT(ld2count[1] == 2);
-    MAF_TEST_EXPECT(ld2count[2] == 2);
-    MAF_TEST_EXPECT(ld2count[3] == 2);
-    MAF_TEST_EXPECT(ld2count[100] == 0);
-    MAF_TEST_EXPECT(lf2count[2.0] == 1);
-    MAF_TEST_EXPECT(i2count[100] == 0);
-    MAF_TEST_EXPECT(lf2count[100.0] == 0);
-    MAF_TEST_EXPECT(s2count["hello"] == 2);
-    MAF_TEST_EXPECT(s2count["world"] == 2);
-    MAF_TEST_EXPECT(s2count["after_unreg"] == 0);
-    MAF_TEST_EXPECT(s2count["last_string"] == 0);
+  TEST_CASE_B(auto_unreg) {
+    EXPECT(i2count[1] == 2);
+    EXPECT(i2count[2] == 2);
+    EXPECT(ld2count[1] == 2);
+    EXPECT(ld2count[2] == 2);
+    EXPECT(ld2count[3] == 2);
+    EXPECT(ld2count[100] == 0);
+    EXPECT(lf2count[2.0] == 1);
+    EXPECT(i2count[100] == 0);
+    EXPECT(lf2count[100.0] == 0);
+    EXPECT(s2count["hello"] == 2);
+    EXPECT(s2count["world"] == 2);
+    EXPECT(s2count["after_unreg"] == 0);
+    EXPECT(s2count["last_string"] == 0);
   }
-  MAF_TEST_CASE_END(auto_unreg)
+  TEST_CASE_E(auto_unreg)
 }
+
+void sendMessageTest() {
+  struct waitable_msg {};
+  struct non_waitable_msg {};
+  struct sum_int_msg {
+    int index;
+  };
+
+  int count = 0;
+  int sum = 0;
+  bool gotHandlingDoneSignal = false;
+
+  const int totalCount = 10;
+
+  AsyncComponent logic = Component::create("logic");
+  for (int i = 0; i < totalCount; ++i) {
+    logic->connect<waitable_msg>([&count] { ++count; });
+  }
+
+  logic->connect<sum_int_msg>(
+      [&sum](const sum_int_msg& msg) { sum += msg.index; });
+
+  logic.launch();
+
+  TEST_CASE_B(component_send_message) {
+    logic->send<waitable_msg>()
+        .then([&gotHandlingDoneSignal] { gotHandlingDoneSignal = true; })
+        .wait();
+
+    EXPECT(totalCount == count);
+    EXPECT(gotHandlingDoneSignal);
+    gotHandlingDoneSignal = false;
+
+    auto handledSignal = logic->send<non_waitable_msg>().then(
+        [&gotHandlingDoneSignal] { gotHandlingDoneSignal = true; });
+
+    EXPECT(!handledSignal.valid());
+
+    std::vector<Component::MessageHandledSignal> handledSignals;
+    for (int i = 1; i <= 10; ++i) {
+      handledSignals.push_back(logic->send<sum_int_msg>(i));
+    }
+
+    for (auto& sig : handledSignals) {
+      sig.waitFor(std::chrono::milliseconds{1});
+    }
+
+    EXPECT(sum == 10 * 11 / 2);
+  }
+  TEST_CASE_E(component_send_message)
+}
+
 int main() {
+  //  using namespace maf::logging;
+  //  maf::logging::init(LOG_LEVEL_FROM_WARN | LOG_LEVEL_VERBOSE,
+  //                     [](const auto& msg) { std::cout << msg << std::endl;
+  //                     });
   maf::test::init_test_cases();
-  testSyncExecution();
+  messageHandlerTest();
+  requestTest();
   testPostingMessages();
   testRegisterUnregisterHandlers();
   testAutoUnregister();
+  sendMessageTest();
 
   return 0;
 }

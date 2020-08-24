@@ -1,7 +1,8 @@
 #include <maf/Messaging.h>
-#include <maf/messaging/MessageHandlerManager.h>
+#include <maf/messaging/MessageHandler.h>
 #include <maf/utils/Pointers.h>
 
+#include <future>
 #include <iostream>
 #include <map>
 
@@ -28,84 +29,63 @@ struct logger__ {
 
 static logger__ logger(const string& prefix = "") { return logger__{prefix}; }
 
-struct set_config_request {
-  set_config_request(string path, string value) {
+struct SetConfigRequest {
+  SetConfigRequest(string path, string value) {
     this->path = move(path);
     this->value = move(value);
   }
-  set_config_request(const set_config_request& other) {
+  SetConfigRequest(const SetConfigRequest& other) {
     path = other.path;
     value = other.value;
   };
-  set_config_request(set_config_request&& other) {
+  SetConfigRequest(SetConfigRequest&& other) {
     path = move(other.path);
     value = move(other.value);
   }
-  set_config_request& operator=(set_config_request&& other) {
+  SetConfigRequest& operator=(SetConfigRequest&& other) {
     path = move(other.path);
     value = move(other.value);
     return *this;
   }
-  set_config_request& operator=(const set_config_request& other) {
+  SetConfigRequest& operator=(const SetConfigRequest& other) {
     path = other.path;
     value = other.value;
     return *this;
   };
 
-  set_config_request() {}
-  ~set_config_request() {}
+  SetConfigRequest() {}
+  ~SetConfigRequest() {}
   string path;
   string value;
 };
 
-struct get_config_async_request {
+struct GetConfigRequest {
   string path;
-  std::function<void(std::string)> callback;
 };
 
-struct get_config_sync_request {
-  string path;
-  string* got_value;
-};
-
-static string getConfig(std::string path) {
-  string config;
-  routing::routeMessageAndWait<get_config_sync_request>("LGC", move(path),
-                                                        &config);
-  return config;
+static Upcoming<string> fetchConfig(const std::string& path) {
+  auto req = routing::makeRequestSync<string, GetConfigRequest>("LGC");
+  return req.send({move(path)});
 }
 
-static bool getConfig(std::string path,
-                      std::function<void(const std::string& config)> callback) {
-  logger("INF") << "Sending request geget_config_async_request for path: "
-                << path;
-  auto asynCallback = [cb = move(callback),
-                       compref = this_component::ref()](string conf) {
-    if (auto comp = compref.lock()) {
-      comp->execute(bind(cb, move(conf)));
-    } else {
-      logger("ERR") << "The component has been stopped!";
-    }
-  };
-
-  if (!routing::routeMessage<get_config_async_request>("LGC", move(path),
-                                                       asynCallback)) {
-    asynCallback("");
-    return false;
-  }
-  return true;
+static void fetchConfig(const std::string& path,
+                        std::function<void(string)> configGetCallback) {
+  routing::makeRequestAsync<string, GetConfigRequest>("LGC").send(
+      {path}, move(configGetCallback));
 }
 
 static bool setConfig(string path, string config) {
-  return routing::routeMessage<set_config_request>("LGC", move(path),
-                                                   move(config));
+  return routing::makeRequestSync<bool, SetConfigRequest>("LGC")
+      .send({move(path), move(config)})
+      .get()
+      .value();
 }
 
 #include <maf/utils/TimeMeasurement.h>
 
 struct stop_all_signal {};
 
-void stopall() { routing::broadcast<stop_all_signal>(); }
+void stopall() { routing::postMsg<stop_all_signal>(); }
 
 int main() {
   cout.sync_with_stdio(false);
@@ -114,85 +94,97 @@ int main() {
   util::TimeMeasurement tm(
       [](auto elapsed) { logger() << "Total time = " << elapsed.count(); });
 
-  AsyncComponent logicComponent = Component::create("LGC");
-  MessageHandlerManager handlersMgr(logicComponent.instance());
-  handlersMgr
-      .onMessage<routing::receiver_status_update>(
-          [](const routing::receiver_status_update& s) {
-            if (auto comp = s.receiver.lock()) {
+  AsyncComponent logic = Component::create("LGC");
+  MessageHandlerGroup msgHandlers(logic.instance());
+  msgHandlers
+      .connect<routing::ComponentStatusUpdateMsg>(
+          [](const routing::ComponentStatusUpdateMsg& s) {
+            if (auto comp = s.compref.lock()) {
               if (comp->id() == "gui") {
                 logger("LGC") << "GUI thread started!";
               }
             }
           })
-      .onMessage<get_config_async_request>(
-          [](const get_config_async_request& request) {
-            logger("LGC") << "Received request get_config_async_request";
-            request.callback(globalConfig[request.path]);
-          })
-      .onMessage<get_config_sync_request>(
-          [](const get_config_sync_request& request) {
-            logger("LGC") << "Received request get_config_sync_request";
-            util::assign_ptr(request.got_value, globalConfig[request.path]);
-          })
-      .onMessage<set_config_request>([](const set_config_request& request) {
-        logger("LGC") << "Received request set_config_request";
-        globalConfig[request.path] = request.value;
+      .connect<stop_all_signal>(
+          [] { logger("LGC") << "got stop_all_signal, then quit"; });
+
+  auto requestHandlers = RequestHandlerGroup{logic.instance()};
+  requestHandlers
+      .connect<GetConfigRequest>([](GetConfigRequest req) -> string {
+        logger("LGC") << "Received request config of path FIRST" << req.path;
+        return globalConfig[req.path];
       })
-      .onMessage<stop_all_signal>(
-          [](auto) { logger("LGC") << "got stop_all_signal, then quit"; });
+      .connect<SetConfigRequest>([](const SetConfigRequest& req) {
+        logger("LGC") << "Received request get_config_sync_request";
+        globalConfig[req.path] = req.value;
+        return true;
+      });
 
-  auto guiComponent = Component::create("GUI");
-
-  logicComponent.run({}, [] {
-    logger("LGC") << "Logic thread exited!";
+  logic->connect<stop_all_signal>([] {
+    logger("LGC") << "Received stop_all_signal, then quit!";
     this_component::stop();
-    stopall();
   });
 
-  guiComponent->onMessage<stop_all_signal>(
-      [](auto) { this_component::stop(); });
-  guiComponent->onMessage<routing::receiver_status_update>(
-      [](const routing::receiver_status_update& status) {
-        if (auto r = status.receiver.lock(); r && r->id() == "LGC") {
+  logic.launch([] {}, [] { logger("LGC") << "Logic thread exited!"; });
+
+  auto gui = Component::create("GUI");
+  gui->connect<stop_all_signal>([](auto) {
+    logger("GUI") << "Received stop_all_signal, then quit!";
+    this_component::stop();
+  });
+
+  gui->connect<routing::ComponentStatusUpdateMsg>(
+      [](const routing::ComponentStatusUpdateMsg& status) {
+        if (auto r = status.compref.lock(); r && r->id() == "LGC") {
           setConfig("hello/world/sync", "sync");
           setConfig("hello/world/async", "async");
 
           logger("GUI") << "1. Sync configuration of hello/world got: "
-                        << getConfig("hello/world/sync");
+                        << fetchConfig("hello/world/sync").get().value();
 
           logger("GUI")
               << "2. this line should come after Sync request complete";
 
-          getConfig("hello/world/async", [](string value) {
-            logger("GUI") << "4. Async configuration of hello/world/async got: "
-                          << value;
-            this_component::stop();
+          fetchConfig("hello/world/sync", [](string config) {
+            logger("GUI") << "4. this is the last message, even its request "
+                             "was sent before the (3.): "
+                          << config;
+            fetchConfig("hello/world/sync")
+                .then([](std::string config) {
+                  logger("Upcoming")
+                      << "Received config throught ComingOutput: " << config;
+                  return config.size();
+                })
+                .then([](size_t sizeofConfig) {
+                  logger("Upcoming") << "size of sync config: " << sizeofConfig;
+                  return to_string(sizeofConfig);
+                })
+                .then([](string sSizeOfConfig) {
+                  logger("Upcoming")
+                      << "size of sync config as string: " << sSizeOfConfig;
+                })
+                .then([] { logger("Upcoming") << "Finally do nothing"; })
+                .wait();
+            this_component::post<stop_all_signal>();
           });
-
           logger("GUI")
-
               << "3. this line must come right after sending getConfig async "
                  "request and before the async config received!";
         }
       });
 
   auto task = async(launch::async, [] {
-    auto config = getConfig("hello/world/sync");
-    logger("asc") << "Got async config " << config;
+    logger("asc") << "Got async config "
+                  << fetchConfig("hello/world/sync").get().value();
   });
 
-  guiComponent->run({},                            // init nothing
-                    [&logicComponent]() mutable {  // deinit
-                      logger("GUI") << "stop and wait event exception";
-                      try {
-                        logicComponent.stopAndWait();
-                      } catch (const exception& e) {
-                        logger("GUI")
-                            << "Exception in thread of logic component "
-                            << e.what();
-                      }
-                    });
+  gui->run();
+
+  try {
+    logic.stopAndWait();
+  } catch (const exception& e) {
+    logger("GUI") << "Exception in thread of logic component " << e.what();
+  }
 
   return 0;
 }

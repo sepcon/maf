@@ -33,17 +33,17 @@ void test() {
   auto receiver = local::LocalIPCBufferReceiver{};
 
   std::thread receiverThread;
-  MAF_TEST_CASE_BEGIN(check_receiver_status) {
-    MAF_TEST_EXPECT(receiver.init(receiverAddr))
+  TEST_CASE_B(check_receiver_status) {
+    EXPECT(receiver.init(receiverAddr))
     receiverThread = std::thread{[&receiver] { receiver.start(); }};
     std::this_thread::sleep_for(10ms);
-    MAF_TEST_EXPECT(sender.checkReceiverStatus(receiverAddr) ==
+    EXPECT(sender.checkReceiverStatus(receiverAddr) ==
                     Availability::Available)
   }
 
-  MAF_TEST_CASE_END()
+  TEST_CASE_E()
 
-  MAF_TEST_CASE_BEGIN(send_buffer) {
+  TEST_CASE_B(send_buffer) {
     const auto SenderThreadsCount = size_t{40};
     const std::vector<Buffer> buffers = {
         "Hello world Nocpes", "sdfdsferererserer",
@@ -70,11 +70,11 @@ void test() {
     std::this_thread::sleep_for(10ms);
     // Due to insert same buffers to std::set, then it should contain only one
     // buffer
-    MAF_TEST_EXPECT(receivedBuffers->size() ==
+    EXPECT(receivedBuffers->size() ==
                     SenderThreadsCount * BufferCount);
-    MAF_TEST_EXPECT(receivedBufferCount == SenderThreadsCount * BufferCount);
+    EXPECT(receivedBufferCount == SenderThreadsCount * BufferCount);
   }
-  MAF_TEST_CASE_END()
+  TEST_CASE_E()
 
   receiver.stop();
   receiverThread.join();

@@ -80,7 +80,7 @@ inline void init_test_cases() {
 
 }  // namespace test
 }  // namespace maf
-#define MAF_TEST_CASE_BEGIN(TestCaseName)                                   \
+#define TEST_CASE_B(TestCaseName)                                   \
   do {                                                                      \
     using namespace maf::test;                                              \
     int testNumber = test_cases_sumary().currentTestCount();                \
@@ -96,17 +96,17 @@ inline void init_test_cases() {
         log_rec() << "Test case [" << testNumber << "]: " << test_case_name \
                   << " PASSED (" << expectation_met << " expectations)";    \
       } else {                                                              \
-        log_rec() << "Test case: " << test_case_name                        \
-                  << " FAILED! at line: " << linefailed;                    \
+        log_rec() << "Test case: " << test_case_name << " FAILED! "         \
+                  << __FILE__ << ":" << linefailed;                         \
       }                                                                     \
     };
 
-#define MAF_TEST_CASE_END(...) \
+#define TEST_CASE_E(...) \
   }                            \
   while (false)                \
     ;
 
-#define MAF_TEST_EXPECT(expected)       \
+#define EXPECT(expected)       \
   if (expected) {                       \
     ++expectation_met;                  \
   } else {                              \

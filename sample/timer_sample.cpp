@@ -1,4 +1,4 @@
-#include <maf/messaging/AsyncComponent.h>
+#include <maf/messaging/ComponentEx.h>
 #include <maf/messaging/Timer.h>
 
 #include <iostream>
@@ -26,7 +26,7 @@ struct Alarm {
 
   void start() {
     auto runner = Component::create();
-    runner->onMessage<next_second_hit>([this](next_second_hit h) {
+    runner->connect<next_second_hit>([this](next_second_hit h) {
       if (h.current_seconds.count() % alarmTime == 0) {
         alarmTimer.setCyclic();
 
@@ -36,7 +36,7 @@ struct Alarm {
       }
     });
 
-    runner->onMessage<alarm_message>([this](const alarm_message& msg) {
+    runner->connect<alarm_message>([this](const alarm_message& msg) {
       cout << "[ALARM]: " << msg.msg << endl;
       elapsedAlarm += eachAlarmInterval;
       if (elapsedAlarm == totalAlarmInterval) {

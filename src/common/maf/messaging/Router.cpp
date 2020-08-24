@@ -2,109 +2,126 @@
 
 namespace maf {
 namespace messaging {
-namespace impl {
+namespace details {
 
-static bool askThenPost(const ReceiverInstance &r, Message msg);
-static void notifyAllAboutNewReceiver(const Receivers &joinedReceivers,
-                                      const ReceiverInstance &newReceiver);
-static void informNewReceiverAboutJoinedOnes(
-    const ReceiverInstance &newReceiver, const Receivers &joinedReceivers);
+static bool askThenPost(const ComponentInstance &r, Message msg);
+static Component::MessageHandledSignal askThenSend(const ComponentInstance &r,
+                                                   Message msg);
+static void notifyAllAboutNewComponent(const Components &joinedComponents,
+                                       const ComponentInstance &newComponent);
+static void informNewComponentAboutJoinedOnes(
+    const ComponentInstance &newComponent, const Components &joinedComponents);
 
-bool Router::routeMessage(const ReceiverID &receiverID, Message &&msg) {
-  if (auto receiver = findReceiver(receiverID)) {
-    return receiver->post(std::move(msg));
+bool Router::postMsg(const ComponentID &componentID, Message &&msg) {
+  if (auto comp = findComponent(componentID)) {
+    return comp->post(std::move(msg));
   }
   return false;
 }
 
-bool Router::routeExecution(const ReceiverID &receiverID, Execution exc) {
-  if (auto receiver = findReceiver(receiverID)) {
-    return receiver->execute(std::move(exc));
-  }
-  return false;
-}
-
-bool Router::routeMessageAndWait(const ReceiverID &receiverID, Message &&msg) {
-  if (auto receiver = findReceiver(receiverID)) {
-    return receiver->postAndWait(std::move(msg));
-  }
-  return false;
-}
-
-bool Router::routeAndWaitExecution(const ReceiverID &receiverID,
-                                   Execution exc) {
-  if (auto receiver = findReceiver(receiverID)) {
-    return receiver->executeAndWait(std::move(exc));
-  }
-  return false;
-}
-
-bool Router::broadcast(const Message &msg) {
-  bool delivered = false;
-  auto atReceivers = receivers_.atomic();
-  for (const auto &receiver : *atReceivers) {
-    delivered |= askThenPost(receiver, std::move(msg));
-  }
-  return delivered;
-}
-
-ReceiverInstance Router::findReceiver(const ReceiverID &id) const {
-  auto atReceivers = receivers_.atomic();
-  if (auto itReceiver = atReceivers->find(id);
-      itReceiver != atReceivers->end()) {
-    return *itReceiver;
+Component::MessageHandledSignal Router::sendMsg(const ComponentID &componentID,
+                                                Message msg) {
+  if (auto comp = findComponent(componentID)) {
+    return comp->send(std::move(msg));
   }
   return {};
 }
 
-bool Router::addReceiver(ReceiverInstance newReceiver) {
-  if (newReceiver) {
-    auto joinedReceivers = receivers_.atomic();
-    if (joinedReceivers->count(newReceiver) == 0) {
-      informNewReceiverAboutJoinedOnes(newReceiver, *joinedReceivers);
-      notifyAllAboutNewReceiver(*joinedReceivers, newReceiver);
-      joinedReceivers->insert(move(newReceiver));
+bool Router::postMsg(const Message &msg) {
+  bool delivered = false;
+  auto atComponents = components_.atomic();
+  for (const auto &comp : *atComponents) {
+    delivered |= askThenPost(comp, std::move(msg));
+  }
+  return delivered;
+}
+
+Component::MessageHandledSignal Router::sendMsg(const Message &msg) {
+  auto msgMessageHandledSignals = vector<Component::MessageHandledSignal>{};
+  auto atComponents = components_.atomic();
+  for (const auto &comp : *atComponents) {
+    if (auto sig = askThenSend(comp, std::move(msg)); sig.valid()) {
+      msgMessageHandledSignals.emplace_back(move(sig));
+    }
+  }
+
+  if (!msgMessageHandledSignals.empty()) {
+    return Component::MessageHandledSignal{async(
+        launch::deferred, [sigs{move(msgMessageHandledSignals)}]() mutable {
+          for (auto &sig : sigs) {
+            sig.get();
+          }
+        })};
+  } else {
+    return {};
+  }
+}
+
+ComponentInstance Router::findComponent(const ComponentID &id) const {
+  auto atComponents = components_.atomic();
+  if (auto itComponent = atComponents->find(id);
+      itComponent != atComponents->end()) {
+    return *itComponent;
+  }
+  return {};
+}
+
+bool Router::addComponent(ComponentInstance comp) {
+  if (comp) {
+    auto joinedComponents = components_.atomic();
+    if (joinedComponents->count(comp) == 0) {
+      informNewComponentAboutJoinedOnes(comp, *joinedComponents);
+      notifyAllAboutNewComponent(*joinedComponents, comp);
+      joinedComponents->insert(move(comp));
     }
   }
   return false;
 }
 
-bool Router::removeReceiver(const ReceiverInstance &receiver) {
-  if (receivers_.atomic()->erase(receiver) != 0) {
-    broadcast(receiver_status_update{
-        receiver, receiver_status_update::unavailable});
+bool Router::removeComponent(const ComponentInstance &comp) {
+  if (components_.atomic()->erase(comp) != 0) {
+    postMsg(ComponentStatusUpdateMsg{
+        comp, ComponentStatusUpdateMsg::Status::UnReachable});
     return true;
   }
   return false;
 }
 
-static bool askThenPost(const ReceiverInstance &r, Message msg) {
-  if (r->hasHandler(msg.type())) {
+static bool askThenPost(const ComponentInstance &r, Message msg) {
+  if (r->connected(msg.type())) {
     return r->post(std::move(msg));
   }
   return false;
 }
 
-static void notifyAllAboutNewReceiver(const Receivers &joinedReceivers,
-                                      const ReceiverInstance &newReceiver) {
-  auto msg = receiver_status_update{
-      newReceiver, receiver_status_update::available};
+static Component::MessageHandledSignal askThenSend(const ComponentInstance &r,
+                                                   Message msg) {
+  if (r->connected(msg.type())) {
+    return r->send(std::move(msg));
+  }
+  return {};
+}
 
-  for (const auto &joinedReceiver : joinedReceivers) {
-    askThenPost(joinedReceiver, msg);
+static void notifyAllAboutNewComponent(const Components &joinedComponents,
+                                       const ComponentInstance &newComponent) {
+  auto msg = ComponentStatusUpdateMsg{
+      newComponent, ComponentStatusUpdateMsg::Status::Reachable};
+
+  for (const auto &joinedComponent : joinedComponents) {
+    askThenPost(joinedComponent, msg);
   }
 }
 
-static void informNewReceiverAboutJoinedOnes(
-    const ReceiverInstance &newReceiver, const Receivers &joinedReceivers) {
-    if (newReceiver->hasHandler(msgid<receiver_status_update>())) {
-    for (const auto &joinedOne : joinedReceivers) {
-      newReceiver->post<receiver_status_update>(
-          joinedOne, receiver_status_update::available);
+static void informNewComponentAboutJoinedOnes(
+    const ComponentInstance &newComponent, const Components &joinedComponents) {
+  if (newComponent->connected(msgid<ComponentStatusUpdateMsg>())) {
+    for (const auto &joinedOne : joinedComponents) {
+      newComponent->post<ComponentStatusUpdateMsg>(
+          joinedOne, ComponentStatusUpdateMsg::Status::Reachable);
     }
   }
 }
 
-}  // namespace impl
+}  // namespace details
 }  // namespace messaging
 }  // namespace maf

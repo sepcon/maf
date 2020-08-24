@@ -29,7 +29,7 @@ int main() {
   auto clientComponent = ClientComponent{
       localipc::createProxy(DataTransmissionServerAddress, SID_WeatherService)};
 
-  clientComponent.onMessage<EndOfRequestChainMsg>(
+  clientComponent->connect<EndOfRequestChainMsg>(
       [](auto) { this_component::stop(); });
 
   clientComponent.run();

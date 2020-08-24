@@ -16,7 +16,7 @@ using namespace maf::messaging;
 struct EndOfRequestChainMsg {};
 
 template <class Proxy>
-class ClientComponent : public ExtensibleComponent {
+class ClientComponent : public ComponentEx {
   using ProxyPtr = std::shared_ptr<Proxy>;
   template <class T>
   using Response = typename Proxy::template Response<T>;

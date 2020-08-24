@@ -6,27 +6,23 @@ namespace maf {
 namespace messaging {
 namespace routing {
 
-bool routeMessage(const ReceiverID &receiverID, Message msg) {
-  return Router::instance().routeMessage(receiverID, std::move(msg));
+bool postMsg(const ComponentID &componentID, Message msg) {
+  return Router::instance().postMsg(componentID, std::move(msg));
 }
 
-bool routeExecution(const ReceiverID &receiverID, Execution exc) {
-  return Router::instance().routeExecution(receiverID, std::move(exc));
+bool postMsg(Message msg) { return Router::instance().postMsg(std::move(msg)); }
+
+ComponentInstance findComponent(const ComponentID &id) {
+  return Router::instance().findComponent(id);
 }
 
-bool broadcast(Message msg) {
-  return Router::instance().broadcast(std::move(msg));
-}
-ReceiverInstance findReceiver(const ReceiverID &id) {
-  return Router::instance().findReceiver(id);
+Component::MessageHandledSignal sendMsg(const ComponentID &componentID,
+                                        Message msg) {
+  return Router::instance().sendMsg(componentID, std::move(msg));
 }
 
-bool routeAndWaitExecution(const ReceiverID &receiverID, Execution exc) {
-  return Router::instance().routeAndWaitExecution(receiverID, std::move(exc));
-}
-
-bool routeMessageAndWait(const ReceiverID &receiverID, Message msg) {
-  return Router::instance().routeMessageAndWait(receiverID, std::move(msg));
+Component::MessageHandledSignal sendMsg(Message msg) {
+  return Router::instance().sendMsg(std::move(msg));
 }
 
 }  // namespace routing

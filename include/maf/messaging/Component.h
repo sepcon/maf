@@ -4,6 +4,8 @@
 #include <maf/logging/Logger.h>
 #include <maf/patterns/Patterns.h>
 
+#include <future>
+
 #include "ComponentDef.h"
 #include "ExecutorIF.h"
 
@@ -17,6 +19,7 @@ class Component final : pattern::Unasignable,
  public:
   using ThreadFunction = std::function<void()>;
   using Executor = std::shared_ptr<ExecutorIF>;
+  using MessageHandledSignal = Upcoming<void>;
 
   MAF_EXPORT static ComponentInstance create(ComponentID id = {});
   MAF_EXPORT static ComponentInstance findComponent(const ComponentID &id);
@@ -28,55 +31,33 @@ class Component final : pattern::Unasignable,
   MAF_EXPORT void stop();
   MAF_EXPORT bool stopped() const;
   MAF_EXPORT bool post(Message msg);
-  MAF_EXPORT bool hasHandler(MessageID mid) const;
-  MAF_EXPORT bool postAndWait(Message msg);
+  MAF_EXPORT MessageHandledSignal send(Message msg);
+  MAF_EXPORT bool connected(const MessageID &mid) const;
   MAF_EXPORT bool execute(Execution exec);
-  MAF_EXPORT bool executeAndWait(Execution exec);
   MAF_EXPORT Executor getExecutor();
-  MAF_EXPORT HandlerRegID registerMessageHandler(MessageID msgid,
-                                                 MessageHandler onMessageFunc);
-  MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
-  MAF_EXPORT void unregisterAllHandlers(MessageID msgid);
+  MAF_EXPORT ConnectionID connect(const MessageID &msgid,
+                                  MessageProcessingCallback processMessage);
+  MAF_EXPORT void disconnect(const ConnectionID &regid);
+  MAF_EXPORT void disconnect(const MessageID &msgid);
   MAF_EXPORT size_t pendingCout() const;
 
   template <class Msg>
-  HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
-    auto translatorCallback = [callback = std::move(f),
-                               this](const Message &genericMsg) {
-      try {
-        callback(std::any_cast<const Msg &>(genericMsg));
-      } catch (const std::bad_any_cast &) {
-        MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgid<Msg>().name());
-      } catch (const std::exception &e) {
-        MAF_LOGGER_FATAL("EXCEPTION when handling message ",
-                         msgid<Msg>().name(), ": ", e.what());
-        throw;
-      }
-    };
-
-    return registerMessageHandler(msgid<Msg>(), std::move(translatorCallback));
-  }
+  bool connected() const;
 
   template <class Msg>
-  HandlerRegID onMessage(DontCareMsgContentHandler f) {
-    return registerMessageHandler(msgid<Msg>(),
-                                  [f{std::move(f)}](const auto &) { f(); });
-  }
-
-  template <class Msg, typename... Args>
-  bool post(Args &&... args) {
-    return post(makeMessage<Msg>(std::forward<Args>(args)...));
-  }
-
-  template <class Msg, typename... Args>
-  bool postAndWait(Args &&... args) {
-    return postAndWait(makeMessage<Msg>(std::forward<Args>(args)...));
-  }
+  ConnectionID connect(SpecificMsgProcessingCallback<Msg> f);
 
   template <class Msg>
-  void unregisterAllHandlers() {
-    unregisterAllHandlers(msgid<Msg>());
-  }
+  ConnectionID connect(EmptyMsgProcessingCallback f);
+
+  template <class Msg, typename... Args>
+  bool post(Args &&... args);
+
+  template <class Msg, typename... Args>
+  MessageHandledSignal send(Args &&... args);
+
+  template <class Msg>
+  void disconnect();
 
   ~Component();
 
@@ -92,8 +73,8 @@ MAF_EXPORT bool stop();
 MAF_EXPORT bool stopped();
 MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
-MAF_EXPORT void unregisterHandler(const HandlerRegID &regid);
-MAF_EXPORT void unregisterAllHandlers(const MessageID &regid);
+MAF_EXPORT void disconnect(const ConnectionID &regid);
+MAF_EXPORT void disconnect(const MessageID &regid);
 
 template <class Msg, typename... Args>
 static bool post(Args &&... args) {
@@ -101,16 +82,60 @@ static bool post(Args &&... args) {
 }
 
 template <class Msg>
-HandlerRegID onMessage(SpecificMessageHandler<Msg> f) {
-  return instance()->onMessage<Msg>(std::move(f));
+ConnectionID connect(SpecificMsgProcessingCallback<Msg> f) {
+  return instance()->connect<Msg>(std::move(f));
 }
 
 template <class Msg>
-void unregisterAllHandlers() {
-  unregisterAllHandlers(msgid<Msg>());
+void disconnect() {
+  disconnect(msgid<Msg>());
 }
 
 };  // namespace this_component
+
+template <class Msg>
+bool Component::connected() const {
+  return connected(msgid<Msg>());
+}
+
+template <class Msg>
+ConnectionID Component::connect(SpecificMsgProcessingCallback<Msg> f) {
+  using namespace std;
+  auto translatorCallback = [callback = move(f),
+                             this](const Message &genericMsg) {
+    try {
+      callback(any_cast<const Msg &>(genericMsg));
+    } catch (const bad_any_cast &) {
+      MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgid<Msg>().name());
+    } catch (const exception &e) {
+      MAF_LOGGER_FATAL("EXCEPTION when handling message ", msgid<Msg>().name(),
+                       ": ", e.what());
+      throw;
+    }
+  };
+
+  return connect(msgid<Msg>(), move(translatorCallback));
+}
+
+template <class Msg>
+ConnectionID Component::connect(EmptyMsgProcessingCallback f) {
+  return connect(msgid<Msg>(), [f{std::move(f)}](const auto &) { f(); });
+}
+
+template <class Msg, typename... Args>
+bool Component::post(Args &&... args) {
+  return post(makeMessage<Msg>(std::forward<Args>(args)...));
+}
+
+template <class Msg, typename... Args>
+Component::MessageHandledSignal Component::send(Args &&... args) {
+  return send(makeMessage<Msg>(std::forward<Args>(args)...));
+}
+
+template <class Msg>
+void Component::disconnect() {
+  disconnect(msgid<Msg>());
+}
 
 }  // namespace messaging
 }  // namespace maf

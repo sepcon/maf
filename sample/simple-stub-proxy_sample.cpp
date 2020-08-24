@@ -1,11 +1,12 @@
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <maf/LocalIPCProxy.h>
 #include <maf/LocalIPCStub.h>
 #include <maf/Messaging.h>
 #include <maf/messaging/client-server/ServiceStatusSignal.h>
 #include <maf/utils/TimeMeasurement.h>
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 
 namespace fs = std::filesystem;
 namespace localipc = maf::localipc;
@@ -63,7 +64,7 @@ int main(int argc, char **argv) {
 
   auto stub = localipc::createStub(DataTransmissionServerAddress,
                                    DataTransmissionServiceID,
-                                   serverComponent.instance()->getExecutor());
+                                   serverComponent->getExecutor());
 
   auto dataTransmissionServiceStatusSignal = serviceStatusSignal(proxy);
 
@@ -118,11 +119,11 @@ int main(int argc, char **argv) {
         request.respond();
       });
 
-
-  serverComponent.run();
+  serverComponent.launch();
   stub->startServing();
 
-  if (dataTransmissionServiceStatusSignal->waitIfNot(Availability::Available).isReady()) {
+  if (dataTransmissionServiceStatusSignal->waitIfNot(Availability::Available)
+          .isReady()) {
     maf::util::TimeMeasurement tm{[](auto elapsedUs) {
       std::cout << "TIME OF execution = " << elapsedUs.count() / 1000 << "ms "
                 << std::endl;
@@ -132,7 +133,6 @@ int main(int argc, char **argv) {
       if (auto response = proxy->sendRequest<begin_write_file_request>(
               begin_write_file_request::make_input(destFile));
           !response.isError()) {
-
         auto ec = std::error_code{};
         auto filesize = fs::file_size(sourceFile, ec);
         if (filesize > 0) {
@@ -193,6 +193,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  serverComponent.stop();
+  serverComponent->stop();
   return 0;
 }

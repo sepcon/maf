@@ -58,8 +58,8 @@ class TimerRestartTester {
   int restarteeHits = 0;
   void start() {
     auto comp = Component::create();
-    comp->onMessage<int>([this](auto) { this->start_(); });
-    comp->onMessage<stop_msg>([] { this_component::stop(); });
+    comp->connect<int>([this](auto) { this->start_(); });
+    comp->connect<stop_msg>([] { this_component::stop(); });
 
     comp->post(1);
     comp->run();
@@ -74,11 +74,11 @@ class TimerRestartTester {
     restartee.setCyclic();
     restartee.start(restarteInterval,
                     [maxCounterHits, startTime = system_clock::now()] {
-                      MAF_TEST_CASE_BEGIN(test_service) {
+                      TEST_CASE_B(test_service) {
                         auto elapsed = system_clock::now() - startTime;
-                        MAF_TEST_EXPECT(elapsed > milliseconds{maxCounterHits});
+                        EXPECT(elapsed > milliseconds{maxCounterHits});
                       }
-                      MAF_TEST_CASE_END(test_service)
+                      TEST_CASE_E(test_service)
                       this_component::post(stop_msg{});
                     });
 
@@ -106,18 +106,18 @@ void multiTimersTest() {
   const auto eachTimerDuration = 1;
   TimerCreater tc{totalTimers, testTime, eachTimerDuration};
   auto expectation = vector<int>(totalTimers, testTime / eachTimerDuration);
-  comp->onMessage<int>(
+  comp->connect<int>(
       [](int x) { std::cout << "got x = " << x << std::endl; });
 
-  comp->onMessage<stop_msg>([](auto) { this_component::stop(); });
+  comp->connect<stop_msg>([](auto) { this_component::stop(); });
 
   comp->run([&tc] { tc.start(); });
 
 //  print(tc.timersHitCount);
-  MAF_TEST_CASE_BEGIN(timer_expiration) {
-    MAF_TEST_EXPECT(tc.timersHitCount >= expectation);
+  TEST_CASE_B(timer_expiration) {
+    EXPECT(tc.timersHitCount >= expectation);
   }
-  MAF_TEST_CASE_END(timer_expiration)
+  TEST_CASE_E(timer_expiration)
 }
 
 int main() {
