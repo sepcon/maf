@@ -35,7 +35,7 @@ MessageID msgid();
 template <class Msg>
 MessageID msgid(Msg&& msg);
 template <class SpecificMsg, class... Args>
-decltype(auto) makeMessage(Args&&... args);
+Message makeMessage(Args&&... args);
 
 struct ConnectionID {
   using HandlerID = void*;
@@ -58,23 +58,9 @@ MessageID msgid(Msg&& msg) {
   return typeid(std::forward<Msg>(msg));
 }
 
-template <class SpecificMsg, class Arg0, class... Args>
-decltype(auto) makeMessage(Arg0&& arg0, Args&&... args) {
-  using namespace std;
-  constexpr bool isMessageConstructible =
-      is_trivially_constructible_v<SpecificMsg, Arg0, Args...> ||
-      is_constructible_v<SpecificMsg, Arg0, Args...>;
-  if constexpr (isMessageConstructible) {
-    return make_any<SpecificMsg>(forward<Arg0>(arg0), forward<Args>(args)...);
-  } else {
-    any a = SpecificMsg{forward<Arg0>(arg0), forward<Args>(args)...};
-    return a;
-  }
-}
-template <class SpecificMsg>
-decltype(auto) makeMessage() {
-  std::any a = SpecificMsg{};
-  return a;
+template <class SpecificMsg, class... Args>
+Message makeMessage(Args&&... args) {
+  return SpecificMsg{std::forward<Args>(args)...};
 }
 
 }  // namespace messaging
