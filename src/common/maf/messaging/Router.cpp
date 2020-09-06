@@ -12,22 +12,22 @@ static void notifyAllAboutNewComponent(const Components &joinedComponents,
 static void informNewComponentAboutJoinedOnes(
     const ComponentInstance &newComponent, const Components &joinedComponents);
 
-bool Router::postMsg(const ComponentID &componentID, Message &&msg) {
+bool Router::post(const ComponentID &componentID, Message &&msg) {
   if (auto comp = findComponent(componentID)) {
     return comp->post(std::move(msg));
   }
   return false;
 }
 
-Component::MessageHandledSignal Router::sendMsg(const ComponentID &componentID,
-                                                Message msg) {
+Component::MessageHandledSignal Router::send(const ComponentID &componentID,
+                                             Message msg) {
   if (auto comp = findComponent(componentID)) {
     return comp->send(std::move(msg));
   }
   return {};
 }
 
-bool Router::postMsg(const Message &msg) {
+bool Router::postToAll(const Message &msg) {
   bool delivered = false;
   auto atComponents = components_.atomic();
   for (const auto &comp : *atComponents) {
@@ -36,7 +36,7 @@ bool Router::postMsg(const Message &msg) {
   return delivered;
 }
 
-Component::MessageHandledSignal Router::sendMsg(const Message &msg) {
+Component::MessageHandledSignal Router::sendToAll(const Message &msg) {
   auto msgMessageHandledSignals = vector<Component::MessageHandledSignal>{};
   auto atComponents = components_.atomic();
   for (const auto &comp : *atComponents) {
@@ -80,7 +80,7 @@ bool Router::addComponent(ComponentInstance comp) {
 
 bool Router::removeComponent(const ComponentInstance &comp) {
   if (components_.atomic()->erase(comp) != 0) {
-    postMsg(ComponentStatusUpdateMsg{
+    postToAll(ComponentStatusUpdateMsg{
         comp, ComponentStatusUpdateMsg::Status::UnReachable});
     return true;
   }

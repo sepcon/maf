@@ -99,12 +99,12 @@ static void setupSlaves() {
       ++greetCount;
       log() << "Slave " << this_component::instance()->id()
             << " received string msg from master: " << msg;
-      postMsg(MasterID, TaskInputRequest{});
+      post(MasterID, TaskInputRequest{});
     });
 
     slave->connect<Task>([](const Task &task) {
-      postMsg(MasterID, TaskResult{this_component::instance(),
-                                   std::get<0>(task), eval(task)});
+      post(MasterID, TaskResult{this_component::instance(), std::get<0>(task),
+                                eval(task)});
     });
     slave->connect<TaskSubmitted>([](auto) {
       log() << "Task submitted to master then quit!";
@@ -121,7 +121,7 @@ static void setupMaster() {
         static int availableSlaves = 0;
         if (msg.ready()) {
           if (++availableSlaves == TaskCount) {
-            postMsg(std::string{"Master hellos all slaves!"});
+            postToAll(std::string{"Master hellos all slaves!"});
           }
         } else {
           if (--availableSlaves == 0) {
@@ -234,7 +234,7 @@ void sendMessageTest() {
   };
 
   TEST_CASE_B(routing_send_message) {
-    routing::sendMsg<waitable_msg>()
+    routing::sendToAll<waitable_msg>()
         .then([] { std::cout << "msg is all handled" << std::endl; })
         .wait();
     EXPECT(totalCount == count);
@@ -244,7 +244,7 @@ void sendMessageTest() {
 
   count = 0;
   TEST_CASE_B(routing_send_message) {
-    auto handledSignal = routing::sendMsg<waitable_msg>().then(
+    auto handledSignal = routing::sendToAll<waitable_msg>().then(
         [] { std::cout << "msg is all handled" << std::endl; });
     EXPECT(!handledSignal.valid());
     EXPECT(0 == count);

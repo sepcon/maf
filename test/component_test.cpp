@@ -463,6 +463,22 @@ void sendMessageTest() {
     EXPECT(sum == 10 * 11 / 2);
   }
   TEST_CASE_E(component_send_message)
+
+  TEST_CASE_B(send_message_from_current_component) {
+    struct NotBlockedMsg {};
+    auto msgHandledEventSource = std::make_shared<std::promise<int> >();
+
+    auto msgHandledSignal = msgHandledEventSource->get_future();
+    logic->connect<NotBlockedMsg>(
+        [event = std::move(msgHandledEventSource)]() mutable {
+          event->set_value(100);
+        });
+    logic->execute(
+        [] { this_component::instance()->send<NotBlockedMsg>().wait(); });
+
+    EXPECT(msgHandledSignal.get() == 100);
+  }
+  TEST_CASE_E(send_message_from_current_component)
 }
 
 int main() {

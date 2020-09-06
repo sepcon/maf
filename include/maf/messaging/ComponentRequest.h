@@ -66,9 +66,8 @@ class ComponentRequest<Output_, Input_, RequestType::Sync> {
   using OutputProcessingCallback =
       typename RequestMsg_<Output, Input>::OutputProcessingCallback;
 
-  explicit ComponentRequest(ComponentInstance comp) : comp_(move(comp)) {
-    assert(comp_ && "Given component must not be null");
-  }
+  explicit ComponentRequest(ComponentInstance comp = {}) : comp_(move(comp)) {}
+
   UpcomingOutput send(Input in = {}) const {
     using namespace std;
     using RequestMsg = RequestMsg_<Output, Input>;
@@ -114,9 +113,7 @@ class ComponentRequest<Output_, Input_, RequestType::Async> {
   using OutputProcessingCallback =
       typename RequestMsg_<Output, Input>::OutputProcessingCallback;
 
-  explicit ComponentRequest(ComponentInstance comp) : comp_(move(comp)) {
-    assert(comp_ && "Given component must not be null");
-  }
+  explicit ComponentRequest(ComponentInstance comp = {}) : comp_(move(comp)) {}
 
   bool send(Input input, OutputProcessingCallback&& callback,
             ExecutorPtr executor = {}) const {

@@ -85,7 +85,7 @@ static bool setConfig(string path, string config) {
 
 struct stop_all_signal {};
 
-void stopall() { routing::postMsg<stop_all_signal>(); }
+void stopall() { routing::postToAll<stop_all_signal>(); }
 
 int main() {
   cout.sync_with_stdio(false);

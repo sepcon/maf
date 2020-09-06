@@ -34,11 +34,11 @@ using Components = std::set<ComponentInstance, ComponentCompare>;
 class Router : public pattern::SingletonObject<Router> {
  public:
   Router(Invisible) noexcept {}
-  bool postMsg(const ComponentID &componentID, Message &&msg);
-  Component::MessageHandledSignal sendMsg(const ComponentID &componentID,
+  bool post(const ComponentID &componentID, Message &&msg);
+  Component::MessageHandledSignal send(const ComponentID &componentID,
                                           Message msg);
-  bool postMsg(const Message &msg);
-  Component::MessageHandledSignal sendMsg(const Message &msg);
+  bool postToAll(const Message &msg);
+  Component::MessageHandledSignal sendToAll(const Message &msg);
 
   ComponentInstance findComponent(const ComponentID &id) const;
   bool addComponent(ComponentInstance comp);

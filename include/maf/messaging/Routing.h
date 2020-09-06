@@ -17,35 +17,35 @@ struct ComponentStatusUpdateMsg {
   bool ready() const { return status == Status::Reachable; }
 };
 
-MAF_EXPORT bool postMsg(const ComponentID& componentID, Message msg);
-MAF_EXPORT bool postMsg(Message msg);
-MAF_EXPORT Component::MessageHandledSignal sendMsg(
-    const ComponentID& componentID, Message msg);
-MAF_EXPORT Component::MessageHandledSignal sendMsg(Message msg);
+MAF_EXPORT bool post(const ComponentID& componentID, Message msg);
+MAF_EXPORT bool postToAll(Message msg);
+MAF_EXPORT Component::MessageHandledSignal send(const ComponentID& componentID,
+                                                Message msg);
+MAF_EXPORT Component::MessageHandledSignal sendToAll(Message msg);
 MAF_EXPORT ComponentInstance findComponent(const ComponentID& id);
 
 template <class Msg, typename... Args>
-bool postMsg(const ComponentID& componentID, Args&&... args) {
+bool post(const ComponentID& componentID, Args&&... args) {
   using namespace std;
-  return postMsg(componentID, makeMessage<Msg>(forward<Args>(args)...));
+  return post(componentID, makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
-bool postMsg(Args&&... args) {
+bool postToAll(Args&&... args) {
   using namespace std;
-  return postMsg(makeMessage<Msg>(forward<Args>(args)...));
+  return postToAll(makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
-bool sendMsg(const ComponentID& componentID, Args&&... args) {
+bool send(const ComponentID& componentID, Args&&... args) {
   using namespace std;
-  return sendMsg(componentID, makeMessage<Msg>(forward<Args>(args)...));
+  return send(componentID, makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
-Component::MessageHandledSignal sendMsg(Args&&... args) {
+Component::MessageHandledSignal sendToAll(Args&&... args) {
   using namespace std;
-  return sendMsg(makeMessage<Msg>(forward<Args>(args)...));
+  return sendToAll(makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Output, class Input, RequestType type>
