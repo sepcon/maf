@@ -1,7 +1,7 @@
 #pragma once
 
 #include <maf/logging/Logger.h>
-#include <maf/messaging/ExecutorIF.h>
+#include <maf/utils/ExecutorIF.h>
 
 #include <cassert>
 
@@ -49,7 +49,7 @@ PTrait::template getOperationID<Output>(),                \
   bool valid() const { return delegate_->valid(); }
 
   void onAborted(AbortRequestCallback abortCallback,
-                 std::shared_ptr<ExecutorIF> executor) {
+                 util::ExecutorIFPtr executor) {
     assert(executor && "Executor must not be null");
     delegate_->onAborted(std::bind(&ExecutorIF::execute, std::move(executor),
                                    std::move(abortCallback)));

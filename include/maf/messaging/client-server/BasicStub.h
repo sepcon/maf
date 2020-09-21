@@ -1,32 +1,34 @@
 #pragma once
 
-#include "CSParamConstrains.h"
-#include "RequestT.h"
-
 #include <maf/logging/Logger.h>
-#include <maf/messaging/ExecutorIF.h>
 #include <maf/messaging/client-server/CSMgmt.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
+#include <maf/utils/ExecutorIF.h>
+
+#include "CSParamConstrains.h"
+#include "RequestT.h"
 
 namespace maf {
 namespace messaging {
 
 using namespace paco;
 
-template <class PTrait> class BasicStub {
+template <class PTrait>
+class BasicStub {
   using StubPtr = std::shared_ptr<BasicStub>;
 
-public:
-  template <typename InputType> using Request = RequestT<PTrait, InputType>;
+ public:
+  template <typename InputType>
+  using Request = RequestT<PTrait, InputType>;
 
   template <typename InputType>
   using RequestHandlerFunction = std::function<void(Request<InputType>)>;
 
-  using ExecutorPtr = std::shared_ptr<ExecutorIF>;
+  using ExecutorIFPtr = util::ExecutorIFPtr;
   using ProviderPtr = std::shared_ptr<ServiceProviderIF>;
 
   static StubPtr createStub(const ConnectionType &contype, const Address &addr,
-                            const ServiceID &sid, ExecutorPtr executor = {});
+                            const ServiceID &sid, ExecutorIFPtr executor = {});
 
   const ServiceID &serviceID() const;
 
@@ -63,26 +65,25 @@ public:
   void startServing();
   void stopServing();
 
-  void setExecutor(ExecutorPtr executor);
-  ExecutorPtr getExecutor() const;
-  std::shared_ptr<BasicStub<PTrait>> with(ExecutorPtr executor);
+  void setExecutor(ExecutorIFPtr executor);
+  ExecutorIFPtr getExecutor() const;
+  std::shared_ptr<BasicStub<PTrait>> with(ExecutorIFPtr executor);
 
-private:
-  BasicStub(ProviderPtr provider, ExecutorPtr executor);
+ private:
+  BasicStub(ProviderPtr provider, ExecutorIFPtr executor);
 
   ProviderPtr provider_;
-  ExecutorPtr executor_;
+  ExecutorIFPtr executor_;
 };
 
 template <class PTrait>
-BasicStub<PTrait>::BasicStub(ProviderPtr provider, ExecutorPtr executor)
+BasicStub<PTrait>::BasicStub(ProviderPtr provider, ExecutorIFPtr executor)
     : provider_(std::move(provider)), executor_{std::move(executor)} {}
 
 template <class PTrait>
-typename BasicStub<PTrait>::StubPtr
-BasicStub<PTrait>::createStub(const ConnectionType &contype,
-                              const Address &addr, const ServiceID &sid,
-                              ExecutorPtr executor) {
+typename BasicStub<PTrait>::StubPtr BasicStub<PTrait>::createStub(
+    const ConnectionType &contype, const Address &addr, const ServiceID &sid,
+    ExecutorIFPtr executor) {
   if (auto provider = csmgmt::getServiceProvider(contype, addr, sid)) {
     return std::shared_ptr<BasicStub>{
         new BasicStub(std::move(provider), std::move(executor))};
@@ -91,14 +92,15 @@ BasicStub<PTrait>::createStub(const ConnectionType &contype,
   return {};
 }
 
-template <class PTrait> const ServiceID &BasicStub<PTrait>::serviceID() const {
+template <class PTrait>
+const ServiceID &BasicStub<PTrait>::serviceID() const {
   return provider_->serviceID();
 }
 
 template <class PTrait>
 template <class Status, AllowOnlyStatusT<PTrait, Status>>
-ActionCallStatus
-BasicStub<PTrait>::setStatus(const std::shared_ptr<Status> &status) {
+ActionCallStatus BasicStub<PTrait>::setStatus(
+    const std::shared_ptr<Status> &status) {
   return provider_->setStatus(PTrait::template getOperationID<Status>(),
                               PTrait::template translate(status));
 }
@@ -122,8 +124,8 @@ std::shared_ptr<Status> BasicStub<PTrait>::getStatus() {
 
 template <class PTrait>
 template <class Attributes, AllowOnlyAttributesT<PTrait, Attributes>>
-ActionCallStatus
-BasicStub<PTrait>::broadcastSignal(const std::shared_ptr<Attributes> &attr) {
+ActionCallStatus BasicStub<PTrait>::broadcastSignal(
+    const std::shared_ptr<Attributes> &attr) {
   auto sigID = PTrait::template getOperationID<Attributes>();
   MAF_LOGGER_VERBOSE("Broadcast signal `", sigID, "`: \n",
                      PTrait::template dump<Attributes>(attr));
@@ -150,7 +152,6 @@ template <class RequestOrInput,
           AllowOnlyRequestOrInputT<PTrait, RequestOrInput>>
 bool BasicStub<PTrait>::registerRequestHandler(
     RequestHandlerFunction<RequestOrInput> handlerFunction) {
-
   if (executor_) {
     auto requestHandler =
         [handlerFunction = std::move(handlerFunction), executor = executor_](
@@ -184,29 +185,32 @@ bool BasicStub<PTrait>::unregisterRequestHandler() {
   return unregisterRequestHandler(PTrait::template getOperationID<Request>());
 }
 
-template <class PTrait> void BasicStub<PTrait>::startServing() {
+template <class PTrait>
+void BasicStub<PTrait>::startServing() {
   provider_->startServing();
 }
 
-template <class PTrait> void BasicStub<PTrait>::stopServing() {
+template <class PTrait>
+void BasicStub<PTrait>::stopServing() {
   provider_->stopServing();
 }
 
 template <class PTrait>
-void BasicStub<PTrait>::setExecutor(BasicStub::ExecutorPtr executor) {
+void BasicStub<PTrait>::setExecutor(BasicStub::ExecutorIFPtr executor) {
   if (executor) {
     executor_ = std::move(executor);
   }
 }
 
 template <class PTrait>
-typename BasicStub<PTrait>::ExecutorPtr BasicStub<PTrait>::getExecutor() const {
+typename BasicStub<PTrait>::ExecutorIFPtr BasicStub<PTrait>::getExecutor()
+    const {
   return executor_;
 }
 
 template <class PTrait>
-std::shared_ptr<BasicStub<PTrait>>
-BasicStub<PTrait>::with(BasicStub::ExecutorPtr executor) {
+std::shared_ptr<BasicStub<PTrait>> BasicStub<PTrait>::with(
+    BasicStub::ExecutorIFPtr executor) {
   assert(executor && "Custom executor must not be null");
   if (executor) {
     return StubPtr{new BasicStub{this->provider_, std::move(executor)}};
@@ -214,5 +218,5 @@ BasicStub<PTrait>::with(BasicStub::ExecutorPtr executor) {
   return {};
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

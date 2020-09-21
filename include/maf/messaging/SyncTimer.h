@@ -1,33 +1,34 @@
 #pragma once
 
-#include "ExecutorIF.h"
-#include <chrono>
 #include <maf/export/MafExport_global.h>
 #include <maf/patterns/Patterns.h>
+#include <maf/utils/ExecutorIF.h>
+
+#include <chrono>
 
 namespace maf {
 namespace messaging {
 
 class SyncTimer : public pattern::Unasignable {
-  using ExecutorPtr = std::shared_ptr<ExecutorIF>;
+  using ExecutorIFPtr = std::shared_ptr<util::ExecutorIF>;
 
-public:
+ public:
   typedef std::function<void()> TimeOutCallback;
   MAF_EXPORT SyncTimer(bool cyclic = false);
   MAF_EXPORT ~SyncTimer();
   MAF_EXPORT void start(long long milliseconds, TimeOutCallback callback,
-                        ExecutorPtr = {});
+                        ExecutorIFPtr = {});
   MAF_EXPORT void start(std::chrono::milliseconds milliseconds,
-                        TimeOutCallback callback, ExecutorPtr = {});
+                        TimeOutCallback callback, ExecutorIFPtr = {});
 
   MAF_EXPORT void restart();
   MAF_EXPORT void stop();
   MAF_EXPORT bool running();
   MAF_EXPORT void setCyclic(bool cyclic = true);
 
-private:
+ private:
   struct SyncTimerDataPrv *d_;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

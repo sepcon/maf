@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/messaging/ExecutorIF.h>
+#include <maf/utils/ExecutorIF.h>
 
 #include "Exceptions.h"
 #include "ServiceStatusObserverIF.h"
@@ -12,7 +12,7 @@ class ServiceStatusObserverDelegater : public ServiceStatusObserverIF {
  public:
   using DelegateCallback = std::function<void(Availability, Availability)>;
 
-  ServiceStatusObserverDelegater(ExecutorPtr executor,
+  ServiceStatusObserverDelegater(util::ExecutorIFPtr executor,
                                  DelegateCallback callback)
       : callback_(std::move(callback)), executor_(std::move(executor)) {}
 
@@ -25,7 +25,7 @@ class ServiceStatusObserverDelegater : public ServiceStatusObserverIF {
 
  private:
   DelegateCallback callback_;
-  ExecutorPtr executor_;
+  util::ExecutorIFPtr executor_;
 };
 
 }  // namespace messaging

@@ -120,6 +120,8 @@ class MessageHandlerGroup {
   MessageHandlerGroup(const MessageHandlerGroup&) = delete;
   MessageHandlerGroup& operator=(const MessageHandlerGroup&) = delete;
 
+  bool connectable() const { return compref_.lock() != nullptr; }
+
   template <class Msg, class ProcessingCallback>
   MessageHandlerGroup& connect(ProcessingCallback callback) {
     if (auto comp = compref_.lock()) {
@@ -136,17 +138,14 @@ class MessageHandlerGroup {
   MessageHandlerGroup& disconnect(const MessageID& mid) {
     using namespace std;
     if (auto comp = compref_.lock()) {
-      auto beg = begin(connectionIDs_);
-      auto ed = end(connectionIDs_);
-      auto prevRemoved = connectionIDs_.before_begin();
-      while (beg != ed) {
-        if (beg->mid_ == mid) {
-          comp->disconnect(*beg);
-          beg = connectionIDs_.erase_after(prevRemoved);
+      connectionIDs_.remove_if([&mid, &comp](const ConnectionID& cid) {
+        if (cid.mid_ == mid) {
+          comp->disconnect(cid);
+          return true;
         } else {
-          prevRemoved = beg++;
+          return false;
         }
-      };
+      });
     }
     return *this;
   }
@@ -160,6 +159,27 @@ class MessageHandlerGroup {
       }
       connectionIDs_.clear();
     }
+  }
+
+  template <class Input, class RequestHandlerCallback>
+  MessageHandlerGroup& connectRequest(RequestHandlerCallback handle) {
+    using Output = decltype(handle(std::declval<Input>()));
+    if (auto id = RequestHandler<Output, Input>::connect(this->compref_.lock(),
+                                                         move(handle));
+        id.valid()) {
+      this->addConnectionID(move(id));
+    }
+    return *this;
+  }
+
+  template <class Output, class Input>
+  void disconnectRequest() {
+    disconnect<RequestMsg_<Output, Input>>();
+  }
+
+  template <class Input>
+  void disconnectRequest() {
+    disconnect<RequestMsg_<void, Input>>();
   }
 
  protected:
@@ -180,23 +200,18 @@ class RequestHandlerGroup : protected MessageHandlerGroup {
 
   template <class Input, class RequestHandlerCallback>
   RequestHandlerGroup& connect(RequestHandlerCallback handle) {
-    using Output = decltype(handle(std::declval<Input>()));
-    if (auto id = RequestHandler<Output, Input>::connect(this->compref_.lock(),
-                                                         move(handle));
-        id.valid()) {
-      this->addConnectionID(move(id));
-    }
+    Base::connectRequest<Input, RequestHandlerCallback>(move(handle));
     return *this;
   }
 
   template <class Output, class Input>
   void disconnect() {
-    Base::disconnect<RequestMsg_<Output, Input>>();
+    Base::disconnectRequest<Output, Input>();
   }
 
   template <class Input>
   void disconnect() {
-    Base::disconnect<RequestMsg_<void, Input>>();
+    Base::disconnectRequest<void, Input>();
   }
 };
 

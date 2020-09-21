@@ -1,9 +1,10 @@
+#include <maf/logging/Logger.h>
+#include <maf/messaging/SyncTimer.h>
+#include <maf/utils/ExecutorIF.h>
+
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
-#include <maf/logging/Logger.h>
-#include <maf/messaging/ExecutorIF.h>
-#include <maf/messaging/SyncTimer.h>
 #include <mutex>
 
 namespace maf {
@@ -25,13 +26,13 @@ SyncTimer::~SyncTimer() {
   delete d_;
 }
 void SyncTimer::start(long long milliseconds, TimeOutCallback callback,
-                      ExecutorPtr executor) {
+                      ExecutorIFPtr executor) {
   start(std::chrono::milliseconds{milliseconds}, std::move(callback),
         std::move(executor));
 }
 
 void SyncTimer::start(std::chrono::milliseconds milliseconds,
-                      TimeOutCallback callback, ExecutorPtr executor) {
+                      TimeOutCallback callback, ExecutorIFPtr executor) {
   if (!callback) {
     MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
   } else {
@@ -53,7 +54,7 @@ void SyncTimer::start(std::chrono::milliseconds milliseconds,
         }
       }
 
-      if (!d_->running) // restarted
+      if (!d_->running)  // restarted
       {
         break;
       }
@@ -81,5 +82,5 @@ void SyncTimer::setCyclic(bool cyclic) {
   d_->cyclic = cyclic;
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

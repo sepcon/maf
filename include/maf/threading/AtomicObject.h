@@ -1,6 +1,7 @@
 #pragma once
 
 #include <maf/patterns/Patterns.h>
+
 #include <mutex>
 
 namespace maf {
@@ -8,11 +9,12 @@ namespace threading {
 
 template <class Protected, class Mutex = std::mutex>
 class AtomicObject : public pattern::Unasignable {
-  template <class AtomicObject_, class Protected_> friend struct AtomicRef;
+  template <class AtomicObject_, class Protected_>
+  friend struct AtomicRef;
 
   template <class AtomicObject_, class Protected_>
   struct AtomicRef : public pattern::Unasignable {
-  public:
+   public:
     AtomicRef(AtomicObject_ *p) : _AtomicObject{p} {
       _AtomicObject->_mutex.lock();
     }
@@ -45,20 +47,18 @@ class AtomicObject : public pattern::Unasignable {
     operator Protected_ &() { return _AtomicObject->_protected; }
     operator const Protected_ &() const { return _AtomicObject->_protected; }
 
-  private:
+   private:
     AtomicObject_ *_AtomicObject;
   };
 
-public:
+ public:
   using DataType = Protected;
   using AtomicRefType = AtomicRef<AtomicObject<Protected, Mutex>, Protected>;
   using CAtomicRefType =
       AtomicRef<const AtomicObject<Protected, Mutex>, const Protected>;
 
   AtomicObject() = default;
-  template <std::enable_if_t<std::is_copy_assignable_v<DataType>, bool> = true>
   AtomicObject(const DataType &p) : _protected(p) {}
-  template <std::enable_if_t<std::is_move_assignable_v<DataType>, bool> = true>
   AtomicObject(DataType &&p) : _protected(std::move(p)) {}
 
   Mutex &getMutex() { return _mutex; }
@@ -73,10 +73,13 @@ public:
   CAtomicRefType operator->() const { return CAtomicRefType{this}; }
   CAtomicRefType operator*() const { return CAtomicRefType{this}; }
 
-private:
+  AtomicRefType atomic() { return AtomicRefType{this}; }
+  CAtomicRefType atomic() const { return CAtomicRefType{this}; }
+
+ private:
   mutable Mutex _mutex;
   DataType _protected;
 };
 
-} // namespace threading
-} // namespace maf
+}  // namespace threading
+}  // namespace maf

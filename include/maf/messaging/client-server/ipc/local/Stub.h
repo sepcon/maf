@@ -10,12 +10,12 @@ namespace local {
 
 using Stub = BasicStub<ParamTrait>;
 using StubPtr = std::shared_ptr<Stub>;
-using ExecutorPtr = Stub::ExecutorPtr;
+using ExecutorIFPtr = Stub::ExecutorIFPtr;
 template <class Input> using Request = Stub::Request<Input>;
 
 inline std::shared_ptr<Stub> createStub(const Address &addr,
                                         const ServiceID &sid,
-                                        Stub::ExecutorPtr executor = {}) {
+                                        Stub::ExecutorIFPtr executor = {}) {
   return Stub::createStub("local.ipc.messaging.maf", addr, sid,
                           std::move(executor));
 }

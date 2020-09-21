@@ -3,10 +3,9 @@
 #include <maf/LocalIPCProxy.h>
 #include <maf/LocalIPCStub.h>
 #include <maf/logging/Logger.h>
-#include <maf/messaging/DirectExecutor.h>
-#include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 #include <maf/messaging/client-server/ServiceStatusSignal.h>
 #include <maf/threading/AtomicObject.h>
+#include <maf/utils/DirectExecutor.h>
 #include <maf/utils/TimeMeasurement.h>
 
 #include <algorithm>
@@ -18,6 +17,7 @@
 #include "test.h"
 
 // clang-format off
+#include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
 REQUEST(string)
     INPUT((std::string, string_input))
     OUTPUT((std::string, string_output))
@@ -60,6 +60,7 @@ ENDPROPERTY()
 #include <maf/messaging/client-server/CSContractDefinesEnd.mc.h>
 
 using namespace maf::messaging;
+using namespace maf::util;
 namespace localipc = maf::localipc;
 namespace itc = maf::itc;
 using namespace std::chrono_literals;
@@ -85,8 +86,8 @@ class Tester {
 
     std::shared_ptr<Request<no_response_request>> noResponseRequestKeeper;
 
-    auto stub = stub_->with(maf::messaging::directExecutor());
-    auto proxy = proxy_->with(maf::messaging::directExecutor());
+    auto stub = stub_->with(maf::util::directExecutor());
+    auto proxy = proxy_->with(maf::util::directExecutor());
     Availability serviceStatus;
     stub->template registerRequestHandler<string_request::input>(
         [](Request<string_request::input> request) {
@@ -156,7 +157,7 @@ class Tester {
 
     TEST_CASE_B(service_status) {
       EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) ==
-                      std::future_status::ready);
+             std::future_status::ready);
       EXPECT(serviceStatus == Availability::Available);
     }
     TEST_CASE_E(service_status)
@@ -209,8 +210,7 @@ class Tester {
       EXPECT(response.isOutput());
 
       // 3. Confirm response's output == expectedResponseString
-      EXPECT(response.getOutput()->get_map_as_string() ==
-                      input->dump());
+      EXPECT(response.getOutput()->get_map_as_string() == input->dump());
     }
     TEST_CASE_E(request_response_map_string_2_vector)
 
@@ -222,8 +222,7 @@ class Tester {
       // 2. Confirm having output
       EXPECT(response.isError());
       // 3. Confirm response's output == inputString
-      EXPECT(response.getError()->code() ==
-                      CSErrorCode::ResponseIgnored);
+      EXPECT(response.getError()->code() == CSErrorCode::ResponseIgnored);
     }
     TEST_CASE_E(request_but_failed_to_response)
 
@@ -248,8 +247,7 @@ class Tester {
       auto regid = proxy->template sendRequestAsync<to_be_aborted_request>(
           [&gotResponse](auto) { gotResponse = true; });
 
-      EXPECT(requestComeEvent.wait_for(10ms) ==
-                      std::future_status::ready);
+      EXPECT(requestComeEvent.wait_for(10ms) == std::future_status::ready);
 
       EXPECT(aborted == false);
 
@@ -260,8 +258,7 @@ class Tester {
 
       // After aborted expect that the Request<to_be_aborted_request> cant
       // respond anymore
-      EXPECT(requestHolder->respond() ==
-                      ActionCallStatus::InvalidCall);
+      EXPECT(requestHolder->respond() == ActionCallStatus::InvalidCall);
 
       //        std::this_thread::sleep_for(1ms);
 
@@ -292,7 +289,7 @@ class Tester {
       stub->broadcastSignal(sentAttribute);
 
       EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
-                      std::future_status::ready)
+             std::future_status::ready)
       EXPECT(receivedAttributeFuture.get() == *sentAttribute);
 
       proxy->unregister(regid);
@@ -335,8 +332,7 @@ class Tester {
 
       for (auto& [regID, propFuture] : propertyRegs) {
         do {
-          EXPECT(propFuture.wait_for(100ms) ==
-                          std::future_status::ready)
+          EXPECT(propFuture.wait_for(100ms) == std::future_status::ready)
           EXPECT(propFuture.get() == *sentStatus);
         } while (false);
         proxy->unregister(regID);

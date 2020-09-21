@@ -1,9 +1,9 @@
 #pragma once
 
 #include <maf/logging/Logger.h>
-#include <maf/messaging/ExecutorIF.h>
 #include <maf/messaging/client-server/CSMgmt.h>
 #include <maf/messaging/client-server/ParamTranslatingStatus.h>
+#include <maf/utils/ExecutorIF.h>
 #include <maf/utils/Pointers.h>
 
 #include <cassert>
@@ -33,12 +33,12 @@ class BasicProxy {
   using ServiceStatusChangedCallback =
       ServiceStatusObserverDelegater::DelegateCallback;
 
-  using ExecutorPtr = std::shared_ptr<ExecutorIF>;
+  using ExecutorIFPtr = util::ExecutorIFPtr;
   using ServiceStatusObserverPtr = std::shared_ptr<ServiceStatusObserverIF>;
   using RequesterPtr = std::shared_ptr<ServiceRequesterIF>;
   static std::shared_ptr<BasicProxy> createProxy(
       const ConnectionType &contype, const Address &addr, const ServiceID &sid,
-      ExecutorPtr executor = {},
+      ExecutorIFPtr executor = {},
       ServiceStatusObserverPtr statusObsv = {}) noexcept;
 
   const ServiceID &serviceID() const noexcept;
@@ -106,13 +106,13 @@ class BasicProxy {
   std::shared_ptr<ServiceStatusObserverIF> onServiceStatusChanged(
       ServiceStatusChangedCallback callback) noexcept;
 
-  void setExecutor(ExecutorPtr executor) noexcept;
-  ExecutorPtr getExecutor() const noexcept;
-  std::shared_ptr<BasicProxy> with(ExecutorPtr executor) noexcept;
+  void setExecutor(ExecutorIFPtr executor) noexcept;
+  ExecutorIFPtr getExecutor() const noexcept;
+  std::shared_ptr<BasicProxy> with(ExecutorIFPtr executor) noexcept;
   RequesterPtr getRequester() const noexcept;
 
  private:
-  BasicProxy(RequesterPtr requester, ExecutorPtr executor) noexcept;
+  BasicProxy(RequesterPtr requester, ExecutorIFPtr executor) noexcept;
 
   template <class CSParam>
   CSPayloadProcessCallback createUpdateMsgHandlerCallback(
@@ -150,7 +150,7 @@ class BasicProxy {
   }
 
   RequesterPtr requester_;
-  ExecutorPtr executor_;
+  ExecutorIFPtr executor_;
 };
 
 #ifndef MAF_NO_STATIC_OPERATION_ID
@@ -164,7 +164,7 @@ class BasicProxy {
 template <class PTrait>
 std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::createProxy(
     const ConnectionType &contype, const Address &addr, const ServiceID &sid,
-    ExecutorPtr executor, ServiceStatusObserverPtr statusObsv) noexcept {
+    ExecutorIFPtr executor, ServiceStatusObserverPtr statusObsv) noexcept {
   if (auto requester = csmgmt::getServiceRequester(contype, addr, sid)) {
     auto proxy = std::shared_ptr<BasicProxy<PTrait>>{
         new BasicProxy<PTrait>(std::move(requester), std::move(executor))};
@@ -180,7 +180,7 @@ std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::createProxy(
 
 template <class PTrait>
 BasicProxy<PTrait>::BasicProxy(RequesterPtr requester,
-                               ExecutorPtr executor) noexcept
+                               ExecutorIFPtr executor) noexcept
     : requester_{std::move(requester)}, executor_{std::move(executor)} {}
 
 template <class PTrait>
@@ -494,19 +494,19 @@ BasicProxy<PTrait>::sendRequest(const OpID &actionID,
 }
 
 template <class PTrait>
-void BasicProxy<PTrait>::setExecutor(ExecutorPtr executor) noexcept {
+void BasicProxy<PTrait>::setExecutor(ExecutorIFPtr executor) noexcept {
   executor_ = std::move(executor);
 }
 
 template <class PTrait>
-typename BasicProxy<PTrait>::ExecutorPtr BasicProxy<PTrait>::getExecutor()
+typename BasicProxy<PTrait>::ExecutorIFPtr BasicProxy<PTrait>::getExecutor()
     const noexcept {
   return executor_;
 }
 
 template <class PTrait>
 std::shared_ptr<BasicProxy<PTrait>> BasicProxy<PTrait>::with(
-    BasicProxy::ExecutorPtr executor) noexcept {
+    BasicProxy::ExecutorIFPtr executor) noexcept {
   assert(executor && "custom executor must not be null");
   if (executor) {
     return std::shared_ptr<BasicProxy>(

@@ -30,5 +30,6 @@ maf_add_test(serialization)
 maf_add_test(stub_proxy)
 maf_add_test(message_routing)
 maf_add_test(ipc_sender_receiver)
+maf_add_test(signal_slot)
 
 

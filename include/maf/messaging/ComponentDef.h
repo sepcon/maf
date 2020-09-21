@@ -21,7 +21,7 @@ using Message = std::any;
 using MessageID = std::type_index;
 using MessageProcessingCallback = std::function<void(const Message&)>;
 using Execution = std::function<void()>;
-using ExecutionTimeout = std::chrono::milliseconds;
+using ExecutionTimeout = std::chrono::microseconds;
 using ExecutionDeadline = std::chrono::system_clock::time_point;
 template <class Msg>
 using SpecificMsgProcessingCallback = std::function<void(const Msg&)>;

@@ -10,7 +10,7 @@ namespace local {
 
 using Proxy = BasicProxy<ParamTrait>;
 using ProxyPtr = std::shared_ptr<Proxy>;
-using ExecutorPtr = Proxy::ExecutorPtr;
+using ExecutorIFPtr = Proxy::ExecutorIFPtr;
 using ServiceStatusObserverPtr = Proxy::ServiceStatusObserverPtr;
 template <class Output>
 using Response = Proxy::Response<Output>;
@@ -18,10 +18,10 @@ using Response = Proxy::Response<Output>;
 inline constexpr auto connectionType = "local.ipc.messaging.maf";
 
 inline ProxyPtr createProxy(const Address &addr, const ServiceID &sid,
-                            ExecutorPtr executor = {},
+                            ExecutorIFPtr executor = {},
                             ServiceStatusObserverPtr statusObsv = {}) {
-  return Proxy::createProxy(connectionType, addr, sid,
-                            std::move(executor), std::move(statusObsv));
+  return Proxy::createProxy(connectionType, addr, sid, std::move(executor),
+                            std::move(statusObsv));
 }
 
 }  // namespace local

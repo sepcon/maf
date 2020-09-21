@@ -26,12 +26,13 @@ using std::pop_heap;
 using std::push_heap;
 using std::shared_ptr;
 using TimerDataPtr = shared_ptr<TimerData>;
+using util::ExecutorIFPtr;
 
 struct TimerInterrupt {};
 
 struct TimerData {
   TimeoutCallback callback;
-  ExecutorPtr executor;
+  ExecutorIFPtr executor;
   DeadLine deadline = Clock::now();
   ExecutionTimeout duration;
   bool cyclic = false;
@@ -53,7 +54,7 @@ struct TimerData {
       callback();
     }
   }
-  void reset(TimeoutCallback&& cb, ExecutorPtr&& exc, ExecutionTimeout d,
+  void reset(TimeoutCallback&& cb, ExecutorIFPtr&& exc, ExecutionTimeout d,
              bool cc = false) {
     callback = move(cb);
     executor = move(exc);
@@ -103,12 +104,12 @@ Timer::Timer(bool cyclic) : d_{new TimerData} { d_->cyclic = cyclic; }
 
 Timer::~Timer() { stop(); }
 void Timer::start(long long milliseconds, TimeOutCallback callback,
-                  ExecutorPtr executor) {
+                  ExecutorIFPtr executor) {
   start(std::chrono::milliseconds{milliseconds}, std::move(callback),
         std::move(executor));
 }
 void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
-                  ExecutorPtr executor) {
+                  ExecutorIFPtr executor) {
   if (!callback) {
     MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
   } else {
@@ -138,7 +139,7 @@ void Timer::stop() {
   }
 }
 
-bool Timer::running() { return d_->running; }
+bool Timer::running() const { return d_->running; }
 
 void Timer::setCyclic(bool cyclic) {
   if (cyclic != d_->cyclic) {

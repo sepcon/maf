@@ -37,7 +37,8 @@ bool postToAll(Args&&... args) {
 }
 
 template <class Msg, typename... Args>
-bool send(const ComponentID& componentID, Args&&... args) {
+Component::MessageHandledSignal send(const ComponentID& componentID,
+                                     Args&&... args) {
   using namespace std;
   return send(componentID, makeMessage<Msg>(forward<Args>(args)...));
 }

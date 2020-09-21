@@ -30,7 +30,7 @@ using util::CallOnExit;
 
 static const ComponentID anonymous_prefix = "[anonymous].";
 
-class CallbackExecutor : public ExecutorIF {
+class CallbackExecutor : public util::ExecutorIF {
   ComponentRef compref;
 
  public:

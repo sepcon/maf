@@ -12,6 +12,7 @@ namespace details {
 
 using namespace std;
 using threading::Upcoming;
+using util::ExecutorIFPtr;
 
 enum class RequestType : char { Sync, Async };
 
@@ -116,7 +117,7 @@ class ComponentRequest<Output_, Input_, RequestType::Async> {
   explicit ComponentRequest(ComponentInstance comp = {}) : comp_(move(comp)) {}
 
   bool send(Input input, OutputProcessingCallback&& callback,
-            ExecutorPtr executor = {}) const {
+            ExecutorIFPtr executor = {}) const {
     using RequestMsg = RequestMsg_<Output, Input>;
     if (!executor) {
       executor = this_component::getExecutor();

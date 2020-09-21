@@ -1,11 +1,10 @@
 #pragma once
 
 #include <maf/logging/Logger.h>
-
-#include "ExecutorIF.h"
+#include <maf/utils/ExecutorIF.h>
 
 namespace maf {
-namespace messaging {
+namespace util {
 
 class DirectExecutor : public ExecutorIF {
  public:
@@ -23,10 +22,9 @@ class DirectExecutor : public ExecutorIF {
   }
 };
 
-inline std::shared_ptr<ExecutorIF> directExecutor() {
-  static std::shared_ptr<ExecutorIF> executor{new DirectExecutor{}};
-  return executor;
+inline ExecutorIFPtr directExecutor() {
+  return ExecutorIFPtr{new DirectExecutor{}};
 }
 
-}  // namespace messaging
+}  // namespace util
 }  // namespace maf

@@ -3,11 +3,11 @@
 #include <maf/export/MafExport_global.h>
 #include <maf/logging/Logger.h>
 #include <maf/patterns/Patterns.h>
+#include <maf/utils/ExecutorIF.h>
 
 #include <future>
 
 #include "ComponentDef.h"
-#include "ExecutorIF.h"
 
 namespace maf {
 namespace messaging {
@@ -18,7 +18,7 @@ class Component final : pattern::Unasignable,
 
  public:
   using ThreadFunction = std::function<void()>;
-  using Executor = std::shared_ptr<ExecutorIF>;
+  using Executor = std::shared_ptr<util::ExecutorIF>;
   using MessageHandledSignal = Upcoming<void>;
 
   MAF_EXPORT static ComponentInstance create(ComponentID id = {});

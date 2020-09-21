@@ -4,16 +4,16 @@
 #include <memory>
 
 namespace maf {
-namespace messaging {
+namespace util {
 
 class ExecutorIF {
-public:
+ public:
   using CallbackType = std::function<void(void)>;
   virtual ~ExecutorIF() = default;
   virtual bool execute(CallbackType) noexcept = 0;
 };
 
-using ExecutorPtr = std::shared_ptr<ExecutorIF>;
+using ExecutorIFPtr = std::shared_ptr<ExecutorIF>;
 
-} // namespace messaging
-} // namespace maf
+}  // namespace util
+}  // namespace maf

@@ -9,11 +9,11 @@ namespace itc {
 
 using Stub = BasicStub<ParamTrait>;
 using StubPtr = std::shared_ptr<Stub>;
-using ExecutorPtr = Stub::ExecutorPtr;
+using ExecutorIFPtr = Stub::ExecutorIFPtr;
 template <class CSParam> using Request = Stub::Request<CSParam>;
 
 inline std::shared_ptr<Stub>
-createStub(const ServiceID &sid, Stub::ExecutorPtr executor = {}) {
+createStub(const ServiceID &sid, Stub::ExecutorIFPtr executor = {}) {
   return Stub::createStub("itc.messaging.maf", {}, sid, std::move(executor));
 }
 
