@@ -171,6 +171,7 @@ void multi_connection_multi_thread_test() {
 
     comp1->run();
 
+    EXPECT(rd1->size() > 0)
     EXPECT(*rd1 == *rd2)
   }
 
@@ -221,7 +222,7 @@ void connection_aware_slot_test() {
   int testVal = 0;
   TEST_CASE_B(connection_aware_slot) {
     sigInt.connect(
-        [&testVal](const Signal<int>::ConnectionPtr& con, int val) {
+        [&testVal](const Signal<int>::ConnectionPtrType& con, int val) {
           con->disconnect();
           testVal = val;
         },
@@ -230,6 +231,34 @@ void connection_aware_slot_test() {
     EXPECT(testVal == 1000)
     sigInt(-1);
     EXPECT(testVal == 1000)
+  }
+  TEST_CASE_E()
+}
+
+void trackable_slot_test() {
+  SignalST<int> sig;
+  struct Invokable {
+    int val = 0;
+    void setValue(int val) { this->val = val; }
+  };
+
+  shared_ptr<Invokable> pi = make_shared<Invokable>();
+  int ii = 0;
+
+  sig.connect(pi, [&ii, p = pi.get()](int i) {
+    p->setValue(i);
+    ii = i;
+  });
+
+
+  TEST_CASE_B(trackable_slot) {
+    sig(1000);
+    EXPECT(ii == 1000)
+
+    pi.reset();
+    // after pi was destroyed, it should nolonger receied signal
+    sig(3000);
+    EXPECT(ii == 1000)
   }
   TEST_CASE_E()
 }
@@ -256,5 +285,6 @@ int main() {
   multi_connection_multi_thread_test();
   scoped_connection_test();
   connection_aware_slot_test();
+  trackable_slot_test();
   performance_test();
 }

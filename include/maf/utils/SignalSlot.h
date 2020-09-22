@@ -137,10 +137,11 @@ class BasicSignal_ {
 
  public:
   class Connection;
-  using ConnectionPtr = shared_ptr<Connection>;
+  using TrackableObjPtrType = shared_ptr<void>;
   using SlotType = Slot_<Args_...>;
-  using ConnectionAwareSlotType = Slot_<ConnectionPtr, Args_...>;
   using SlotPtrType = SlotPtr_<Args_...>;
+  using ConnectionPtrType = shared_ptr<Connection>;
+  using ConnectionAwareSlotType = Slot_<ConnectionPtrType, Args_...>;
 
   BasicSignal_() = default;
   BasicSignal_(const BasicSignal_&) = delete;
@@ -168,7 +169,7 @@ class BasicSignal_ {
   bool connect(ConnectionAwareSlotType cas) {
     auto ps = makeSlotPtr({});
     *ps = ConnectionAwareSlotWrap_(
-        move(cas), ConnectionPtr{new Connection{sharedKeeper(), ps}});
+        move(cas), ConnectionPtrType{new Connection{sharedKeeper(), ps}});
     return keeper()->add(move(ps));
   }
 
@@ -176,8 +177,24 @@ class BasicSignal_ {
     auto ps = makeSlotPtr({});
     *ps = ConnectionAwareSlotWrap_(
         move(cas), move(executor),
-        ConnectionPtr{new Connection{sharedKeeper(), ps}});
+        ConnectionPtrType{new Connection{sharedKeeper(), ps}});
     return keeper()->add(move(ps));
+  }
+
+  bool connect(TrackableObjPtrType obj, SlotType s) {
+    assert(s && obj && "The tracked object and slot must not be null");
+    if (obj) {
+      return connect([sl{move(s)}, trackedObjRef = weak_ptr{obj}](
+                         ConnectionPtrType con, Args_... args) {
+        if (auto trackedObj = trackedObjRef.lock()) {
+          sl(move(args)...);
+        } else {
+          con->disconnect();
+        }
+      });
+    } else {
+      return false;
+    }
   }
 
   void disconnect() { keeper()->clear(); }
@@ -295,12 +312,12 @@ class BasicSignal_ {
     }
     ConnectionAwareSlotWrap_(ConnectionAwareSlotWrap_&&) = default;
     ConnectionAwareSlotWrap_& operator=(ConnectionAwareSlotWrap_&&) = default;
-    ConnectionAwareSlotWrap_(ConnectionAwareSlotType&& s, ConnectionPtr&& c)
+    ConnectionAwareSlotWrap_(ConnectionAwareSlotType&& s, ConnectionPtrType&& c)
         : slot_(move(s)), con_(move(c)) {}
 
     ConnectionAwareSlotWrap_(ConnectionAwareSlotType&& s,
-                             ExecutorIFPtr&& executor, ConnectionPtr&& c)
-        : slot_(combineSlotWithExecutor<ConnectionPtr, Args_...>(
+                             ExecutorIFPtr&& executor, ConnectionPtrType&& c)
+        : slot_(combineSlotWithExecutor<ConnectionPtrType, Args_...>(
               move(s), move(executor))),
           con_(move(c)) {}
 

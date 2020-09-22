@@ -34,7 +34,7 @@ class SignalTimer {
 int main() {
   auto runner = Component::create();
   SignalTimer timer;
-  SignalTimer::TimeoutSignal::ConnectionPtr counterConnection;
+  SignalTimer::TimeoutSignal::ConnectionPtrType counterConnection;
   int counter = 0;
 
   timer.setCyclic();
@@ -48,7 +48,7 @@ int main() {
 
   timer.timeoutSignal().connect(
       [&counter,
-       &counterConnection](SignalTimer::TimeoutSignal::ConnectionPtr con) {
+       &counterConnection](SignalTimer::TimeoutSignal::ConnectionPtrType con) {
         cout << "current counter is " << counter << endl;
         counterConnection = con;
         if (++counter == 3) {
