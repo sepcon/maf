@@ -73,6 +73,7 @@ class ComponentRequest<Output_, Input_, RequestType::Sync> {
     using namespace std;
     using RequestMsg = RequestMsg_<Output, Input>;
     using OutputSource = promise<Output>;
+    assert(comp_ && "comp_ must not be null");
     if (comp_) {
       auto outputSource = make_shared<OutputSource>();
       auto outputSink = outputSource->get_future();

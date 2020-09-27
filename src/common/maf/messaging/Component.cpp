@@ -181,6 +181,7 @@ ComponentInstance Component::findComponent(const ComponentID &id) {
 const ComponentID &Component::id() const noexcept { return d_->id; }
 
 void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
+  joinRoutingIfNotAnonymous(shared_from_this());
   auto justSet = this_component::testAndSetThreadLocalInstance(this);
   if (threadInit) {
     threadInit();
@@ -193,17 +194,9 @@ void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
     this_component::clearTLInstanceIfSet(justSet);
   };
 
-  joinRoutingIfNotAnonymous(shared_from_this());
-
   ExecutionUPtr exc;
   while (d_->pendingExecutions.wait(exc)) {
-    try {
-      invoke(exc);
-    } catch (const std::exception &e) {
-      MAF_LOGGER_FATAL("EXCEPTION when executing pending execution: ",
-                       e.what());
-      throw;
-    }
+    invoke(exc);
   }
 }
 
@@ -220,13 +213,7 @@ void Component::runUntil(ExecutionDeadline deadline) {
   };
 
   while (d_->pendingExecutions.waitUntil(exc, deadline)) {
-    try {
-      invoke(exc);
-    } catch (const std::exception &e) {
-      MAF_LOGGER_FATAL("EXCEPTION when executing pending execution: ",
-                       e.what());
-      throw;
-    }
+    invoke(exc);
   }
 }
 

@@ -1,7 +1,7 @@
 
 #include <maf/Messaging.h>
 #include <maf/utils/DirectExecutor.h>
-#include <maf/utils/SignalSlot.h>
+#include <maf/utils/SignalSlots.h>
 
 #include <map>
 #include <thread>
@@ -10,6 +10,7 @@
 
 using namespace maf;
 using namespace maf::messaging;
+using namespace maf::signal_slots;
 using namespace maf::util;
 using namespace std;
 
@@ -220,6 +221,7 @@ void scoped_connection_test() {
 void connection_aware_slot_test() {
   Signal<int> sigInt;
   int testVal = 0;
+  int testVal1 = 0;
   TEST_CASE_B(connection_aware_slot) {
     sigInt.connect(
         [&testVal](const Signal<int>::ConnectionPtrType& con, int val) {
@@ -227,10 +229,19 @@ void connection_aware_slot_test() {
           testVal = val;
         },
         directExecutor());
+
+    auto con = sigInt.connect([&testVal1](auto con, int val) {
+      con->disconnect();
+      testVal1 = val;
+    });
+
+
     sigInt(1000);
-    EXPECT(testVal == 1000)
+    EXPECT(testVal == 1000 && testVal1 == 1000)
+    EXPECT(!con.connected())
+
     sigInt(-1);
-    EXPECT(testVal == 1000)
+    EXPECT(testVal == 1000 && testVal1 == 1000)
   }
   TEST_CASE_E()
 }
@@ -249,7 +260,6 @@ void trackable_slot_test() {
     p->setValue(i);
     ii = i;
   });
-
 
   TEST_CASE_B(trackable_slot) {
     sig(1000);

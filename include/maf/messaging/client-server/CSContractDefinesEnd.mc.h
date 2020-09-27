@@ -46,6 +46,11 @@
 #		pragma pop_macro("OUTPUT")
 #		undef maf_restore_macro_OUTPUT
 #	endif
+#	ifdef maf_restore_macro_ERROR
+#		undef ERROR
+#		pragma pop_macro("ERROR")
+#		undef maf_restore_macro_ERROR
+#	endif
 #	ifdef maf_restore_macro_PROPERTY
 #		undef PROPERTY
 #		pragma pop_macro("PROPERTY")

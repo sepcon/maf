@@ -1,8 +1,9 @@
 #pragma once
 
-#include <cassert>
 #include <maf/messaging/client-server/CSMessage.h>
 #include <maf/utils/serialization/SerializableIF.h>
+
+#include <cassert>
 
 namespace maf {
 namespace messaging {
@@ -30,13 +31,14 @@ struct cs_input             : public cs_inputbase   {};
 
 struct cs_outputbase        : public cs_param       {};
 struct cs_output            : public cs_outputbase  {};
+struct cs_error             : public cs_outputbase  {};
 struct cs_status            : public cs_outputbase  {};
 struct cs_attributes        : public cs_outputbase  {};
 
 // clang-format on
 
 template <class SerializableCSParamClass, class cs_param_type>
-struct serializable_cs_param_t : public cs_param_type{ };
+struct serializable_cs_param_t : public cs_param_type {};
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

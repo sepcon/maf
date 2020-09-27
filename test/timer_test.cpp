@@ -1,10 +1,14 @@
 #include <maf/messaging/Component.h>
+#include <maf/messaging/SignalTimer.h>
 #include <maf/messaging/Timer.h>
+#include <maf/utils/TimeMeasurement.h>
 
 #include "test.h"
 
 using namespace std;
 using namespace chrono;
+using namespace maf::util;
+using namespace maf::signal_slots;
 using namespace maf::messaging;
 
 template <class Iterable>
@@ -106,18 +110,32 @@ void multiTimersTest() {
   const auto eachTimerDuration = 1;
   TimerCreater tc{totalTimers, testTime, eachTimerDuration};
   auto expectation = vector<int>(totalTimers, testTime / eachTimerDuration);
-  comp->connect<int>(
-      [](int x) { std::cout << "got x = " << x << std::endl; });
+  comp->connect<int>([](int x) { std::cout << "got x = " << x << std::endl; });
 
   comp->connect<stop_msg>([](auto) { this_component::stop(); });
 
   comp->run([&tc] { tc.start(); });
 
-//  print(tc.timersHitCount);
-  TEST_CASE_B(timer_expiration) {
-    EXPECT(tc.timersHitCount >= expectation);
-  }
+  //  print(tc.timersHitCount);
+  TEST_CASE_B(timer_expiration) { EXPECT(tc.timersHitCount >= expectation); }
   TEST_CASE_E(timer_expiration)
+}
+
+void signalTimerTest() {
+  SignalTimer timer;
+  maf::util::TimeMeasurement tm;
+  long long elapsedMs = 0;
+  Component::create()->run([&]() mutable {
+    timer.timeoutSignal().connect(
+        [&]() mutable { elapsedMs = tm.elapsedTime().count() / 1000; });
+    timer.timeoutSignal().connect([] { this_component::stop(); });
+    tm.restart();
+    timer.start(1);
+  });
+
+  cout << elapsedMs << endl;
+  TEST_CASE_B(signal_timer) { EXPECT(elapsedMs == 1); }
+  TEST_CASE_E()
 }
 
 int main() {
@@ -125,5 +143,6 @@ int main() {
   maf::test::init_test_cases();
   multiTimersTest();
   restartTimerTest();
+  signalTimerTest();
   return 0;
 }

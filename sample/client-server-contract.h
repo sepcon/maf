@@ -36,6 +36,13 @@ REQUEST(today_weather)
         (StringList, shared_list_of_places),
         (uint32_t, your_command, 0)
     )
+
+    ERROR
+    (
+        (std::string, message),
+        (int, code)
+    )
+
     INPUT
     (
         (std::string, client_name, "This s client"),

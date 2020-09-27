@@ -107,10 +107,6 @@ ConnectionID Component::connect(SpecificMsgProcessingCallback<Msg> f) {
       callback(any_cast<const Msg &>(genericMsg));
     } catch (const bad_any_cast &) {
       MAF_LOGGER_ERROR("Failed to CAST msg to type of ", msgid<Msg>().name());
-    } catch (const exception &e) {
-      MAF_LOGGER_FATAL("EXCEPTION when handling message ", msgid<Msg>().name(),
-                       ": ", e.what());
-      throw;
     }
   };
 

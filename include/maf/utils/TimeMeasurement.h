@@ -7,7 +7,7 @@ namespace maf {
 namespace util {
 
 class TimeMeasurement {
-public:
+ public:
   using MicroSeconds = std::chrono::microseconds;
   TimeMeasurement() = default;
   TimeMeasurement(std::function<void(MicroSeconds)> onReportCallback)
@@ -20,6 +20,8 @@ public:
   TimeMeasurement& operator=(const TimeMeasurement&) = delete;
 
   ~TimeMeasurement() { stop(); }
+
+  void restart() { _startTime = std::chrono::system_clock::now(); }
 
   MicroSeconds elapsedTime() const {
     return std::chrono::duration_cast<MicroSeconds>(
@@ -42,5 +44,5 @@ public:
   std::function<void(MicroSeconds)> _onReportCallback;
   std::chrono::system_clock::time_point _startTime;
 };
-} // namespace util
-} // namespace maf
+}  // namespace util
+}  // namespace maf

@@ -1,63 +1,64 @@
 #include <maf/Messaging.h>
-#include <maf/utils/SignalSlot.h>
-#include <maf/utils/StringifyableEnum.h>
+#include <maf/messaging/SignalTimer.h>
+#include <maf/utils/TimeMeasurement.h>
 
 #include <iostream>
 
 using namespace maf::util;
+using namespace maf::signal_slots;
 using namespace maf::messaging;
 using namespace std;
 
-class SignalTimer {
- public:
-  using TimeoutSignal = Signal<>;
+static mutex m;
 
-  void start(long long interval) {
-    impl_.start(interval, [this] { timeoutSignal().notify(); });
+#define LOG(expr)         \
+  {                       \
+    lock_guard lock(m);   \
+    cout << expr << endl; \
   }
 
-  void restart() { impl_.restart(); }
-
-  void stop() { impl_.stop(); }
-
-  bool running() const { return impl_.running(); }
-
-  void setCyclic(bool yes = true) { impl_.setCyclic(yes); }
-
-  TimeoutSignal& timeoutSignal() { return timeoutSignal_; }
-
- private:
-  TimeoutSignal timeoutSignal_;
-  Timer impl_;
-};
 
 int main() {
+  auto tm = TimeMeasurement(
+      [](auto elapsed) { LOG("elapsed = " << elapsed.count() << "us"); });
+
+  cout.sync_with_stdio(false);
   auto runner = Component::create();
+  AsyncComponent runner2 = Component::create();
+
+  Signal<> stopAllSignal;
+  Signal<> firedSignal;
+
   SignalTimer timer;
-  SignalTimer::TimeoutSignal::ConnectionPtrType counterConnection;
   int counter = 0;
 
-  timer.setCyclic();
-  timer.timeoutSignal().connect([&counterConnection] {
-    static int num = 0;
-    cout << (num++ % 2 == 0 ? "tik" : "tak") << endl;
-    if (num == 5) {
-      counterConnection->reconnect();
+  timer.timeoutSignal.connect(ref(firedSignal));
+
+  firedSignal.connect([] { LOG("Timeout on runner"); }, runner->getExecutor());
+
+  stopAllSignal.connect([runner, &runner2, &tm] {
+    tm.stop();
+    runner->stop();
+    runner2->stop();
+  });
+
+  timer.setCyclic(true);
+
+  timer.timeoutSignal.connect([] { LOG("Time out on runner2"); },
+                              runner->getExecutor());
+
+  timer.timeoutSignal.connect([] { LOG("Time out on runner2"); },
+                              runner->getExecutor());
+
+  timer.timeoutSignal.connect([&](auto connectionPtr) {
+    if (++counter >= 10) {
+      stopAllSignal();
+      connectionPtr->disconnect();
     }
   });
 
-  timer.timeoutSignal().connect(
-      [&counter,
-       &counterConnection](SignalTimer::TimeoutSignal::ConnectionPtrType con) {
-        cout << "current counter is " << counter << endl;
-        counterConnection = con;
-        if (++counter == 3) {
-          con->disconnect();
-
-        } else if (counter == 10) {
-          this_component::stop();
-        }
-      });
-
-  runner->run([&timer] { timer.start(1000); });
+  runner2.launch();
+  runner->run([&timer] { timer.start(100); });
+  runner2.wait();
+  LOG("Counter is " << counter);
 }

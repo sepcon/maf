@@ -51,8 +51,14 @@ PTrait::template getOperationID<Output>(),                \
   void onAborted(AbortRequestCallback abortCallback,
                  util::ExecutorIFPtr executor) {
     assert(executor && "Executor must not be null");
-    delegate_->onAborted(std::bind(&ExecutorIF::execute, std::move(executor),
-                                   std::move(abortCallback)));
+    delegate_->onAborted(
+        [callback = std::move(abortCallback), executor = std::move(executor)] {
+          executor->execute(std::move(callback));
+        });
+  }
+
+  void onAborted(AbortRequestCallback abortCallback) {
+    delegate_->onAborted(std::move(abortCallback));
   }
 
   std::shared_ptr<Input> getInput() const {

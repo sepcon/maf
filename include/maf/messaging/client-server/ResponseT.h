@@ -1,32 +1,33 @@
 #pragma once
 
-#include "CSError.h"
 #include <variant>
+
+#include "CSError.h"
 
 namespace maf {
 namespace messaging {
 
-template <class Output> class ResponseT {
+template <class Output>
+class ResponseT {
   struct NoValue {};
 
-public:
+ public:
   using OutputPtr = std::shared_ptr<Output>;
   using ErrorPtr = std::shared_ptr<CSError>;
 
-  template <typename T,
-            std::enable_if_t<std::is_same_v<Output, T>, bool> = true>
-  ResponseT(std::shared_ptr<T> response = {}) noexcept
+  ResponseT(std::shared_ptr<Output> response) noexcept
       : response_(std::move(response)) {}
 
   ResponseT(std::shared_ptr<CSError> error) noexcept
       : response_(std::move(error)) {}
 
   ResponseT() noexcept : response_{NoValue{}} {}
-  //  ResponseT(const ResponseT &) = default;
-  //  ResponseT(ResponseT &&) = default;
-  //  ResponseT &operator=(ResponseT &&) = default;
+  ResponseT(const ResponseT &) = default;
+  ResponseT(ResponseT &&) = default;
+  ResponseT &operator=(ResponseT &&) = default;
+  ResponseT &operator=(const ResponseT &) = default;
 
-  ~ResponseT(){} // Avoid VC-C2644 warning
+  ~ResponseT() {}  // Avoid VC-C2644 warning
 
   OutputPtr getOutput() const noexcept {
     return isOutput() ? std::get<OutputPtr>(response_) : nullptr;
@@ -40,7 +41,7 @@ public:
   bool isOutput() const noexcept { return has<OutputPtr>(); }
   bool hasValue() const noexcept { return !has<NoValue>(); }
 
-private:
+ private:
   // clang-format off
   template<class T>
   bool has() const noexcept { return std::holds_alternative<T>(response_); }
@@ -54,5 +55,5 @@ private:
   // clang-format on
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

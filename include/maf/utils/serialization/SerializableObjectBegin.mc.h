@@ -38,7 +38,6 @@
 #define MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 #   include "Serializer.h"
 #   include "DumpHelper.h"
-#   include <maf/utils/cppextension/Loop.mc.h>
 #endif // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 
 // The rest of this file must be putted outside include guard

@@ -132,6 +132,10 @@ class BasicProxy {
   static Response<CSParam> getResposne(const CSPayloadIFPtr &) noexcept;
 
   template <class CSParam>
+  static Response<CSParam> makeError(const OpID &opid,
+                                     ActionCallStatus callstatus) noexcept;
+
+  template <class CSParam>
   static std::shared_ptr<CSParam> convert(const CSPayloadIFPtr &) noexcept;
 
   template <class T>
@@ -272,7 +276,7 @@ typename BasicProxy<PTrait>::template Response<CSParam>
 BasicProxy<PTrait>::getResposne(const CSPayloadIFPtr &payload) noexcept {
   using ResponseType = Response<CSParam>;
   if (!payload) {
-    return ResponseType{};
+    return typename ResponseType::OutputPtr{};
   }
 
   if (payload->type() == CSPayloadType::Error) {
@@ -287,6 +291,16 @@ BasicProxy<PTrait>::getResposne(const CSPayloadIFPtr &payload) noexcept {
   }
 
   return ResponseType{convert<CSParam>(payload)};
+}
+
+template <class PTrait>
+template <class CSParam>
+typename BasicProxy<PTrait>::template Response<CSParam>
+BasicProxy<PTrait>::makeError(const OpID &opid,
+                              ActionCallStatus callstatus) noexcept {
+  std::ostringstream oss;
+  oss << "Operation failed `" << opid << "` with call status: " << callstatus;
+  return std::make_shared<CSError>(oss.str(), CSErrorCode::OperationFailed);
 }
 
 template <class PTrait>
@@ -489,7 +503,7 @@ BasicProxy<PTrait>::sendRequest(const OpID &actionID,
   } else {
     MAF_LOGGER_ERROR("Failed to send sync-request `", actionID,
                      "` to server with call status: ", cstt);
-    return {};
+    return makeError<RequestOrOutput>(actionID, cstt);
   }
 }
 

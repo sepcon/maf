@@ -52,6 +52,11 @@
 #		define maf_restore_macro_OUTPUT
 #		undef OUTPUT
 #	endif
+#	ifdef ERROR
+#		pragma push_macro("ERROR")
+#		define maf_restore_macro_ERROR
+#		undef ERROR
+#	endif
 #	ifdef PROPERTY
 #		pragma push_macro("PROPERTY")
 #		define maf_restore_macro_PROPERTY
@@ -110,6 +115,7 @@
 #define REQUEST(name) mc_maf_csc_declare_feature(request, name)
 #define INPUT(...) mc_maf_csc_function_params(input, __VA_ARGS__)
 #define OUTPUT(...) mc_maf_csc_function_params(output, __VA_ARGS__)
+#define ERROR(...) mc_maf_csc_function_params(error, __VA_ARGS__)
 #define ENDREQUEST(...) \
   }                     \
   ;

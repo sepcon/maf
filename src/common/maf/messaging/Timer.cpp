@@ -32,7 +32,6 @@ struct TimerInterrupt {};
 
 struct TimerData {
   TimeoutCallback callback;
-  ExecutorIFPtr executor;
   DeadLine deadline = Clock::now();
   ExecutionTimeout duration;
   bool cyclic = false;
@@ -47,17 +46,9 @@ struct TimerData {
   void updateNextDeadline() { deadline += duration; }
   void restart() { deadline = Clock::now() + duration; }
   bool expired() const { return deadline <= Clock::now(); }
-  void onExpired() {
-    if (executor) {
-      executor->execute(callback);
-    } else {
-      callback();
-    }
-  }
-  void reset(TimeoutCallback&& cb, ExecutorIFPtr&& exc, ExecutionTimeout d,
-             bool cc = false) {
+  void onExpired() { callback(); }
+  void reset(TimeoutCallback&& cb, ExecutionTimeout d, bool cc = false) {
     callback = move(cb);
-    executor = move(exc);
     deadline = Clock::now() + d;
     duration = d;
     cyclic = cc;
@@ -114,7 +105,13 @@ void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
     MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
   } else {
     if (auto comp = this_component::instance()) {
-      d_->reset(move(callback), move(executor), interval, d_->cyclic);
+      if (executor) {
+        d_->reset([callback = move(callback),
+                   executor = move(executor)] { executor->execute(callback); },
+                  interval, d_->cyclic);
+      } else {
+        d_->reset(move(callback), interval, d_->cyclic);
+      }
       mgr().start(d_);
     }
   }
@@ -122,10 +119,9 @@ void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
 
 void Timer::restart() {
   if (auto comp = this_component::instance()) {
-    if (d_->running) {
-      mgr().restart(d_);
-      mgr().interruptCurrentTimer(comp);
-    }
+    d_->running = true;
+    mgr().restart(d_);
+    mgr().interruptCurrentTimer(comp);
   }
 }
 
