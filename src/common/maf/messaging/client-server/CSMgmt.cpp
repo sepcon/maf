@@ -2,7 +2,7 @@
 #include <maf/messaging/client-server/CSMgmt.h>
 
 #include "ClientFactory.h"
-#include "GlobalThreadPool.h"
+#include "SingleThreadPool.h"
 #include "ServerFactory.h"
 
 namespace maf {
@@ -10,8 +10,8 @@ namespace messaging {
 namespace csmgmt {
 
 struct CSInit {
-  CSInit() { global_threadpool::init(); }
-  ~CSInit() { global_threadpool::deinit(); }
+  CSInit() { single_threadpool::init(); }
+  ~CSInit() { single_threadpool::deinit(); }
 };
 
 static void csinit() { static CSInit _; }

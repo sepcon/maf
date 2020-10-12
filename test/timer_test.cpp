@@ -43,7 +43,7 @@ struct TimerCreater {
   void start() {
     for (size_t i = 0; i < timers.size(); ++i) {
       timers[i]->start(eachTimerTimeout, [i, this] { timersHitCount[i]++; });
-    };
+    }
 
     controllerTimer.start(runningTime, [start = system_clock::now()] {
       cout << "total execution time of controller timer = "
@@ -80,7 +80,7 @@ class TimerRestartTester {
                     [maxCounterHits, startTime = system_clock::now()] {
                       TEST_CASE_B(test_service) {
                         auto elapsed = system_clock::now() - startTime;
-                        EXPECT(elapsed > milliseconds{maxCounterHits});
+                        EXPECT(elapsed > milliseconds{maxCounterHits})
                       }
                       TEST_CASE_E(test_service)
                       this_component::post(stop_msg{});
@@ -117,8 +117,8 @@ void multiTimersTest() {
   comp->run([&tc] { tc.start(); });
 
   //  print(tc.timersHitCount);
-  TEST_CASE_B(timer_expiration) { EXPECT(tc.timersHitCount >= expectation); }
-  TEST_CASE_E(timer_expiration)
+  TEST_CASE_B(timer_expiration){
+      EXPECT(tc.timersHitCount >= expectation)} TEST_CASE_E(timer_expiration)
 }
 
 void signalTimerTest() {
@@ -126,16 +126,15 @@ void signalTimerTest() {
   maf::util::TimeMeasurement tm;
   long long elapsedMs = 0;
   Component::create()->run([&]() mutable {
-    timer.timeoutSignal().connect(
+    timer.timeoutSignal.connect(
         [&]() mutable { elapsedMs = tm.elapsedTime().count() / 1000; });
-    timer.timeoutSignal().connect([] { this_component::stop(); });
+    timer.timeoutSignal.connect([] { this_component::stop(); });
     tm.restart();
     timer.start(1);
   });
 
   cout << elapsedMs << endl;
-  TEST_CASE_B(signal_timer) { EXPECT(elapsedMs == 1); }
-  TEST_CASE_E()
+  TEST_CASE_B(signal_timer){EXPECT(elapsedMs == 1)} TEST_CASE_E()
 }
 
 int main() {

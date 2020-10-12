@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-#include "../GlobalThreadPool.h"
+#include "../SingleThreadPool.h"
 #include "BufferSenderIF.h"
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
@@ -36,9 +36,8 @@ bool LocalIPCClient::init(const Address &serverAddress) {
 
 bool LocalIPCClient::start() {
   receiverThread_ = std::thread{[this] { pReceiver_->start(); }};
-  global_threadpool::tryAddThread();
-  global_threadpool::submit([this] { monitorServerStatus(); });
-  return global_threadpool::threadCount() > 0;
+  single_threadpool::submit([this] { monitorServerStatus(); });
+  return true;
 }
 
 void LocalIPCClient::stop() {
@@ -47,7 +46,6 @@ void LocalIPCClient::stop() {
   if (receiverThread_.joinable()) {
     receiverThread_.join();
   }
-  global_threadpool::tryRemoveThread();
 }
 
 void LocalIPCClient::deinit() { ClientBase::deinit(); }
@@ -98,7 +96,7 @@ void LocalIPCClient::monitorServerStatus(long long tunedInterval) {
 }
 
 void LocalIPCClient::onBytesCome(srz::Buffer &&buff) {
-  global_threadpool::submit([this, buff = std::move(buff)]() mutable {
+  single_threadpool::submit([this, buff = std::move(buff)]() mutable {
     std::shared_ptr<LocalIPCMessage> csMsg =
         std::make_shared<LocalIPCMessage>();
     if (csMsg->fromBytes(std::move(buff))) {

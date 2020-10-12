@@ -3,11 +3,12 @@
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
 
-#include "../GlobalThreadPool.h"
+#include <cassert>
+
+#include "../SingleThreadPool.h"
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
 #include "LocalIPCMessage.h"
-#include <cassert>
 
 namespace maf {
 namespace messaging {
@@ -29,9 +30,8 @@ bool LocalIPCServer::init(const Address &serverAddress) {
 }
 
 bool LocalIPCServer::start() {
-  global_threadpool::tryAddThread();
   listeningThread_ = std::thread{[this] { pReceiver_->start(); }};
-  return global_threadpool::threadCount() > 0;
+  return true;
 }
 
 void LocalIPCServer::stop() {
@@ -41,7 +41,6 @@ void LocalIPCServer::stop() {
   if (listeningThread_.joinable()) {
     listeningThread_.join();
   }
-  global_threadpool::tryRemoveThread();
 }
 
 void LocalIPCServer::deinit() {}
@@ -124,7 +123,7 @@ bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
 }
 
 void LocalIPCServer::onBytesCome(srz::Buffer &&buff) {
-  global_threadpool::submit(
+  single_threadpool::submit(
       [thisw = weak_from_this(), buff = std::move(buff)]() mutable {
         if (auto this_ = thisw.lock()) {
           std::shared_ptr<LocalIPCMessage> csMsg =

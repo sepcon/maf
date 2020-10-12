@@ -43,7 +43,7 @@
  public:                                                                \
   void set_all(mc_maf_sb_remove_first_arg(                              \
       mc_maf_for_each(mc_maf_sb_declare_function_param, __VA_ARGS__))){ \
-      mc_maf_for_each(mc_maf_sb_set_member_value, __VA_ARGS__)};
+      mc_maf_for_each(mc_maf_sb_set_member_value, __VA_ARGS__)}
 
 #define mc_maf_sb_declare_function_param(parentheses) \
   mc_maf_sb_declare_function_param_no_prt(mc_strip_parentheses(parentheses))
