@@ -6,7 +6,21 @@ namespace maf {
 namespace messaging {
 namespace single_threadpool {
 
-using ThreadPool = AsyncComponent;
+class ThreadPool : public ComponentExBase {
+  std::thread thread_;
+
+ public:
+  void launch() {
+    thread_ = std::thread{[this] { instance_->run(); }};
+  }
+
+  void stopAndWait() {
+    instance()->stop();
+    if (thread_.joinable()) {
+      thread_.join();
+    }
+  }
+};
 static ThreadPool& thepool() {
   static ThreadPool _;
   return _;
