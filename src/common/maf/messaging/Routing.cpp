@@ -18,12 +18,12 @@ ComponentInstance findComponent(const ComponentID &id) {
   return Router::instance().findComponent(id);
 }
 
-Component::MessageHandledSignal send(const ComponentID &componentID,
+Component::CompleteSignal send(const ComponentID &componentID,
                                      Message msg) {
   return Router::instance().send(componentID, std::move(msg));
 }
 
-Component::MessageHandledSignal sendToAll(Message msg) {
+Component::CompleteSignal sendToAll(Message msg) {
   return Router::instance().sendToAll(std::move(msg));
 }
 

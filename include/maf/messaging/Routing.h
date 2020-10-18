@@ -19,9 +19,9 @@ struct ComponentStatusUpdateMsg {
 
 MAF_EXPORT bool post(const ComponentID& componentID, Message msg);
 MAF_EXPORT bool postToAll(Message msg);
-MAF_EXPORT Component::MessageHandledSignal send(const ComponentID& componentID,
+MAF_EXPORT Component::CompleteSignal send(const ComponentID& componentID,
                                                 Message msg);
-MAF_EXPORT Component::MessageHandledSignal sendToAll(Message msg);
+MAF_EXPORT Component::CompleteSignal sendToAll(Message msg);
 MAF_EXPORT ComponentInstance findComponent(const ComponentID& id);
 
 template <class Msg, typename... Args>
@@ -37,14 +37,14 @@ bool postToAll(Args&&... args) {
 }
 
 template <class Msg, typename... Args>
-Component::MessageHandledSignal send(const ComponentID& componentID,
+Component::CompleteSignal send(const ComponentID& componentID,
                                      Args&&... args) {
   using namespace std;
   return send(componentID, makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
-Component::MessageHandledSignal sendToAll(Args&&... args) {
+Component::CompleteSignal sendToAll(Args&&... args) {
   using namespace std;
   return sendToAll(makeMessage<Msg>(forward<Args>(args)...));
 }

@@ -12,6 +12,7 @@
 
 using namespace maf::messaging;
 using namespace maf::util;
+using namespace std::chrono_literals;
 
 struct program_start_msg {};
 struct program_end_msg {};
@@ -451,7 +452,7 @@ void sendMessageTest() {
 
     EXPECT(!handledSignal.valid());
 
-    std::vector<Component::MessageHandledSignal> handledSignals;
+    std::vector<Component::CompleteSignal> handledSignals;
     for (int i = 1; i <= 10; ++i) {
       handledSignals.push_back(logic->send<sum_int_msg>(i));
     }
@@ -481,6 +482,42 @@ void sendMessageTest() {
   TEST_CASE_E(send_message_from_current_component)
 }
 
+void blockingExecutionTest() {
+  AsyncComponent comp;
+  comp.launch();
+  int firedCount = 0;
+  comp->execute(Blocked,
+                [&firedCount] {
+                  std::this_thread::sleep_for(1ms);
+                  ++firedCount;
+                })
+      .then([&firedCount] { ++firedCount; })
+      .wait();
+
+  TEST_CASE_B(blocking_execution) { EXPECT(firedCount == 2); }
+  TEST_CASE_E(blocking_execution)
+
+  comp->stop();
+  // reset
+  firedCount = 0;
+  bool gotException = false;
+  try {
+    comp->execute(Blocked,
+                  [&firedCount] {
+                    std::this_thread::sleep_for(1ms);
+                    ++firedCount;
+                  })
+        .then([&firedCount] { ++firedCount; })
+        .wait();
+  } catch (const std::future_error&) {
+    gotException = true;
+  }
+
+  TEST_CASE_B(blocking_execution_when_component_stopepd) {
+    EXPECT(firedCount == 0 && gotException == true);
+  }
+  TEST_CASE_E(blocking_execution_when_component_stopepd)
+}
 int main() {
   //  using namespace maf::logging;
   //  maf::logging::init(LOG_LEVEL_FROM_WARN | LOG_LEVEL_VERBOSE,
@@ -493,6 +530,7 @@ int main() {
   testRegisterUnregisterHandlers();
   testAutoUnregister();
   sendMessageTest();
+  blockingExecutionTest();
 
   return 0;
 }

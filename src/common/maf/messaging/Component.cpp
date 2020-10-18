@@ -241,9 +241,9 @@ bool Component::post(Message msg) {
   return false;
 }
 
-Component::MessageHandledSignal Component::send(Message msg) {
+Component::CompleteSignal Component::send(Message msg) {
   using namespace std;
-  MessageHandledSignal doneSignal;
+  CompleteSignal doneSignal;
   if (!stopped()) {
     auto &msgType = msg.type();
     if (auto handlers = d_->findHandlers(msgType)) {
@@ -252,7 +252,7 @@ Component::MessageHandledSignal Component::send(Message msg) {
             handlers->handle(msg);
           });
 
-      doneSignal = MessageHandledSignal{msgHandlingTask->get_future()};
+      doneSignal = CompleteSignal{msgHandlingTask->get_future()};
       if (this_component::id() != id()) {
         execute([task{move(msgHandlingTask)}] { (*task)(); });
       } else {
@@ -280,6 +280,21 @@ bool Component::execute(Execution exec) {
     }
   }
   return false;
+}
+
+Component::CompleteSignal Component::execute(BlockingMode, Execution exec) {
+  using namespace std;
+  CompleteSignal doneSignal;
+  if (!stopped()) {
+    auto task = make_shared<packaged_task<void()>>(move(exec));
+    doneSignal = CompleteSignal{task->get_future()};
+    if (this_component::id() != id()) {
+      execute([task{move(task)}] { (*task)(); });
+    } else {
+      (*task)();
+    }
+  }
+  return doneSignal;
 }
 
 Component::Executor Component::getExecutor() {

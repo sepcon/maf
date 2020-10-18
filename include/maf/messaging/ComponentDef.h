@@ -27,6 +27,8 @@ template <class Msg>
 using SpecificMsgProcessingCallback = std::function<void(const Msg&)>;
 using EmptyMsgProcessingCallback = std::function<void()>;
 using threading::Upcoming;
+inline constexpr struct BlockingMode {
+} Blocked;
 
 // -----------------------------------------------------------
 

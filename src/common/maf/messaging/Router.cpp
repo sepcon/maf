@@ -5,8 +5,8 @@ namespace messaging {
 namespace details {
 
 static bool askThenPost(const ComponentInstance &r, Message msg);
-static Component::MessageHandledSignal askThenSend(const ComponentInstance &r,
-                                                   Message msg);
+static Component::CompleteSignal askThenSend(const ComponentInstance &r,
+                                             Message msg);
 static void notifyAllAboutNewComponent(const Components &joinedComponents,
                                        const ComponentInstance &newComponent);
 static void informNewComponentAboutJoinedOnes(
@@ -19,8 +19,8 @@ bool Router::post(const ComponentID &componentID, Message &&msg) {
   return false;
 }
 
-Component::MessageHandledSignal Router::send(const ComponentID &componentID,
-                                             Message msg) {
+Component::CompleteSignal Router::send(const ComponentID &componentID,
+                                       Message msg) {
   if (auto comp = findComponent(componentID)) {
     return comp->send(std::move(msg));
   }
@@ -36,8 +36,8 @@ bool Router::postToAll(const Message &msg) {
   return delivered;
 }
 
-Component::MessageHandledSignal Router::sendToAll(const Message &msg) {
-  auto msgMessageHandledSignals = vector<Component::MessageHandledSignal>{};
+Component::CompleteSignal Router::sendToAll(const Message &msg) {
+  auto msgMessageHandledSignals = vector<Component::CompleteSignal>{};
   auto atComponents = components_.atomic();
   for (const auto &comp : *atComponents) {
     if (auto sig = askThenSend(comp, std::move(msg)); sig.valid()) {
@@ -46,7 +46,7 @@ Component::MessageHandledSignal Router::sendToAll(const Message &msg) {
   }
 
   if (!msgMessageHandledSignals.empty()) {
-    return Component::MessageHandledSignal{async(
+    return Component::CompleteSignal{async(
         launch::deferred, [sigs{move(msgMessageHandledSignals)}]() mutable {
           for (auto &sig : sigs) {
             sig.get();
@@ -94,8 +94,8 @@ static bool askThenPost(const ComponentInstance &r, Message msg) {
   return false;
 }
 
-static Component::MessageHandledSignal askThenSend(const ComponentInstance &r,
-                                                   Message msg) {
+static Component::CompleteSignal askThenSend(const ComponentInstance &r,
+                                             Message msg) {
   if (r->connected(msg.type())) {
     return r->send(std::move(msg));
   }

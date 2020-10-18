@@ -35,10 +35,9 @@ class Router : public pattern::SingletonObject<Router> {
  public:
   Router(Invisible) noexcept {}
   bool post(const ComponentID &componentID, Message &&msg);
-  Component::MessageHandledSignal send(const ComponentID &componentID,
-                                          Message msg);
+  Component::CompleteSignal send(const ComponentID &componentID, Message msg);
   bool postToAll(const Message &msg);
-  Component::MessageHandledSignal sendToAll(const Message &msg);
+  Component::CompleteSignal sendToAll(const Message &msg);
 
   ComponentInstance findComponent(const ComponentID &id) const;
   bool addComponent(ComponentInstance comp);

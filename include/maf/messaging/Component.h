@@ -19,7 +19,7 @@ class Component final : pattern::Unasignable,
  public:
   using ThreadFunction = std::function<void()>;
   using Executor = std::shared_ptr<util::ExecutorIF>;
-  using MessageHandledSignal = Upcoming<void>;
+  using CompleteSignal = Upcoming<void>;
 
   MAF_EXPORT static ComponentInstance create(ComponentID id = {});
   MAF_EXPORT static ComponentInstance findComponent(const ComponentID &id);
@@ -31,9 +31,10 @@ class Component final : pattern::Unasignable,
   MAF_EXPORT void stop();
   MAF_EXPORT bool stopped() const;
   MAF_EXPORT bool post(Message msg);
-  MAF_EXPORT MessageHandledSignal send(Message msg);
+  MAF_EXPORT CompleteSignal send(Message msg);
   MAF_EXPORT bool connected(const MessageID &mid) const;
   MAF_EXPORT bool execute(Execution exec);
+  MAF_EXPORT CompleteSignal execute(BlockingMode, Execution exec);
   MAF_EXPORT Executor getExecutor();
   MAF_EXPORT ConnectionID connect(const MessageID &msgid,
                                   MessageProcessingCallback processMessage);
@@ -54,7 +55,7 @@ class Component final : pattern::Unasignable,
   bool post(Args &&... args);
 
   template <class Msg, typename... Args>
-  MessageHandledSignal send(Args &&... args);
+  CompleteSignal send(Args &&... args);
 
   template <class Msg>
   void disconnect();
@@ -124,7 +125,7 @@ bool Component::post(Args &&... args) {
 }
 
 template <class Msg, typename... Args>
-Component::MessageHandledSignal Component::send(Args &&... args) {
+Component::CompleteSignal Component::send(Args &&... args) {
   return send(makeMessage<Msg>(std::forward<Args>(args)...));
 }
 
