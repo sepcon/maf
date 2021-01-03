@@ -8,11 +8,12 @@
 
 #define SET_ERROR_AND_RETURN_IF(condition, pErrorStore, errorValue, \
                                 returnedValue)                      \
-  if (condition) {                                                  \
-    assign_ptr(pErrorStore, errorValue);                            \
-    return returnedValue;                                           \
-  }                                                                 \
-  static_cast<void *>(nullptr)
+  do {                                                              \
+    if (condition) {                                                \
+      assign_ptr(pErrorStore, errorValue);                          \
+      return returnedValue;                                         \
+    }                                                               \
+  } while (false)
 
 namespace maf {
 namespace messaging {

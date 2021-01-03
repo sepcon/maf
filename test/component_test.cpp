@@ -112,7 +112,7 @@ void testPostingMessages() {
     range_begin = 1;
     range_end = 1000;
     postingMessages();
-    EXPECT(sum_of_all_consumers == (range_end * (range_end + 1)))
+    EXPECT(sum_of_all_consumers == (range_end * (range_end + 1)));
   }
   TEST_CASE_E()
 }
@@ -285,7 +285,7 @@ void requestTest() {
     EXPECT(!fired);
 
     logic.wait();
-    EXPECT(!logic.running())
+    EXPECT(!logic.running());
   }
   TEST_CASE_E(stop_async_component)
 }

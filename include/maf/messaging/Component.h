@@ -36,6 +36,7 @@ class Component final : pattern::Unasignable,
   MAF_EXPORT bool execute(Execution exec);
   MAF_EXPORT CompleteSignal execute(BlockingMode, Execution exec);
   MAF_EXPORT Executor getExecutor();
+  MAF_EXPORT Executor getBlockingExecutor();
   MAF_EXPORT ConnectionID connect(const MessageID &msgid,
                                   MessageProcessingCallback processMessage);
   MAF_EXPORT void disconnect(const ConnectionID &regid);
@@ -74,11 +75,12 @@ MAF_EXPORT bool stop();
 MAF_EXPORT bool stopped();
 MAF_EXPORT bool post(Message msg);
 MAF_EXPORT Component::Executor getExecutor();
+MAF_EXPORT Component::Executor getBlockingExecutor();
 MAF_EXPORT void disconnect(const ConnectionID &regid);
 MAF_EXPORT void disconnect(const MessageID &regid);
 
 template <class Msg, typename... Args>
-static bool post(Args &&... args) {
+bool post(Args &&... args) {
   return post(makeMessage<Msg>(std::forward<Args>(args)...));
 }
 
@@ -92,7 +94,7 @@ void disconnect() {
   disconnect(msgid<Msg>());
 }
 
-};  // namespace this_component
+}  // namespace this_component
 
 template <class Msg>
 bool Component::connected() const {

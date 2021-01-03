@@ -1,6 +1,8 @@
 #include <maf/Messaging.h>
+#include <maf/Observable.h>
 #include <maf/messaging/SignalTimer.h>
 #include <maf/utils/TimeMeasurement.h>
+#include <maf/utils/serialization/DumpHelper.h>
 
 #include <iostream>
 
@@ -17,48 +19,44 @@ static mutex m;
     cout << expr << endl; \
   }
 
+static Observable<vector<string>, size_t> locations;
+static Observable<bool> stopped = false;
+
+void startLocationsFetcher() {
+  thread{[] {
+    do {
+      cout << "start fetching data from server..." << endl;
+      this_thread::sleep_for(49ms);
+      auto mutableLocations = locations.mut();
+      auto& locationList = mutableLocations.get<0>();
+      locationList.push_back(
+          "new place: " +
+          to_string(chrono::system_clock::now().time_since_epoch().count()));
+      mutableLocations.get<1>() = locationList.size();
+    } while (!stopped.get());
+  }}.detach();
+}
 
 int main() {
-  auto tm = TimeMeasurement(
-      [](auto elapsed) { LOG("elapsed = " << elapsed.count() << "us"); });
+  startLocationsFetcher();
+  auto mainComponent = Component::create();
+  locations.connect(
+      [](const vector<string>& loc, size_t modificationPos) {
+        cout << "Got new list of locations: modificationPos = "
+             << modificationPos << " \n"
+             << maf::srz::dump(loc) << endl;
+      },
+      mainComponent->getExecutor());
 
-  cout.sync_with_stdio(false);
-  auto runner = Component::create();
-  AsyncComponent runner2 = Component::create();
-
-  Signal<> stopAllSignal;
-  Signal<> firedSignal;
-
-  SignalTimer timer;
-  int counter = 0;
-
-  timer.timeoutSignal.connect(ref(firedSignal));
-
-  firedSignal.connect([] { LOG("Timeout on runner"); }, runner->getExecutor());
-
-  stopAllSignal.connect([runner, &runner2, &tm] {
-    tm.stop();
-    runner->stop();
-    runner2->stop();
+  mainComponent->run([] {
+    stopped.connect(
+        [](bool yes) {
+          if (yes) {
+            this_component::stop();
+          }
+        },
+        this_component::getBlockingExecutor());
+    Timer::timeoutAfter(100ms, [] { stopped = true; });
   });
-
-  timer.setCyclic(true);
-
-  timer.timeoutSignal.connect([] { LOG("Time out on runner2"); },
-                              runner->getExecutor());
-
-  timer.timeoutSignal.connect([] { LOG("Time out on runner2"); },
-                              runner->getExecutor());
-
-  timer.timeoutSignal.connect([&](auto connectionPtr) {
-    if (++counter >= 10) {
-      stopAllSignal();
-      connectionPtr->disconnect();
-    }
-  });
-
-  runner2.launch();
-  runner->run([&timer] { timer.start(100); });
-  runner2.wait();
-  LOG("Counter is " << counter);
+  return 0;
 }

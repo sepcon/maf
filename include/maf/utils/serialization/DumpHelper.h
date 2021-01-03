@@ -1,11 +1,13 @@
 #pragma once
 
-#include "JsonTrait.h"
-#include "Tuplizable.h"
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
 #include <string.h>
+
 #include <string>
+
+#include "JsonTrait.h"
+#include "Tuplizable.h"
 
 namespace maf {
 namespace srz {
@@ -46,38 +48,29 @@ struct hlp {
     return '"' + str + '"';
   }
   inline static std::string quoteAllEscapes(const std::string &s);
+  inline static void dumpString(const std::string &s, int indentLevel,
+                                std::string &strOut);
 };
 
-template <typename NonDeterminedType, typename = void> struct DumpHelper {
+template <typename NonDeterminedType, typename = void>
+struct DumpHelper {
   inline static void dump(const NonDeterminedType &value, int indentLevel,
                           std::string &strOut) noexcept {
     return prv::template dump<NonDeterminedType>(value, indentLevel, strOut);
   }
 
   struct prv {
-    template <typename TupleLike,
-              std::enable_if_t<is_tuplizable_type_v<TupleLike>, bool> = true>
-    inline static void dump(const TupleLike &value, int indentLevel,
-                            std::string &strOut) noexcept {
-      value.dump(indentLevel, strOut);
-    }
+    template <typename Pointer>
+    struct PointerDumpable {
+      static constexpr bool value =
+          std::is_pointer_v<Pointer> &&
+          !std::is_abstract_v<
+              std::remove_const_t<std::remove_pointer_t<Pointer>>>;
+    };
 
-    template <typename NumberType,
-              std::enable_if_t<nstl::is_number_type_v<NumberType>, bool> = true>
-    inline static void dump(const NumberType &value, int /*indentLevel*/,
-                            std::string &strOut) noexcept {
-      strOut += std::to_string(value);
-    }
-
-    template <typename EnumType,
-              std::enable_if_t<std::is_enum_v<EnumType>, bool> = true>
-    inline static void dump(const EnumType &value, int /*indentLevel*/,
-                            std::string &strOut) noexcept {
-      strOut += std::to_string(static_cast<uint32_t>(value));
-    }
-
-    template <typename PointerType,
-              std::enable_if_t<std::is_pointer_v<PointerType>, bool> = true>
+    template <
+        typename PointerType,
+        std::enable_if_t<PointerDumpable<PointerType>::value, bool> = true>
     inline static void dump(const PointerType &value, int indentLevel,
                             std::string &strOut) noexcept {
       using NormalTypeOfPointerType =
@@ -85,44 +78,37 @@ template <typename NonDeterminedType, typename = void> struct DumpHelper {
       if (value) {
         DumpHelper<NormalTypeOfPointerType>::dump(*value, indentLevel, strOut);
       } else {
-        DumpHelper<NormalTypeOfPointerType>::dump(NormalTypeOfPointerType{},
+        DumpHelper<NormalTypeOfPointerType>::dump(NormalTypeOfPointerType(),
                                                   indentLevel, strOut);
       }
     }
 
-    template <typename SmartPtrType,
-              std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, bool> = true>
-    inline static void dump(const SmartPtrType &value, int indentLevel,
-                            std::string &strOut) noexcept {
-      using PtrType = typename SmartPtrType::element_type *;
-      DumpHelper<PtrType>::dump(value.get(), indentLevel, strOut);
-    }
-
-    template <
-        typename JsonType,
-        std::enable_if_t<is_maf_compatible_json<JsonType>::value, bool> = true>
-    inline static void dump(const JsonType &value, int /*indentLevel*/,
-                            std::string &strOut) noexcept {
-      strOut += JsonTrait<JsonType>::marshall(value);
+    template <typename Fallback, class... Args_>
+    inline static void dump(const Fallback & /*value*/, int indentLevel,
+                            std::string &strOut, Args_...) noexcept {
+      hlp::dumpString(typeid(Fallback).name(), indentLevel, strOut);
     }
   };
 };
 
-template <class JsonClass> struct DumpHelper<JsonTrait<JsonClass>, void> {
+template <class JsonClass>
+struct DumpHelper<JsonTrait<JsonClass>, void> {
   inline static void dump(const bool &value, int /*indentLevel*/,
                           std::string &strOut) noexcept {
     strOut += value ? "true" : "false";
   }
 };
 
-template <> struct DumpHelper<bool, void> {
+template <>
+struct DumpHelper<bool, void> {
   inline static void dump(const bool &value, int /*indentLevel*/,
                           std::string &strOut) noexcept {
     strOut += value ? "true" : "false";
   }
 };
 
-template <typename T1, typename T2> struct DumpHelper<std::pair<T1, T2>, void> {
+template <typename T1, typename T2>
+struct DumpHelper<std::pair<T1, T2>, void> {
   using DType = std::pair<T1, T2>;
 
   inline static void dump(const DType &p, int indentLevel,
@@ -149,12 +135,13 @@ struct DumpHelper<Tuple, std::enable_if_t<nstl::is_tuple_v<Tuple>, void>> {
                            strOut += ",";
                          });
 
-    strOut.resize(strOut.size() - 1); // remove the last ',' character
+    strOut.resize(strOut.size() - 1);  // remove the last ',' character
     strOut += getIndent(indentLevel, newLine) + "]";
   }
 };
 
-template <> struct DumpHelper<std::string, void> {
+template <>
+struct DumpHelper<std::string, void> {
   inline static void dump(const std::string &value, int /*indentLevel*/,
                           std::string &strOut) noexcept {
     // must be taken care for case of wstring
@@ -172,6 +159,51 @@ struct DumpHelper<
                           std::string &strOut) noexcept {
     // must be taken care for case of wstring
     strOut += hlp::quoteAllEscapes(value);
+  }
+};
+
+template <class SmartPtrType>
+struct DumpHelper<SmartPtrType,
+                  std::enable_if_t<nstl::is_smart_ptr_v<SmartPtrType>, void>> {
+  inline static void dump(const SmartPtrType &value, int indentLevel,
+                          std::string &strOut) noexcept {
+    using PtrType = typename SmartPtrType::element_type *;
+    DumpHelper<PtrType>::dump(value.get(), indentLevel, strOut);
+  }
+};
+
+template <class JsonType>
+struct DumpHelper<
+    JsonType, std::enable_if_t<is_maf_compatible_json<JsonType>::value, void>> {
+  inline static void dump(const JsonType &value, int /*indentLevel*/,
+                          std::string &strOut) noexcept {
+    strOut += JsonTrait<JsonType>::marshall(value);
+  }
+};
+
+template <class EnumType>
+struct DumpHelper<EnumType, std::enable_if_t<std::is_enum_v<EnumType>, void>> {
+  inline static void dump(const EnumType &value, int /*indentLevel*/,
+                          std::string &strOut) noexcept {
+    strOut += std::to_string(static_cast<uint32_t>(value));
+  }
+};
+
+template <class NumberType>
+struct DumpHelper<NumberType,
+                  std::enable_if_t<nstl::is_number_type_v<NumberType>, void>> {
+  inline static void dump(const NumberType &value, int /*indentLevel*/,
+                          std::string &strOut) noexcept {
+    strOut += std::to_string(value);
+  }
+};
+
+template <class TupleLike>
+struct DumpHelper<TupleLike,
+                  std::enable_if_t<is_tuplizable_type_v<TupleLike>, void>> {
+  inline static void dump(const TupleLike &value, int indentLevel,
+                          std::string &strOut) noexcept {
+    value.dump(indentLevel, strOut);
   }
 };
 
@@ -199,7 +231,8 @@ struct DumpHelper<
 //    }
 //};
 
-template <> struct DumpHelper<std::wstring, void> {
+template <>
+struct DumpHelper<std::wstring, void> {
   inline static void dump(const std::wstring & /*wvalue*/, int /*indentLevel*/,
                           std::string &strOut) noexcept {
     //        std::string value(wvalue.size() * sizeof(wchar_t), '\0');
@@ -209,7 +242,8 @@ template <> struct DumpHelper<std::wstring, void> {
   }
 };
 
-template <typename Iterable, typename = void> struct Packager {
+template <typename Iterable, typename = void>
+struct Packager {
   inline static void openBox(int /*indentLevel*/, std::string &strOut) {
     strOut += "[";
   }
@@ -245,7 +279,7 @@ struct DumpHelper<Iterable,
       strOut += ",";
     }
     if (!seq.empty()) {
-      strOut.resize(strOut.size() - 1); // remove the last ',' character
+      strOut.resize(strOut.size() - 1);  // remove the last ',' character
     }
     Packager<Iterable>::closeBox(indentLevel, strOut);
   }
@@ -256,7 +290,8 @@ void dump(const T &val, int indentLevel, std::string &strOut) {
   DumpHelper<std::decay_t<decltype(val)>>::dump(val, indentLevel, strOut);
 }
 
-template <typename T> std::string dump(const T &val, int indenLevel = 0) {
+template <typename T>
+std::string dump(const T &val, int indenLevel = 0) {
   std::string strOut;
   dump(val, indenLevel, strOut);
   return strOut;
@@ -302,5 +337,10 @@ std::string hlp::quoteAllEscapes(const std::string &value) {
   return out;
 }
 
-} // namespace srz
-} // namespace maf
+void hlp::dumpString(const std::string &value, int indentLevel,
+                     std::string &strOut) {
+  DumpHelper<std::string>::dump(value, indentLevel, strOut);
+}
+
+}  // namespace srz
+}  // namespace maf

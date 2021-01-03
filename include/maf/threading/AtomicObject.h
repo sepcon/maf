@@ -7,65 +7,65 @@
 namespace maf {
 namespace threading {
 
-template <class Protected, class Mutex = std::mutex>
-class AtomicObject : public pattern::Unasignable {
-  template <class AtomicObject_, class Protected_>
-  friend struct AtomicRef;
-
-  template <class AtomicObject_, class Protected_>
-  struct AtomicRef : public pattern::Unasignable {
+template <class Data_, class Mutex = std::mutex>
+class AtomicObject : public pattern::UnCopyable {
+  template <class Pointed_>
+  struct AtomicRefBase_ : public pattern::Unasignable {
    public:
-    AtomicRef(AtomicObject_ *p) : _AtomicObject{p} {
-      _AtomicObject->_mutex.lock();
+    AtomicRefBase_(Pointed_ *p) : pointed_{p} { pointed_->mutex_.lock(); }
+
+    AtomicRefBase_(AtomicRefBase_ &&other) : pointed_{other.pointed_} {
+      other.pointed_ = nullptr;
     }
 
-    AtomicRef(const Protected_ &p) { operator*() = p; }
-
-    AtomicRef(Protected_ &&p) { operator*() = std::move(p); }
-
-    AtomicRef &operator=(const Protected_ &p) {
-      operator*() = p;
-      return *this;
+    AtomicRefBase_ &operator=(AtomicRefBase_ &&other) {
+      pointed_ = other.pointed_;
+      other.pointed_ = nullptr;
     }
 
-    AtomicRef &operator=(Protected_ &&p) {
-      operator*() = std::move(p);
-      return *this;
+    ~AtomicRefBase_() {
+      if (pointed_) {
+        pointed_->mutex_.unlock();
+      }
     }
 
-    ~AtomicRef() { _AtomicObject->_mutex.unlock(); }
+   protected:
+    Pointed_ *pointed_ = nullptr;
+  };
 
-    Protected_ *operator->() { return &(_AtomicObject->_protected); }
-    Protected_ &operator*() { return _AtomicObject->_protected; }
+  class AtomicRef_ : public AtomicRefBase_<AtomicObject> {
+    using Base_ = AtomicRefBase_<AtomicObject>;
 
-    const Protected_ *operator->() const {
-      return &(_AtomicObject->_protected);
+   public:
+    using Base_::Base_;
+    Data_ *operator->() { return std::addressof(this->pointed_->data_); }
+    Data_ &operator*() { return this->pointed_->data_; }
+  };
+  struct CAtomicRef_ : public AtomicRefBase_<const AtomicObject> {
+    using Base_ = AtomicRefBase_<const AtomicObject>;
+
+   public:
+    using Base_::Base_;
+    const Data_ *operator->() const {
+      return std::addressof(Base_::pointed_->data_);
     }
-
-    const Protected_ &operator*() const { return _AtomicObject->_protected; }
-
-    operator Protected_ &() { return _AtomicObject->_protected; }
-    operator const Protected_ &() const { return _AtomicObject->_protected; }
-
-   private:
-    AtomicObject_ *_AtomicObject;
+    const Data_ &operator*() const { return this->pointed_->data_; }
   };
 
  public:
-  using DataType = Protected;
-  using AtomicRefType = AtomicRef<AtomicObject<Protected, Mutex>, Protected>;
-  using CAtomicRefType =
-      AtomicRef<const AtomicObject<Protected, Mutex>, const Protected>;
+  using DataType = Data_;
+  using AtomicRefType = AtomicRef_;
+  using CAtomicRefType = CAtomicRef_;
 
   AtomicObject() = default;
-  AtomicObject(const DataType &p) : _protected(p) {}
-  AtomicObject(DataType &&p) : _protected(std::move(p)) {}
+  AtomicObject(const DataType &p) : data_(p) {}
+  AtomicObject(DataType &&p) : data_(std::move(p)) {}
 
-  Mutex &getMutex() { return _mutex; }
-  const Mutex &getMutex() const { return _mutex; }
+  Mutex &getMutex() { return mutex_; }
+  const Mutex &getMutex() const { return mutex_; }
 
-  DataType &lockee() { return _protected; }
-  const DataType &lockee() const { return _protected; }
+  DataType &lockee() { return data_; }
+  const DataType &lockee() const { return data_; }
 
   AtomicRefType operator->() { return AtomicRefType{this}; }
   AtomicRefType operator*() { return AtomicRefType{this}; }
@@ -77,8 +77,8 @@ class AtomicObject : public pattern::Unasignable {
   CAtomicRefType atomic() const { return CAtomicRefType{this}; }
 
  private:
-  mutable Mutex _mutex;
-  DataType _protected;
+  mutable Mutex mutex_;
+  DataType data_;
 };
 
 }  // namespace threading

@@ -11,7 +11,7 @@ MC_MAF_STRINGIFYABLE_ENUM(TranslationStatus, char,
                           NoSource,
                           SourceCorrupted,
                           DestSrcMismatch
-                          );
+                          )
 // clang-format on
 
 } // namespace messaging

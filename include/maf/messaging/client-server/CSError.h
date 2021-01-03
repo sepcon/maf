@@ -18,7 +18,7 @@ MC_MAF_STRINGIFYABLE_ENUM(CSErrorCode, char,
                     RequestRejected,
                     RequestTimeout,
                     Unknown
-                    );
+                    )
 // clang-format on
 
 class CSError : public CSMsgPayloadIF {

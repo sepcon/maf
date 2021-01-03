@@ -26,16 +26,6 @@ struct ParamTraitBase {
     }
   }
 
-  template <class Message>
-  static std::string dump(const std::shared_ptr<Message>& msg) {
-    if (msg) {
-      return msg->dump();
-    } else {
-      return "Null";
-    }
-    //    return "Not Dumpable!";
-  }
-
   template <typename Input, typename Output>
   static bool isSameOpID(const Input* input, const Output* output) {
     return getOperationID(input) == getOperationID(output);

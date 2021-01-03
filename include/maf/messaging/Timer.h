@@ -27,6 +27,12 @@ class Timer : public pattern::Unasignable {
   MAF_EXPORT void stop();
   MAF_EXPORT bool running() const;
   MAF_EXPORT void setCyclic(bool cyclic = true);
+  MAF_EXPORT static void timeoutAfter(long long milliseconds,
+                                      TimeOutCallback callback,
+                                      ExecutorIFPtr executor = {});
+  MAF_EXPORT static void timeoutAfter(std::chrono::milliseconds milliseconds,
+                                      TimeOutCallback callback,
+                                      ExecutorIFPtr executor = {});
 
  private:
   std::shared_ptr<struct TimerData> d_;

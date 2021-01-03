@@ -9,11 +9,13 @@
 #include <forward_list>
 #include <future>
 #include <map>
+#include <string_view>
 
 #include "Router.h"
 
 namespace maf {
 namespace messaging {
+using namespace std::string_view_literals;
 
 namespace this_component {
 static bool testAndSetThreadLocalInstance(Component *inst);
@@ -28,7 +30,7 @@ using PendingExecutions = threading::Queue<ExecutionUPtr>;
 using MsgHandlersMap = threading::Lockable<std::map<MessageID, HandlersPtr>>;
 using util::CallOnExit;
 
-static const ComponentID anonymous_prefix = "[anonymous].";
+static inline constexpr auto anonymous_prefix = "[anonymous]."sv;
 
 class CallbackExecutor : public util::ExecutorIF {
   ComponentRef compref;
@@ -39,6 +41,24 @@ class CallbackExecutor : public util::ExecutorIF {
     if (auto comp = compref.lock()) {
       comp->execute(std::move(callback));
       return true;
+    }
+    return false;
+  }
+};
+
+class BlockingCallbackExecutor : public util::ExecutorIF {
+  ComponentRef compref;
+
+ public:
+  BlockingCallbackExecutor(ComponentRef &&cr) : compref{std::move(cr)} {}
+  bool execute(CallbackType callback) noexcept override {
+    if (auto comp = compref.lock()) {
+      try {
+        comp->execute(Blocked, std::move(callback)).wait();
+        return true;
+      } catch (const std::future_error &) {
+        return false;
+      }
     }
     return false;
   }
@@ -127,13 +147,13 @@ static const ComponentID &emptyComponentID() {
 
 static ComponentID generateAnonymousID() {
   static std::atomic_int counter = 0;
-  return anonymous_prefix + std::to_string(++counter);
+  return anonymous_prefix.data() + std::to_string(++counter);
 }
 
 static bool isAnonymous(const ComponentID &id) {
   return id.length() > anonymous_prefix.length() &&
-         strncmp(id.c_str(), anonymous_prefix.c_str(),
-                 anonymous_prefix.length()) == 0;
+         std::string_view(id.c_str(), anonymous_prefix.length()) ==
+             anonymous_prefix;
 }
 
 static void joinRoutingIfNotAnonymous(ComponentInstance comp) {
@@ -169,6 +189,8 @@ ComponentInstance Component::create(ComponentID id) {
   if (willJoinRouting) {
     if (Router::instance().findComponent(comp->id())) {
       comp.reset();
+    } else {
+      Router::instance().addComponent(comp);
     }
   }
   return comp;
@@ -181,7 +203,6 @@ ComponentInstance Component::findComponent(const ComponentID &id) {
 const ComponentID &Component::id() const noexcept { return d_->id; }
 
 void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
-  joinRoutingIfNotAnonymous(shared_from_this());
   auto justSet = this_component::testAndSetThreadLocalInstance(this);
   if (threadInit) {
     threadInit();
@@ -301,6 +322,10 @@ Component::Executor Component::getExecutor() {
   return std::make_shared<CallbackExecutor>(weak_from_this());
 }
 
+Component::Executor Component::getBlockingExecutor() {
+  return std::make_shared<BlockingCallbackExecutor>(weak_from_this());
+}
+
 ConnectionID Component::connect(const MessageID &msgid,
                                 MessageProcessingCallback processMessage) {
   using namespace std;
@@ -387,6 +412,13 @@ bool post(Message msg) {
 Component::Executor getExecutor() {
   if (auto comp = instance()) {
     return comp->getExecutor();
+  }
+  return {};
+}
+
+Component::Executor getBlockingExecutor() {
+  if (auto comp = instance()) {
+    return comp->getBlockingExecutor();
   }
   return {};
 }

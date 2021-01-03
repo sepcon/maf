@@ -1,8 +1,12 @@
 #include "ServerFactory.h"
+
+#include <maf/logging/Logger.h>
+#include <maf/messaging/client-server/ipc/local/ConnectionType.h>
+#include <maf/messaging/client-server/itc/ConnectionType.h>
+#include <maf/utils/containers/Map2D.h>
+
 #include "ipc/LocalIPCServer.h"
 #include "itc/Server.h"
-#include <maf/logging/Logger.h>
-#include <maf/utils/containers/Map2D.h>
 
 namespace maf {
 namespace messaging {
@@ -12,7 +16,7 @@ class ServerFactoryImpl {
       util::Map2D<ConnectionType, Address, std::shared_ptr<ServerIF>>>
       serverMap_;
 
-public:
+ public:
   ~ServerFactoryImpl() {
     std::lock_guard lock(serverMap_);
     for (auto &[contype, servers] : *serverMap_) {
@@ -26,9 +30,9 @@ public:
   }
 
   std::shared_ptr<ServerIF> makeServer(const ConnectionType &connectionType) {
-    if (connectionType == "itc.messaging.maf") {
+    if (connectionType == itc::connection_type) {
       return itc::Server::instance();
-    } else if (connectionType == "local.ipc.messaging.maf") {
+    } else if (connectionType == ipc::local::connection_type) {
       return std::make_shared<ipc::local::LocalIPCServer>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
@@ -64,11 +68,10 @@ ServerFactory::ServerFactory(Invisible) noexcept
 
 ServerFactory::~ServerFactory() = default;
 
-std::shared_ptr<ServerIF>
-ServerFactory::getServer(const ConnectionType &connectionType,
-                         const Address &addr) noexcept {
+std::shared_ptr<ServerIF> ServerFactory::getServer(
+    const ConnectionType &connectionType, const Address &addr) noexcept {
   return pImpl_->getServer(connectionType, addr);
 }
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

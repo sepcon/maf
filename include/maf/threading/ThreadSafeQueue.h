@@ -92,7 +92,6 @@ class ThreadSafeQueue {
   }
 
   void reOpen() {
-    clear();
     closed_.store(false, std::memory_order_release);
   }
 

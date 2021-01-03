@@ -14,10 +14,10 @@
 
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
-#include <maf/utils/serialization/Tuplizable.h>
 #include <maf/utils/serialization/JsonTrait.h>
+#include <maf/utils/serialization/Tuplizable.h>
 
-//#include "json11.hpp"
+#include <json11.hpp>
 
 namespace maf {
 namespace srz {
@@ -42,32 +42,37 @@ struct is_json11_convertible_type<std::map<Key, Value>>
           bool, std::is_same_v<std::string, Key> &&
                     is_json11_convertible_type<Value>::value> {};
 
-template <typename Type> struct J11TraitImpl {
+template <typename Type>
+struct J11TraitImpl {
   static Type get(const Json &j) { return internal::template get<Type>(j); }
 
   static bool exist(const Json &j) { return internal::template exist<Type>(j); }
 
   struct internal {
-    template <typename T, std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
+    template <typename T,
+              std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
     static T get(const Json &j) {
       T t;
       t.load_from_json(j);
       return t;
     }
 
-    template <typename T, std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
+    template <typename T,
+              std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
     static bool exist(const Json &j) {
       return j.is_object();
     }
   };
 };
 
-template <> struct J11TraitImpl<json11::Json> {
+template <>
+struct J11TraitImpl<json11::Json> {
   static json11::Json get(const Json &j) { return j; }
   static bool exist(const Json &) { return true; }
 };
 
-template <class T> struct J11TraitImpl<std::vector<T>> {
+template <class T>
+struct J11TraitImpl<std::vector<T>> {
   using ReturnType = std::vector<T>;
   static_assert(is_json11_convertible_type<T>::value,
                 R"(Please provide: vector of below types only:
@@ -90,7 +95,8 @@ template <class T> struct J11TraitImpl<std::vector<T>> {
   static bool exist(const Json &j) { return j.is_array(); }
 };
 
-template <class Key, class Value> struct J11TraitImpl<std::map<Key, Value>> {
+template <class Key, class Value>
+struct J11TraitImpl<std::map<Key, Value>> {
   using ReturnType = std::map<Key, Value>;
   static_assert(
       std::is_same_v<std::string, Key> &&
@@ -116,12 +122,13 @@ template <class Key, class Value> struct J11TraitImpl<std::map<Key, Value>> {
   static bool exist(const Json &j) { return j.is_object(); }
 };
 
-#define mc_J11TraitImpl(type, exist_function, get_function)                    \
-  template <> struct J11TraitImpl<type> {                                      \
-    static type get(const Json &j) {                                           \
-      return static_cast<type>(j.get_function());                              \
-    }                                                                          \
-    static bool exist(const Json &j) { return j.exist_function(); }            \
+#define mc_J11TraitImpl(type, exist_function, get_function)         \
+  template <>                                                       \
+  struct J11TraitImpl<type> {                                       \
+    static type get(const Json &j) {                                \
+      return static_cast<type>(j.get_function());                   \
+    }                                                               \
+    static bool exist(const Json &j) { return j.exist_function(); } \
   };
 
 mc_J11TraitImpl(int16_t, is_number, int_value)
@@ -135,7 +142,6 @@ mc_J11TraitImpl(int16_t, is_number, int_value)
                                 mc_J11TraitImpl(std::string, is_string,
                                                 string_value)
                                     mc_J11TraitImpl(bool, is_bool, bool_value)
-
 #undef mc_J11TraitImpl
 
                                         template <>
@@ -149,11 +155,13 @@ mc_J11TraitImpl(int16_t, is_number, int_value)
   static std::string marshall(const Json &j) { return j.dump(); }
   static size_t marshallSize(const Json &j) { return j.dump().size(); }
 
-  template <typename T> static bool has(const Json &j, const std::string &key) {
+  template <typename T>
+  static bool has(const Json &j, const std::string &key) {
     return J11TraitImpl<T>::exist(j[key]);
   }
 
-  template <typename T> static T get(const Json &j, const std::string &key) {
+  template <typename T>
+  static T get(const Json &j, const std::string &key) {
     return static_cast<T>(J11TraitImpl<T>::get(j[key]));
   }
 
@@ -163,5 +171,5 @@ mc_J11TraitImpl(int16_t, is_number, int_value)
   }
 };
 
-} // namespace srz
-} // namespace maf
+}  // namespace srz
+}  // namespace maf

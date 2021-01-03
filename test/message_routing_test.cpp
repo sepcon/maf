@@ -32,8 +32,8 @@ using Text = std::string;
 static auto master = ComponentInstance{};
 static auto slaves = std::vector<AsyncComponent>{};
 
-static std::atomic_int greetCount = 0;
-static std::atomic_int taskSubmittedCount = 0;
+static std::atomic_uint greetCount = 0;
+static std::atomic_uint taskSubmittedCount = 0;
 
 // clang-format off
 MC_MAF_STRINGIFYABLE_ENUM(BinOp, char,
@@ -41,7 +41,7 @@ MC_MAF_STRINGIFYABLE_ENUM(BinOp, char,
                           Sub,
                           Mul,
                           Dev
-                          );
+                          )
 // clang-format on
 
 using Task = std::tuple<BinOp, int, int>;
@@ -85,7 +85,7 @@ struct CompLogRecord {
   CompLogRecord &operator<<(const T &val) {
     oss << val;
     return *this;
-  };
+  }
   std::ostringstream oss;
 };
 
@@ -165,9 +165,9 @@ static void routingTest() {
     }
 
     master->run();
-    EXPECT(sumAllTasks() == sumAll)
-    EXPECT(greetCount == TaskCount)
-    EXPECT(taskSubmittedCount == TaskCount)
+    EXPECT(sumAllTasks() == sumAll);
+    EXPECT(greetCount == TaskCount);
+    EXPECT(taskSubmittedCount == TaskCount);
   }
   TEST_CASE_E()
   // clang-format on
@@ -181,13 +181,6 @@ static void receiverStatusTest() {
   using namespace std;
   vector<AsyncComponent> asyncComponents;
   static const int asyncCount = 10;
-  for (int i = 0; i < asyncCount; ++i) {
-    asyncComponents.emplace_back(Component::create("async" + to_string(i)));
-  }
-
-  for (auto &comp : asyncComponents) {
-    comp.launch();
-  }
 
   auto mainComponent = Component::create("main");
   int totalAvailable = 0;
@@ -206,6 +199,14 @@ static void receiverStatusTest() {
           }
         }
       });
+
+  for (int i = 0; i < asyncCount; ++i) {
+    asyncComponents.emplace_back(Component::create("async" + to_string(i)));
+  }
+
+  for (auto &comp : asyncComponents) {
+    comp.launch();
+  }
 
   mainComponent->run();
 

@@ -35,6 +35,11 @@ class ParamTrait : public ParamTraitBase {
       return {};
     }
   }
+
+  template <class Message>
+  static std::string dump(const std::shared_ptr<Message> &msg) {
+    return typeid(Message).name();
+  }
 };
 
 }  // namespace itc

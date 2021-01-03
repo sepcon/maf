@@ -44,6 +44,10 @@ if(MAF_PLATFORM_NAME)
 endif(MAF_PLATFORM_NAME)
 
 if(BUILD_SHARED_LIBS)
+    set(MAF_BUILD_SHARED_LIB ${BUILD_SHARED_LIBS})
+endif(BUILD_SHARED_LIBS)
+
+if(MAF_BUILD_SHARED_LIB)
     add_definitions(-DMAF_SHARED_LIBRARY)
 else()
     add_definitions(-DMAF_STATIC_LIBRARY)
@@ -62,11 +66,11 @@ set( MAF_ALL_SOURCES
 
 set(MAF_BINARY_DIR ${CMAKE_BINARY_DIR})
 
-if(BUILD_SHARED_LIBS)
+if(MAF_BUILD_SHARED_LIB)
     add_library(maf SHARED ${MAF_ALL_SOURCES})
 else()
     add_library(maf STATIC ${MAF_ALL_SOURCES})
-endif(BUILD_SHARED_LIBS)
+endif(MAF_BUILD_SHARED_LIB)
 
 if(
     ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
@@ -76,12 +80,25 @@ if(
     target_link_libraries(maf pthread)
 endif()
 
+if(MSVC)
+  # Force to always compile with W4
+  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+    string(REGEX REPLACE "/W[0-4]" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+  endif()
+elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  # Update if necessary
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
+endif()
+
 
 # specify variable MAF_BUILD_SAMPLE to disable building test programs
 if(MAF_BUILD_SAMPLE)
     add_subdirectory("sample/")
 endif(MAF_BUILD_SAMPLE)
 if(MAF_ENABLE_TEST)
+    enable_testing()
     add_subdirectory("test/")
 endif(MAF_ENABLE_TEST)
 

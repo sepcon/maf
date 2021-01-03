@@ -18,7 +18,7 @@ struct TimerMgr;
 using namespace std::chrono;
 using Clock = system_clock;
 using DeadLine = ExecutionDeadline;
-using TimeoutCallback = Timer::TimeOutCallback;
+using TimeOutCallback = Timer::TimeOutCallback;
 using std::make_heap;
 using std::make_shared;
 using std::move;
@@ -31,14 +31,14 @@ using util::ExecutorIFPtr;
 struct TimerInterrupt {};
 
 struct TimerData {
-  TimeoutCallback callback;
+  TimeOutCallback callback;
   DeadLine deadline = Clock::now();
   ExecutionTimeout duration;
   bool cyclic = false;
   bool running = false;
 
   TimerData() = default;
-  TimerData(TimeoutCallback cb, ExecutionTimeout interval, bool cc = false)
+  TimerData(TimeOutCallback cb, ExecutionTimeout interval, bool cc = false)
       : callback(move(cb)),
         deadline(Clock::now() + interval),
         duration(interval),
@@ -47,7 +47,7 @@ struct TimerData {
   void restart() { deadline = Clock::now() + duration; }
   bool expired() const { return deadline <= Clock::now(); }
   void onExpired() { callback(); }
-  void reset(TimeoutCallback&& cb, ExecutionTimeout d, bool cc = false) {
+  void reset(TimeOutCallback&& cb, ExecutionTimeout d, bool cc = false) {
     callback = move(cb);
     deadline = Clock::now() + d;
     duration = d;
@@ -91,6 +91,20 @@ static TimerMgr& mgr() {
   return _;
 }
 
+static void runTimer(const TimerDataPtr& tm, milliseconds interval,
+                     TimeOutCallback&& callback, ExecutorIFPtr&& executor) {
+  if (auto comp = this_component::instance()) {
+    if (executor) {
+      tm->reset([callback = move(callback),
+                 executor = move(executor)] { executor->execute(callback); },
+                interval, tm->cyclic);
+    } else {
+      tm->reset(move(callback), interval, tm->cyclic);
+    }
+    mgr().start(tm);
+  }
+}
+
 Timer::Timer(bool cyclic) : d_{new TimerData} { d_->cyclic = cyclic; }
 
 Timer::~Timer() { stop(); }
@@ -104,16 +118,7 @@ void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
   if (!callback) {
     MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
   } else {
-    if (auto comp = this_component::instance()) {
-      if (executor) {
-        d_->reset([callback = move(callback),
-                   executor = move(executor)] { executor->execute(callback); },
-                  interval, d_->cyclic);
-      } else {
-        d_->reset(move(callback), interval, d_->cyclic);
-      }
-      mgr().start(d_);
-    }
+    runTimer(d_, interval, move(callback), move(executor));
   }
 }
 
@@ -143,6 +148,18 @@ void Timer::setCyclic(bool cyclic) {
   }
 }
 
+void Timer::timeoutAfter(long long ms, Timer::TimeOutCallback callback,
+                         Timer::ExecutorIFPtr executor) {
+  timeoutAfter(milliseconds{ms}, move(callback), move(executor));
+}
+
+void Timer::timeoutAfter(milliseconds milliseconds,
+                         Timer::TimeOutCallback callback,
+                         Timer::ExecutorIFPtr executor) {
+  auto tm = make_shared<TimerData>();
+  runTimer(tm, milliseconds, move(callback), move(executor));
+}
+
 void TimerMgr::cleanup() {
   records_.clear();
   setRunningOnThisThread(false);
@@ -167,7 +184,11 @@ void TimerMgr::runAllTimers() {
       if (!timer->expired()) {
         comp->runUntil(timer->deadline);
         if (!timer->expired()) {
-          continue;
+          if (!comp->stopped()) {
+            continue;
+          } else {
+            break;
+		  }
         }
       }
 

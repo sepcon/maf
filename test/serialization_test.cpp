@@ -41,8 +41,12 @@ ENDOBJECT(ComplexObject)
 // clang-format on
 
 enum class TheEnum : char { Val0, Val1, Val2, ValN, DefauLtVal };
+class AbstractClass {
+  virtual void abstractFunction() = 0;
+  virtual ~AbstractClass() = default;
+};
 
-ComplexObject ocomplex = {
+static ComplexObject ocomplex = {
     1001001,
     "hell world",
     HeaderMap{{"header", Header{"index", "name"}}},
@@ -50,6 +54,7 @@ ComplexObject ocomplex = {
     100.00,
     SpecialMap{{"map", {{"vector_of_set", {{1, 2, 3, 4}, {2, 3, 4, 4}}}}}}};
 
+static AbstractClass *abstract = nullptr;
 static int oi = 1000;
 static long ol = 10000;
 static float of = 200;
@@ -98,32 +103,32 @@ static void serializationTest(OStream &theostream, IStream &theistream,
   // clang-format off
   TEST_CASE_B(stream_serialization_all_types)
   {
-    EXPECT(ocomplex  == dcomplex )
-    EXPECT(oi  == di )
-    EXPECT(ol  == dl )
-    EXPECT(of  == df )
-    EXPECT(od  == dd )
-    EXPECT(os  == ds )
-    EXPECT(ovi  == dvi )
-    EXPECT(oseti  == dseti )
-    EXPECT(omsvi  == dmsvi )
-    EXPECT(*osptr  == *dsptr )
-    EXPECT(*orptr == *drptr)
-    EXPECT(*ouptr == *duptr)
-    EXPECT(oenum == denum)
+    EXPECT(ocomplex  == dcomplex );
+    EXPECT(oi  == di );
+    EXPECT(ol  == dl );
+    EXPECT(of  == df );
+    EXPECT(od  == dd );
+    EXPECT(os  == ds );
+    EXPECT(ovi  == dvi );
+    EXPECT(oseti  == dseti );
+    EXPECT(omsvi  == dmsvi );
+    EXPECT(*osptr  == *dsptr );
+    EXPECT(*orptr == *drptr);
+    EXPECT(*ouptr == *duptr);
+    EXPECT(oenum == denum);
 
-    EXPECT( maf::srz::dump(ocomplex) == maf::srz::dump(dcomplex) )
-    EXPECT( maf::srz::dump(oi) == maf::srz::dump(di) )
-    EXPECT( maf::srz::dump(ol) == maf::srz::dump(dl) )
-    EXPECT( maf::srz::dump(of) == maf::srz::dump(df) )
-    EXPECT( maf::srz::dump(od) == maf::srz::dump(dd) )
-    EXPECT( maf::srz::dump(os) == maf::srz::dump(ds) )
-    EXPECT( maf::srz::dump(ovi) == maf::srz::dump(dvi) )
-    EXPECT( maf::srz::dump(oseti) == maf::srz::dump(dseti) )
-    EXPECT( maf::srz::dump(omsvi) == maf::srz::dump(dmsvi) )
-    EXPECT( maf::srz::dump(*osptr) == maf::srz::dump(*dsptr) )
-    EXPECT( maf::srz::dump(*orptr) == maf::srz::dump(*drptr) )
-    EXPECT( maf::srz::dump(oenum) == maf::srz::dump(denum) )
+    EXPECT( maf::srz::dump(ocomplex) == maf::srz::dump(dcomplex) );
+    EXPECT( maf::srz::dump(oi) == maf::srz::dump(di) );
+    EXPECT( maf::srz::dump(ol) == maf::srz::dump(dl) );
+    EXPECT( maf::srz::dump(of) == maf::srz::dump(df) );
+    EXPECT( maf::srz::dump(od) == maf::srz::dump(dd) );
+    EXPECT( maf::srz::dump(os) == maf::srz::dump(ds) );
+    EXPECT( maf::srz::dump(ovi) == maf::srz::dump(dvi) );
+    EXPECT( maf::srz::dump(oseti) == maf::srz::dump(dseti) );
+    EXPECT( maf::srz::dump(omsvi) == maf::srz::dump(dmsvi) );
+    EXPECT( maf::srz::dump(*osptr) == maf::srz::dump(*dsptr) );
+    EXPECT( maf::srz::dump(*orptr) == maf::srz::dump(*drptr) );
+    EXPECT( maf::srz::dump(oenum) == maf::srz::dump(denum) );
   } TEST_CASE_E()
   // clang-format on
 }
@@ -153,21 +158,23 @@ void dumpheperTest() {
   // clang-format off
   TEST_CASE_B(dump_helper_all_types)
   {
-    EXPECT(maf::srz::dump(oi)  == "1000")
-    EXPECT(maf::srz::dump(ol)  == "10000")
-    EXPECT(maf::srz::dump(of)  == "200.000000")
-    EXPECT(maf::srz::dump(od)  == "3000.000000")
-    EXPECT(maf::srz::dump(os)  == R"("hello")")
-    EXPECT(maf::srz::dump(ovi)  == "[\n  1,\n  2,\n  3\n]")
-    EXPECT(maf::srz::dump(oseti)  == "[\n  1,\n  2,\n  3\n]")
-    EXPECT(maf::srz::dump(omsvi)  == "{\n  \"hello\": [\n    1,\n    2,\n    3\n  ]\n}")
-    EXPECT(maf::srz::dump(omsseti)  == "{\n  [\n    1,\n    2,\n    3\n  ]: [\n    1,\n    2,\n    3\n  ]\n}")
-    EXPECT(maf::srz::dump(osptr)  == R"("Hello world")")
-    EXPECT(maf::srz::dump(orptr)  == R"("hello world")")
-    EXPECT(maf::srz::dump(ouptr)  == R"("hello world")")
-    EXPECT(maf::srz::dump(oenum)  == "1")
+    EXPECT(maf::srz::dump(oi)  == "1000");
+    EXPECT(maf::srz::dump(ol)  == "10000");
+    EXPECT(maf::srz::dump(of)  == "200.000000");
+    EXPECT(maf::srz::dump(od)  == "3000.000000");
+    EXPECT(maf::srz::dump(os)  == R"("hello")");
+    EXPECT(maf::srz::dump(ovi)  == "[\n  1,\n  2,\n  3\n]");
+    EXPECT(maf::srz::dump(oseti)  == "[\n  1,\n  2,\n  3\n]");
+    EXPECT(maf::srz::dump(omsvi)  == "{\n  \"hello\": [\n    1,\n    2,\n    3\n  ]\n}");
+    EXPECT(maf::srz::dump(omsseti)  == "{\n  [\n    1,\n    2,\n    3\n  ]: [\n    1,\n    2,\n    3\n  ]\n}");
+    EXPECT(maf::srz::dump(osptr)  == R"("Hello world")");
+    EXPECT(maf::srz::dump(orptr)  == R"("hello world")");
+    EXPECT(maf::srz::dump(ouptr)  == R"("hello world")");
+    EXPECT(maf::srz::dump(oenum)  == "1");
+    EXPECT(maf::srz::dump(abstract)  == maf::srz::dump(std::string{typeid(AbstractClass*).name()}));
+
   }
-TEST_CASE_E(s)
+TEST_CASE_E(dump_helper_all_types)
   // clang-format on
 }
 

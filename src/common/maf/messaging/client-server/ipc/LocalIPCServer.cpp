@@ -96,9 +96,11 @@ bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
       {
         std::lock_guard lock(providers_);
         for (auto &[sid, provider] : *providers_) {
-          notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
-                                      Availability::Unavailable,
-                                      Availability::Available);
+          if (provider->availability() == Availability::Available) {
+            notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
+                                        Availability::Unavailable,
+                                        Availability::Available);
+          }
         }
       }
       return true;

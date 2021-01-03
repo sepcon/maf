@@ -19,9 +19,6 @@ macro(maf_add_test test_name)
     endif()
 
     add_test(NAME "${test_name}.test" COMMAND ${the_test_binary})
-
-    add_custom_command(TARGET ${the_test_binary} POST_BUILD
-                       COMMAND ${the_test_binary})
 endmacro(maf_add_test)
 
 maf_add_test(component)

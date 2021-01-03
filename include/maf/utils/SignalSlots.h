@@ -17,7 +17,7 @@ namespace details {
 
 using namespace std;
 using threading::AtomicObject;
-using util::ExecutorIFPtr;
+using SlotInvokerPtr = util::ExecutorIFPtr;
 
 template <class T>
 using PurgeType_ = remove_reference_t<remove_cv_t<T>>;
@@ -55,7 +55,11 @@ class SingleSlotKeeper {
     return false;
   }
 
-  void operator()(Args_... args) const { mySlot()->operator()(move(args)...); }
+  void notify(ConstRef_<Args_>... args) const {
+    if (valid()) {
+      mySlot()->operator()(args...);
+    }
+  }
 
   bool valid() const { return mySlot() && mySlot()->operator bool(); }
   void clear() {
@@ -76,10 +80,10 @@ class SingleSlotKeeper {
   SlotsType slots_;
 };
 
-template <class... Args>
+template <class... Args_>
 class MultiSlotKeeper {
  public:
-  using SlotPtrType = SlotPtr_<Args...>;
+  using SlotPtrType = SlotPtr_<Args_...>;
   using SlotsType = vector<SlotPtrType>;
 
   bool add(SlotPtrType s) {
@@ -95,9 +99,12 @@ class MultiSlotKeeper {
     return false;
   }
 
-  void operator()(Args... args) const {
-    for (const auto& s : slots_) {
-      (*s)(args...);
+  void notify(ConstRef_<Args_>... args) const {
+    if (valid()) {
+      auto clonedSlots = slots_;  // slot might disconnect
+      for (const auto& s : clonedSlots) {
+        (*s)(args...);
+      }
     }
   }
 
@@ -129,17 +136,14 @@ class MultiSlotKeeper {
   SlotsType slots_;
 };
 
-template <class T>
-class NonAtomicObject_ {
- public:
-  const T* operator->() const { return &d_; }
-  T* operator->() { return &d_; }
-  const T& operator*() const { return d_; }
-  T& operator*() { return d_; }
-
- private:
-  T d_;
+struct DummyMutex_ {
+  void lock() {}
+  void unlock() {}
+  bool try_lock() { return true; }
 };
+
+template <class T>
+using NonAtomicObject_ = AtomicObject<T, DummyMutex_>;
 
 template <class SlotKeeperType_>
 decltype(auto) getSlots(const NonAtomicObject_<SlotKeeperType_>& skeeper) {
@@ -151,40 +155,150 @@ decltype(auto) getSlots(const AtomicObject<SlotKeeperType_>& skeeper) {
   return skeeper->cloneSlots();
 }
 
+class ConnectableIF {
+ public:
+  using ConnectorPtr = shared_ptr<void>;
+  using ConnectorRef = weak_ptr<void>;
+
+  virtual bool disconnect(const ConnectorPtr& ctor) = 0;
+  virtual bool connect(const ConnectorPtr& ctor) = 0;
+  virtual bool connectedTo(const ConnectorPtr& ctor) = 0;
+};
+
+class Connection {
+ public:
+  Connection() = default;
+  Connection(Connection&& other) noexcept
+      : ctor_(move(other.ctor_)), hubref_{move(other.hubref_)} {}
+
+  Connection& operator=(Connection&& other) noexcept {
+    if (&other != this) {
+      this->ctor_ = move(other.ctor_);
+      this->hubref_ = move(other.hubref_);
+      other.ctor_ = {};
+    }
+    return *this;
+  }
+
+  Connection(const Connection&) = delete;
+  Connection& operator=(const Connection&) = delete;
+
+  bool disconnect() noexcept {
+    try {
+      if (auto s = get<ConnectorRef_>(ctor_).lock()) {
+        if (auto hub = hubref_.lock()) {
+          if (hub->disconnect(s)) {
+            ctor_ = move(s);
+            return true;
+          }
+        } else {
+          ctor_ = {};
+        }
+      }
+    } catch (...) {
+    }
+    return false;
+  }
+
+  bool connected() const {
+    try {
+      if (auto ctor = get<ConnectorRef_>(ctor_).lock()) {
+        if (auto hub = hubref_.lock()) {
+          return hub->connectedTo(ctor);
+        }
+      }
+    } catch (...) {
+    }
+    return false;
+  }
+
+  bool reconnect() {
+    try {
+      if (auto ctor = get<ConnectorPtr_>(ctor_)) {
+        if (auto hub = hubref_.lock()) {
+          if (hub->connect(ctor)) {
+            ctor_ = ConnectorRef_{ctor};
+            return true;
+          } else {
+            ctor_ = {};
+          }
+        }
+      }
+    } catch (...) {
+    }
+    return false;
+  }
+
+ private:
+  using ConnectorRef_ = ConnectableIF::ConnectorRef;
+  using ConnectorPtr_ = ConnectableIF::ConnectorPtr;
+  using HubRef_ = weak_ptr<ConnectableIF>;
+
+  template <class SlotsKeeper_, class... Args_>
+  friend class BasicSignal_;
+
+  Connection(const HubRef_& hub, ConnectorRef_&& s)
+      : ctor_(move(s)), hubref_(hub) {}
+
+  variant<ConnectorRef_, ConnectorPtr_> ctor_;
+  HubRef_ hubref_;
+};
+
+class ScopedConnection {
+ public:
+  using ConnectionType = Connection;
+  ScopedConnection() = default;
+  ScopedConnection(ConnectionType&& c) : c_{move(c)} {}
+  ScopedConnection(ScopedConnection&&) = default;
+  ScopedConnection& operator=(ScopedConnection&&) = default;
+  ~ScopedConnection() { c_.disconnect(); }
+
+ private:
+  ConnectionType c_;
+};
+
+class ScopedConnectionGroup : public vector<ScopedConnection> {
+ public:
+  using ScopedConnectionType = ScopedConnection;
+  ScopedConnectionGroup& operator<<(ScopedConnectionType&& conn) {
+    push_back(move(conn));
+    return *this;
+  }
+};
+
 template <class SlotsKeeper_, class... Args_>
 class BasicSignal_ {
  public:
-  class Connection;
+  using Connection = details::Connection;
+  using SelfType = BasicSignal_<SlotsKeeper_, Args_...>;
+  using ScopedConnectionType = ScopedConnection;
+  using ScopedConnectionGroupType = ScopedConnectionGroup;
   using TrackableObjPtrType = shared_ptr<void>;
-  using SlotType = Slot_<Args_...>;
-  using SingleArgSlotType = Slot_<tuple<Args_...>>;
-  using SlotPtrType = SlotPtr_<Args_...>;
+  using SlotType = Slot_<ConstRef_<Args_>...>;
+  using SlotPtrType = SlotPtr_<ConstRef_<Args_>...>;
   using ConnectionPtrType = shared_ptr<Connection>;
   using ConnectionAwareSlotType = Slot_<ConnectionPtrType, Args_...>;
 
-  ~BasicSignal_() { disconnect(); }
   BasicSignal_() = default;
   BasicSignal_(const BasicSignal_&) = default;
   BasicSignal_& operator=(const BasicSignal_&) = default;
   BasicSignal_(BasicSignal_&&) = default;
   BasicSignal_& operator=(BasicSignal_&&) = default;
 
-  void operator()(Args_... args) const { notify(move(args)...); }
+  void operator()(ConstRef_<Args_>... args) const { notify(args...); }
 
-  void notify(Args_... args) const {
-    if (keeper()->valid()) {
-      for (auto& s : getSlots(keeper())) {
-        (*s)(args...);
-      }
-    }
-  }
+  void notify(ConstRef_<Args_>... args) const { keeper()->notify(args...); }
+
+  void operator()(ConstRef_<Args_>... args) { notify(args...); }
+
+  void notify(ConstRef_<Args_>... args) { keeper()->notify(args...); }
 
   Connection connect(SlotType s) {
     assert(s);
     return saveSlot(makeSlotPtr(move(s)));
   }
 
-  Connection connect(SlotType s, ExecutorIFPtr executor) {
+  Connection connect(SlotType s, SlotInvokerPtr executor) {
     assert(executor && s);
     return connect(combineSlotWithExecutor<Args_...>(move(s), move(executor)));
   }
@@ -197,7 +311,7 @@ class BasicSignal_ {
     return saveSlot(move(ps));
   }
 
-  Connection connect(ConnectionAwareSlotType cas, ExecutorIFPtr executor) {
+  Connection connect(ConnectionAwareSlotType cas, SlotInvokerPtr executor) {
     return connect(combineSlotWithExecutor<ConnectionPtrType, Args_...>(
         move(cas), move(executor)));
   }
@@ -215,11 +329,10 @@ class BasicSignal_ {
   }
 
   Connection connect(TrackableObjPtrType obj, SlotType s,
-                     ExecutorIFPtr executor) {
+                     SlotInvokerPtr executor) {
     assert(executor && "executor must not be null");
     return connect(move(obj),
-                   combineSlotWithExecutor<ConnectionPtrType, Args_...>(
-                       move(s), move(executor)));
+                   combineSlotWithExecutor<Args_...>(move(s), move(executor)));
   }
 
   template <
@@ -230,12 +343,12 @@ class BasicSignal_ {
     return connect(ps, ref(*ps));
   }
 
-  //  Connection connect(SlotPtrType ps) {
-  //    assert(ps && *ps);
-  //    return saveSlot(ps);
-  //  }
+  Connection connect(SlotPtrType ps) {
+    assert(ps && *ps);
+    return saveSlot(ps);
+  }
 
-  Connection connect(SlotPtrType ps, ExecutorIFPtr executor) {
+  Connection connect(SlotPtrType ps, SlotInvokerPtr executor) {
     return connect(combineSlotWithExecutor<Args_...>(move(ps), move(executor)));
   }
 
@@ -243,20 +356,41 @@ class BasicSignal_ {
 
   void disconnect() { keeper()->clear(); }
 
- private:
-  using SlotKeeperPtr = shared_ptr<SlotsKeeper_>;
+  bool connected() const { return keeper()->valid(); }
+
+ protected:
+  struct MyKeeper_ : public SlotsKeeper_, public ConnectableIF {
+    using Base_ = SlotsKeeper_;
+    using Base_::Base_;
+
+    bool connect(const ConnectableIF::ConnectorPtr& ctor) override {
+      assert(ctor);
+      return (*this)->addUnique(reinterpret_pointer_cast<SlotType>(ctor));
+    }
+
+    bool disconnect(const ConnectableIF::ConnectorPtr& ctor) override {
+      return (*this)->remove(reinterpret_pointer_cast<SlotType>(ctor));
+    }
+
+    bool connectedTo(const ConnectorPtr& ctor) override {
+      return (*this)->has(reinterpret_pointer_cast<SlotType>(ctor));
+    }
+  };
+
+  using SlotKeeperPtr = shared_ptr<MyKeeper_>;
 
   template <class... Ts>
   static decltype(auto) combineSlotWithExecutor(Slot_<Ts...>&& s,
-                                                ExecutorIFPtr&& executor) {
+                                                SlotInvokerPtr&& executor) {
     return combineSlotWithExecutor<Ts...>(make_shared<Slot_<Ts...>>(move(s)),
                                           move(executor));
   }
 
   template <class... Ts>
   static decltype(auto) combineSlotWithExecutor(shared_ptr<Slot_<Ts...>>&& ps,
-                                                ExecutorIFPtr&& executor) {
-    return [ps = move(ps), executor(move(executor))](ConstRef_<Ts>... args) {
+                                                SlotInvokerPtr&& executor) {
+    return [ps = move(ps),
+            executor(move(executor))](ConstRef_<Ts>... args) mutable {
       auto sparams = make_shared<tuple<PurgeType_<Ts>...>>(move(args)...);
       executor->execute([ps, sparams{move(sparams)}]() mutable {
         apply(*ps, move(*sparams));
@@ -269,8 +403,9 @@ class BasicSignal_ {
   }
 
   Connection saveSlot(SlotPtrType ps) {
-    if (keeper()->add(ps)) {
-      return {sharedKeeper(), move(ps)};
+    auto ctor = reinterpret_pointer_cast<void>(ps);
+    if (keeper()->add(move(ps))) {
+      return {sharedKeeper(), move(ctor)};
     }
     return {};
   }
@@ -279,127 +414,26 @@ class BasicSignal_ {
   const SlotsKeeper_& keeper() const { return *slotKeeper_; }
   SlotsKeeper_& keeper() { return *slotKeeper_; }
 
-  SlotKeeperPtr slotKeeper_ = make_shared<SlotsKeeper_>();
-
- public:
-  class Connection {
-   public:
-    Connection() = default;
-    Connection(Connection&& other) noexcept
-        : slotSwitch_(move(other.slotSwitch_)),
-          slotKeeperRef_{move(other.slotKeeperRef_)} {
-      other.slotSwitch_ = {};
-    }
-
-    Connection& operator=(Connection&& other) {
-      if (&other != this) {
-        this->slotSwitch_ = move(other.slotSwitch_);
-        this->slotKeeperRef_ = move(other.slotKeeperRef_);
-        other.slotSwitch_ = {};
-      }
-      return *this;
-    }
-
-    Connection(const Connection&) = delete;
-    Connection& operator=(const Connection&) = delete;
-
-    bool disconnect() {
-      try {
-        if (auto s = get<SlotRefType>(slotSwitch_).lock()) {
-          if (auto slotKeeper = slotKeeperRef_.lock()) {
-            if ((*slotKeeper)->remove(s)) {
-              slotSwitch_ = move(s);
-              return true;
-            }
-          } else {
-            slotSwitch_ = {};
-          }
-        }
-      } catch (...) {
-      }
-      return false;
-    }
-
-    bool connected() const {
-      try {
-        if (auto s = get<SlotRefType>(slotSwitch_).lock()) {
-          if (auto keeper = slotKeeperRef_.lock()) {
-            return (*keeper)->has(s);
-          }
-        }
-      } catch (...) {
-      }
-      return false;
-    }
-
-    bool reconnect() {
-      try {
-        if (auto s = get<SlotPtrType>(slotSwitch_)) {
-          if (auto keeper = slotKeeperRef_.lock()) {
-            if ((*keeper)->addUnique(s)) {
-              slotSwitch_ = SlotRefType{s};
-              return true;
-            } else {
-              slotSwitch_ = {};
-            }
-          }
-        }
-      } catch (...) {
-      }
-      return false;
-    }
-
-   private:
-    using SlotRefType = weak_ptr<SlotType>;
-    friend class BasicSignal_;
-    Connection(const SlotKeeperPtr& keeper, SlotRefType&& s)
-        : slotKeeperRef_(keeper), slotSwitch_(move(s)) {}
-
-    weak_ptr<SlotsKeeper_> slotKeeperRef_;
-    variant<SlotRefType, SlotPtrType> slotSwitch_;
-  };
-
-  class ScopedConnection {
-   public:
-    ScopedConnection(Connection&& c) : c_{move(c)} {}
-    ~ScopedConnection() { c_.disconnect(); }
-
-   private:
-    Connection c_;
-  };
-};
-
-enum class MultiThread { Yes, No };
-
-template <MultiThread ts, class SlotsKeeper_, class... Args_>
-class BasicSignal;
-
-template <class SlotsKeeper_, class... Args>
-class BasicSignal<MultiThread::No, SlotsKeeper_, Args...>
-    : public BasicSignal_<NonAtomicObject_<SlotsKeeper_>, Args...> {};
-
-template <class SlotsKeeper_, class... Args>
-class BasicSignal<MultiThread::Yes, SlotsKeeper_, Args...>
-    : public BasicSignal_<AtomicObject<SlotsKeeper_, mutex>, Args...> {};
-
-template <class... Args>
-class SCSignalST
-    : public BasicSignal<MultiThread::No, SingleSlotKeeper<Args...>, Args...> {
+  SlotKeeperPtr slotKeeper_ = make_shared<MyKeeper_>();
 };
 
 template <class... Args>
-class SignalST
-    : public BasicSignal<MultiThread::No, MultiSlotKeeper<Args...>, Args...> {};
+using SignalST =
+    BasicSignal_<NonAtomicObject_<MultiSlotKeeper<Args...>>, Args...>;
 
 template <class... Args>
-class SCSignal
-    : public BasicSignal<MultiThread::Yes, SingleSlotKeeper<Args...>, Args...> {
-};
+using SCSignalST =
+    BasicSignal_<NonAtomicObject_<SingleSlotKeeper<Args...>>, Args...>;
 
 template <class... Args>
-class Signal
-    : public BasicSignal<MultiThread::Yes, MultiSlotKeeper<Args...>, Args...> {
-};
+using SCSignal =
+    BasicSignal_<AtomicObject<SingleSlotKeeper<Args...>, recursive_mutex>,
+                 Args...>;
+
+template <class... Args>
+using Signal =
+    BasicSignal_<AtomicObject<MultiSlotKeeper<Args...>, recursive_mutex>,
+                 Args...>;
 
 template <template <typename...> class Signal_, typename... Args_>
 class FutureInvocation {
@@ -490,12 +524,15 @@ auto waitableConnect(Signal_<Args_...>& sig,
 
 }  // namespace details
 
-using details::BasicSignal;
+using details::Connection;
 using details::FutureInvocation;
+using details::ScopedConnection;
+using details::ScopedConnectionGroup;
 using details::SCSignal;
 using details::SCSignalST;
 using details::Signal;
 using details::SignalST;
+using details::SlotInvokerPtr;
 using details::waitableConnect;
 
 }  // namespace signal_slots

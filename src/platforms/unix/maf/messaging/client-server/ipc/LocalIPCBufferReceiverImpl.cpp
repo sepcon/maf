@@ -153,7 +153,6 @@ bool LocalIPCBufferReceiverImpl::waitAndProcessConnections() {
       auto sd = fdClientSocks[i];
       if (FD_ISSET(sd, &readfds)) {
         SizeType messageLength = 0;
-        bool failed = true;
         ssize_t totalRead = 0;
         if (auto bytesRead = read(sd, reinterpret_cast<char *>(&messageLength),
                                   sizeof(SizeType));
@@ -172,7 +171,6 @@ bool LocalIPCBufferReceiverImpl::waitAndProcessConnections() {
           }
           if (totalRead == messageLength) {
             bytesComeCallback_(std::move(payload));
-            failed = false;
           }
         }
         close(sd);

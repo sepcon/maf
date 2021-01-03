@@ -1,6 +1,8 @@
 #include "ClientFactory.h"
 
 #include <maf/logging/Logger.h>
+#include <maf/messaging/client-server/ipc/local/ConnectionType.h>
+#include <maf/messaging/client-server/itc/ConnectionType.h>
 #include <maf/utils/containers/Map2D.h>
 
 #include "ipc/LocalIPCClient.h"
@@ -29,9 +31,9 @@ class ClientFactoryImpl {
   }
 
   std::shared_ptr<ClientIF> makeClient(const ConnectionType &connectionType) {
-    if (connectionType == "itc.messaging.maf") {
+    if (connectionType == itc::connection_type) {
       return itc::Client::instance();
-    } else if (connectionType == "local.ipc.messaging.maf") {
+    } else if (connectionType == ipc::local::connection_type) {
       return std::make_shared<ipc::local::LocalIPCClient>();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",

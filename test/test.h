@@ -80,15 +80,17 @@ inline void init_test_cases() {
 
 }  // namespace test
 }  // namespace maf
-#define TEST_CASE_B(TestCaseName)                                   \
+#define TEST_CASE_B(TestCaseName)                                           \
   do {                                                                      \
     using namespace maf::test;                                              \
     int testNumber = test_cases_sumary().currentTestCount();                \
     std::string test_case_name = #TestCaseName "_test";                     \
     int expectation_met = 0;                                                \
     int linefailed = -1;                                                    \
+    std::string failedReason;                                               \
     CallOnExit print_test_result = [testNumber, &test_case_name,            \
-                                    &expectation_met, &linefailed] {        \
+                                    &expectation_met, &linefailed,          \
+                                    &failedReason] {                        \
       assert(expectation_met != 0 &&                                        \
              (test_case_name + " does not have any expectation!").c_str()); \
       if (expectation_met > 0) {                                            \
@@ -97,21 +99,25 @@ inline void init_test_cases() {
                   << " PASSED (" << expectation_met << " expectations)";    \
       } else {                                                              \
         log_rec() << "Test case: " << test_case_name << " FAILED! "         \
-                  << __FILE__ << ":" << linefailed;                         \
+                  << __FILE__ << ":" << linefailed                          \
+                  << "\n\tExpanded to: " << failedReason;                   \
       }                                                                     \
     };
 
 #define TEST_CASE_E(...) \
-  }                            \
-  while (false)                \
+  }                      \
+  while (false)          \
     ;
 
-#define EXPECT(expected)       \
+#define EXPECT(expected)                \
   if (expected) {                       \
     ++expectation_met;                  \
   } else {                              \
     linefailed = __LINE__;              \
     expectation_met = -1;               \
     test_cases_sumary().total_failed++; \
+    failedReason = #expected;           \
     break;                              \
-  }
+  }                                     \
+  do {                                  \
+  } while (0)

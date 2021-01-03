@@ -15,7 +15,7 @@ struct Statics {
 static Statics &statics() {
   static Statics s;
   return s;
-};
+}
 
 } // namespace
 

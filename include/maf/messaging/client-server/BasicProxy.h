@@ -123,10 +123,10 @@ class BasicProxy {
       ResponseProcessingCallback<CSParam> callback) noexcept;
 
   template <class OperationOrOutput>
-  Response<OperationOrOutput> sendRequest(const OpID &actionID,
-                                          const CSPayloadIFPtr &requestInput,
-                                          ActionCallStatus *callStatus,
-                                          RequestTimeoutMs timeout) noexcept;
+  Response<OperationOrOutput> sendRequest_(const OpID &actionID,
+                                           const CSPayloadIFPtr &requestInput,
+                                           ActionCallStatus *callStatus,
+                                           RequestTimeoutMs timeout) noexcept;
 
   template <class CSParam>
   static Response<CSParam> getResposne(const CSPayloadIFPtr &) noexcept;
@@ -231,8 +231,6 @@ CSPayloadProcessCallback BasicProxy<PTrait>::createResponseMsgHandlerCallback(
     if (executor_) {
       return [callback = std::move(callback), executor = this->executor_](
                  const CSPayloadIFPtr &payload) mutable {
-        auto operationID = getOpID<CSParam>();
-
         executor->execute([payload, callback = std::move(callback)] {
           // getResposne must be called on thread of executor
           // try not block thread of service requester untill
@@ -288,9 +286,9 @@ BasicProxy<PTrait>::getResposne(const CSPayloadIFPtr &payload) noexcept {
 
   if constexpr (!PTrait::template encodable<CSParam>()) {
     return ResponseType{};
+  } else {
+    return ResponseType{convert<CSParam>(payload)};
   }
-
-  return ResponseType{convert<CSParam>(payload)};
 }
 
 template <class PTrait>
@@ -309,22 +307,23 @@ std::shared_ptr<CSParam> BasicProxy<PTrait>::convert(
     const CSPayloadIFPtr &payload) noexcept {
   if constexpr (!PTrait::template encodable<CSParam>()) {
     return {};
-  } else if (payload && payload->type() != CSPayloadType::Error) {
-    TranslationStatus decodeStatus;
-    auto output = translate<CSParam>(payload, &decodeStatus);
+  } else {
+    if (payload && payload->type() != CSPayloadType::Error) {
+      auto decodeStatus = TranslationStatus::DestSrcMismatch;
+      auto output = translate<CSParam>(payload, &decodeStatus);
 
-    if (decodeStatus != TranslationStatus::DestSrcMismatch) {
-      MAF_LOGGER_VERBOSE(getOpID<CSParam>(), "'s output:\n",
-                         PTrait::template dump<CSParam>(output));
-      return output;
-    } else {
-      MAF_LOGGER_WARN("Failed to decode response of [", getOpID<CSParam>(),
-                      "] "
-                      "from server");
+      if (decodeStatus != TranslationStatus::DestSrcMismatch) {
+        MAF_LOGGER_VERBOSE(getOpID<CSParam>(), "'s output:\n",
+                           PTrait::template dump<CSParam>(output));
+        return output;
+      } else {
+        MAF_LOGGER_WARN("Failed to decode response of [", getOpID<CSParam>(),
+                        "] "
+                        "from server");
+      }
     }
+    return {};
   }
-
-  return {};
 }
 template <class PTrait>
 template <class Status, AllowOnlyStatusT<PTrait, Status>>
@@ -468,9 +467,9 @@ typename BasicProxy<PTrait>::template Response<RequestOrOutput>
 BasicProxy<PTrait>::sendRequest(const std::shared_ptr<Input> &input,
                                 ActionCallStatus *callStatus,
                                 RequestTimeoutMs timeout) noexcept {
-  MAF_ASSERT_SAME_OPERATION_ID(Input, RequestOrOutput);
-  return sendRequest<RequestOrOutput>(getOpID<RequestOrOutput>(),
-                                      translate(input), callStatus, timeout);
+  MAF_ASSERT_SAME_OPERATION_ID(Input, RequestOrOutput)
+  return sendRequest_<RequestOrOutput>(getOpID<RequestOrOutput>(),
+                                       translate(input), callStatus, timeout);
 }
 
 template <class PTrait>
@@ -479,17 +478,17 @@ template <class RequestOrOutput,
 typename BasicProxy<PTrait>::template Response<RequestOrOutput>
 BasicProxy<PTrait>::sendRequest(ActionCallStatus *callStatus,
                                 RequestTimeoutMs timeout) noexcept {
-  return sendRequest<RequestOrOutput>(getOpID<RequestOrOutput>(), {},
-                                      callStatus, timeout);
+  return sendRequest_<RequestOrOutput>(getOpID<RequestOrOutput>(), {},
+                                       callStatus, timeout);
 }
 
 template <class PTrait>
 template <class RequestOrOutput>
 typename BasicProxy<PTrait>::template Response<RequestOrOutput>
-BasicProxy<PTrait>::sendRequest(const OpID &actionID,
-                                const CSPayloadIFPtr &requestInput,
-                                ActionCallStatus *callStatus,
-                                RequestTimeoutMs timeout) noexcept {
+BasicProxy<PTrait>::sendRequest_(const OpID &actionID,
+                                 const CSPayloadIFPtr &requestInput,
+                                 ActionCallStatus *callStatus,
+                                 RequestTimeoutMs timeout) noexcept {
   auto cstt = ActionCallStatus::FailedUnknown;
   auto rawResponse =
       requester_->sendRequest(actionID, requestInput, &cstt, timeout);

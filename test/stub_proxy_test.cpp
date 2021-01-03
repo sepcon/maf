@@ -289,7 +289,7 @@ class Tester {
       stub->broadcastSignal(sentAttribute);
 
       EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
-             std::future_status::ready)
+             std::future_status::ready);
       EXPECT(receivedAttributeFuture.get() == *sentAttribute);
 
       proxy->unregister(regid);
@@ -332,7 +332,7 @@ class Tester {
 
       for (auto& [regID, propFuture] : propertyRegs) {
         do {
-          EXPECT(propFuture.wait_for(100ms) == std::future_status::ready)
+          EXPECT(propFuture.wait_for(100ms) == std::future_status::ready);
           EXPECT(propFuture.get() == *sentStatus);
         } while (false);
         proxy->unregister(regID);
@@ -347,9 +347,9 @@ class Tester {
 
       auto gotStatus =
           proxy->template getStatus<some_string_property::status>();
-      EXPECT(gotStatus)
+      EXPECT(gotStatus);
       maf::test::log_rec() << gotStatus->dump();
-      EXPECT(*gotStatus == *sentStatus)
+      EXPECT(*gotStatus == *sentStatus);
 
       std::set<std::string> statusesToUpdate = {"1", "2", "3", "4", "5"};
       maf::threading::AtomicObject<std::set<std::string>> updatedStatuses;
@@ -423,16 +423,15 @@ void testITC() {
   tester.test();
 }
 
-static maf::util::TimeMeasurement tm([](auto elapsed) {
-  std::cout << "Total time = " << elapsed.count() / 1000 << "ms";
-});
 int main() {
   //  maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
   //                         maf::logging::LOG_LEVEL_VERBOSE |
   //                         maf::logging::LOG_LEVEL_DEBUG,
   //                     [](const auto& msg) { std::cout << msg << std::endl;
   //                     });
-
+  static maf::util::TimeMeasurement tm([](auto elapsed) {
+    std::cout << "Total time = " << elapsed.count() / 1000 << "ms";
+  });
   maf::test::init_test_cases();
   testLocalIPC();
   testITC();

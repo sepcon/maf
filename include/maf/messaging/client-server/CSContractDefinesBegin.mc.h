@@ -120,7 +120,7 @@
   }                     \
   ;
 
-#define VOID_REQUEST(name) REQUEST(name) ENDREQUEST()
+#define VOID_REQUEST(name) REQUEST(name) ENDREQUEST(name)
 
 // Property declarations
 #define PROPERTY(name) mc_maf_csc_declare_feature(property, name)

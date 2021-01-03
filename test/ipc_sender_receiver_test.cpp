@@ -34,11 +34,10 @@ void test() {
 
   std::thread receiverThread;
   TEST_CASE_B(check_receiver_status) {
-    EXPECT(receiver.init(receiverAddr))
+    EXPECT(receiver.init(receiverAddr));
     receiverThread = std::thread{[&receiver] { receiver.start(); }};
     std::this_thread::sleep_for(10ms);
-    EXPECT(sender.checkReceiverStatus(receiverAddr) ==
-                    Availability::Available)
+    EXPECT(sender.checkReceiverStatus(receiverAddr) == Availability::Available);
   }
 
   TEST_CASE_E()
@@ -70,8 +69,7 @@ void test() {
     std::this_thread::sleep_for(10ms);
     // Due to insert same buffers to std::set, then it should contain only one
     // buffer
-    EXPECT(receivedBuffers->size() ==
-                    SenderThreadsCount * BufferCount);
+    EXPECT(receivedBuffers->size() == SenderThreadsCount * BufferCount);
     EXPECT(receivedBufferCount == SenderThreadsCount * BufferCount);
   }
   TEST_CASE_E()
@@ -81,7 +79,7 @@ void test() {
 }
 int main() {
   using namespace maf::logging;
-  //maf::logging::init(LOG_LEVEL_ERROR | LOG_LEVEL_INFO,
+  // maf::logging::init(LOG_LEVEL_ERROR | LOG_LEVEL_INFO,
   //                   [](const auto& msg) { std::cout << msg << std::endl; });
   maf::test::init_test_cases();
   test();

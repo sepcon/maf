@@ -91,8 +91,9 @@ void LocalIPCClient::monitorServerStatus(long long tunedInterval) {
   } else if (tunedInterval < serverMonitorInterval) {
     tunedInterval += 5;
   }
-  serverMonitorTimer_.start(tunedInterval,
-                            [=] { this->monitorServerStatus(tunedInterval); });
+  serverMonitorTimer_.start(tunedInterval, [tunedInterval, this] {
+    this->monitorServerStatus(tunedInterval);
+  });
 }
 
 void LocalIPCClient::onBytesCome(srz::Buffer &&buff) {

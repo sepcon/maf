@@ -69,6 +69,16 @@ class ParamTrait : public ParamTraitBase {
   static CSPayloadIFPtr translate(const std::shared_ptr<Message> &content) {
     return std::make_shared<OutgoingPayloadT<Message>>(content);
   }
+
+  template <class Message>
+  static std::string dump(const std::shared_ptr<Message> &msg) {
+    if (msg) {
+      return msg->dump();
+    } else {
+      return "Null";
+    }
+    //    return "Not Dumpable!";
+  }
 };
 
 }  // namespace local

@@ -80,7 +80,7 @@ class TimerRestartTester {
                     [maxCounterHits, startTime = system_clock::now()] {
                       TEST_CASE_B(test_service) {
                         auto elapsed = system_clock::now() - startTime;
-                        EXPECT(elapsed > milliseconds{maxCounterHits})
+                        EXPECT(elapsed > milliseconds{maxCounterHits});
                       }
                       TEST_CASE_E(test_service)
                       this_component::post(stop_msg{});
@@ -117,24 +117,23 @@ void multiTimersTest() {
   comp->run([&tc] { tc.start(); });
 
   //  print(tc.timersHitCount);
-  TEST_CASE_B(timer_expiration){
-      EXPECT(tc.timersHitCount >= expectation)} TEST_CASE_E(timer_expiration)
+  TEST_CASE_B(timer_expiration) { EXPECT(tc.timersHitCount >= expectation); }
+  TEST_CASE_E(timer_expiration)
 }
 
-void signalTimerTest() {
-  SignalTimer timer;
+void singleShotTest() {
   maf::util::TimeMeasurement tm;
   long long elapsedMs = 0;
   Component::create()->run([&]() mutable {
-    timer.timeoutSignal.connect(
-        [&]() mutable { elapsedMs = tm.elapsedTime().count() / 1000; });
-    timer.timeoutSignal.connect([] { this_component::stop(); });
     tm.restart();
-    timer.start(1);
+    Timer::timeoutAfter(1, [&] {
+      elapsedMs = tm.elapsedTime().count() / 1000;
+      this_component::stop();
+    });
   });
 
-  cout << elapsedMs << endl;
-  TEST_CASE_B(signal_timer){EXPECT(elapsedMs == 1)} TEST_CASE_E()
+  TEST_CASE_B(signal_timer) { EXPECT(elapsedMs == 1); }
+  TEST_CASE_E()
 }
 
 int main() {
@@ -142,6 +141,6 @@ int main() {
   maf::test::init_test_cases();
   multiTimersTest();
   restartTimerTest();
-  signalTimerTest();
+  singleShotTest();
   return 0;
 }

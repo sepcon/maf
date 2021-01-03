@@ -2,6 +2,7 @@
 
 #include <maf/messaging/client-server/BasicProxy.h>
 
+#include "ConnectionType.h"
 #include "ParamTrait.h"
 
 namespace maf {
@@ -15,11 +16,10 @@ using ServiceStatusObserverPtr = Proxy::ServiceStatusObserverPtr;
 template <class CSParam>
 using Response = Proxy::Response<CSParam>;
 
-static inline constexpr auto connectionType = "itc.messaging.maf";
-
-inline ProxyPtr createProxy(const ServiceID &sid, ExecutorIFPtr executor = {},
+inline ProxyPtr createProxy(const ServiceID &sid = {},
+                            ExecutorIFPtr executor = {},
                             ServiceStatusObserverPtr statusObsv = {}) {
-  return Proxy::createProxy(connectionType, {}, sid, std::move(executor),
+  return Proxy::createProxy(connection_type, {}, sid, std::move(executor),
                             std::move(statusObsv));
 }
 

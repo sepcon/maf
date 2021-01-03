@@ -1,7 +1,8 @@
 #pragma once
 
-#include "cppextension/Loop.mc.h"
 #include <ostream>
+
+#include "cppextension/Loop.mc.h"
 
 /// Allow you to declare enum and stringify its values as the values' name using
 /// std::ostream.
@@ -46,18 +47,18 @@
 
 #define MC_MAF_STRINGIFY(arg) #arg,
 
-#define MC_MAF_STRINGIFYABLE_ENUM(TheEnum, base_type, ...)                     \
-  enum class TheEnum : base_type { __VA_ARGS__, TheEnum##InvalidPlaceHolder }; \
-                                                                               \
-  constexpr const char *TheEnum##StrArr[] = {                                  \
-      mc_maf_for_each(MC_MAF_STRINGIFY, __VA_ARGS__) #TheEnum "Invalid"};      \
-  inline std::ostream &operator<<(std::ostream &os, TheEnum en) {              \
-    os << TheEnum##StrArr[static_cast<unsigned long long>(en)];                \
-    return os;                                                                 \
-  }                                                                            \
-  static_assert(                                                               \
-      static_cast<base_type>(TheEnum::TheEnum##InvalidPlaceHolder) ==          \
-          sizeof(TheEnum##StrArr) / sizeof(const char *) - 1,                  \
-      "Max enum value of " #TheEnum " must equal to number of its values, "    \
-      "Because StringifyableEnum doesnot "                                     \
-      "support Enum with custom values");
+#define MC_MAF_STRINGIFYABLE_ENUM(TheEnum, base_type, ...)              \
+  enum class TheEnum : base_type { __VA_ARGS__, __ };                   \
+                                                                        \
+  static inline constexpr const char *TheEnum##StrArr[] = {             \
+      mc_maf_for_each(MC_MAF_STRINGIFY, __VA_ARGS__) "_"};              \
+  inline std::ostream &operator<<(std::ostream &os, TheEnum en) {       \
+    os << TheEnum##StrArr[static_cast<unsigned long long>(en)];         \
+    return os;                                                          \
+  }                                                                     \
+  static_assert(static_cast<base_type>(TheEnum::__) ==                  \
+                    sizeof(TheEnum##StrArr) / sizeof(const char *) - 1, \
+                "Max enum value of " #TheEnum                           \
+                " must equal to number of it's index, "                 \
+                "Because StringifyableEnum does not "                   \
+                "support Enum with custom values");
