@@ -44,7 +44,10 @@ struct TimerData {
         duration(interval),
         cyclic(cc) {}
   void updateNextDeadline() { deadline += duration; }
-  void restart() { deadline = Clock::now() + duration; }
+  void restart() {
+    running = true;
+    deadline = Clock::now() + duration;
+  }
   bool expired() const { return deadline <= Clock::now(); }
   void onExpired() { callback(); }
   void reset(TimeOutCallback&& cb, ExecutionTimeout d, bool cc = false) {
@@ -61,24 +64,25 @@ static bool timerGreater(const TimerDataPtr& t1, const TimerDataPtr& t2) {
 
 struct TimerMgr {
   using Heap = std::vector<TimerDataPtr>;
+  enum class State : char { NoTimer, HaveTimer, Waiting };
   Heap records_;
-  std::thread::id mythreadID;
+  State state_;
 
   void cleanup();
   void refresh();
   void runAllTimers();
   void start(TimerDataPtr record);
+  void stop(TimerDataPtr record);
   void onTimerModified();
   void onShortestTimerExpired(const TimerDataPtr& record);
   void restart(const TimerDataPtr& r);
   void add(TimerDataPtr newRecord);
-  bool runningOnThisThread() const;
-  void setRunningOnThisThread(bool yes = true);
-  void remove(TimerDataPtr tm);
+  bool remove(TimerDataPtr tm);
   TimerDataPtr getShortestTimer();
   TimerDataPtr removeShortestTimer();
   void updateShortestTimer();
   void interruptCurrentTimer(const ComponentInstance& comp);
+  bool checkRecordListEmpty();
 
   decltype(auto) begin() { return std::begin(records_); }
   decltype(auto) end() { return std::end(records_); }
@@ -92,52 +96,43 @@ static TimerMgr& mgr() {
 }
 
 static void runTimer(const TimerDataPtr& tm, milliseconds interval,
-                     TimeOutCallback&& callback, ExecutorIFPtr&& executor) {
-  if (auto comp = this_component::instance()) {
-    if (executor) {
-      tm->reset([callback = move(callback),
-                 executor = move(executor)] { executor->execute(callback); },
-                interval, tm->cyclic);
-    } else {
-      tm->reset(move(callback), interval, tm->cyclic);
-    }
-    mgr().start(tm);
-  }
+                     TimeOutCallback&& callback) {
+  tm->reset(move(callback), interval, tm->cyclic);
+  mgr().start(tm);
 }
 
 Timer::Timer(bool cyclic) : d_{new TimerData} { d_->cyclic = cyclic; }
 
 Timer::~Timer() { stop(); }
-void Timer::start(long long milliseconds, TimeOutCallback callback,
-                  ExecutorIFPtr executor) {
-  start(std::chrono::milliseconds{milliseconds}, std::move(callback),
-        std::move(executor));
+void Timer::start(long long milliseconds, TimeOutCallback callback) {
+  start(std::chrono::milliseconds{milliseconds}, std::move(callback));
 }
-void Timer::start(std::chrono::milliseconds interval, TimeOutCallback callback,
-                  ExecutorIFPtr executor) {
-  if (!callback) {
-    MAF_LOGGER_ERROR("[TimerImpl]: Please specify not null callback");
-  } else {
-    runTimer(d_, interval, move(callback), move(executor));
-  }
+void Timer::start(std::chrono::milliseconds interval,
+                  TimeOutCallback callback) {
+  assert(callback);
+  runTimer(d_, interval, move(callback));
 }
 
-void Timer::restart() {
-  if (auto comp = this_component::instance()) {
-    d_->running = true;
-    mgr().restart(d_);
-    mgr().interruptCurrentTimer(comp);
-  }
+void Timer::start(long long milliseconds, Timer::TimeOutCallback callback,
+                  const ComponentInstance& comp) {
+  start(std::chrono::milliseconds{milliseconds}, move(callback), comp);
 }
 
-void Timer::stop() {
-  if (d_->running) {
-    d_->running = false;
-    if (auto comp = this_component::instance()) {
-      mgr().remove(d_);
-      mgr().interruptCurrentTimer(comp);
-    }
-  }
+void Timer::start(milliseconds milliseconds, Timer::TimeOutCallback callback,
+                  const ComponentInstance& comp) {
+  comp->execute(
+      [timerData = d_, callback{move(callback)}, milliseconds]() mutable {
+        runTimer(timerData, milliseconds, move(callback));
+      });
+}
+
+void Timer::restart() { mgr().restart(d_); }
+
+void Timer::stop() { mgr().stop(d_); }
+
+void Timer::stop(const ComponentInstance& comp) {
+  assert(comp);
+  comp->execute([timerData{d_}] { mgr().stop(timerData); });
 }
 
 bool Timer::running() const { return d_->running; }
@@ -148,59 +143,66 @@ void Timer::setCyclic(bool cyclic) {
   }
 }
 
+void Timer::timeoutAfter(long long ms, Timer::TimeOutCallback callback) {
+  timeoutAfter(milliseconds{ms}, move(callback));
+}
+
+void Timer::timeoutAfter(milliseconds milliseconds,
+                         Timer::TimeOutCallback callback) {
+  auto tm = make_shared<TimerData>();
+  runTimer(tm, milliseconds, move(callback));
+}
+
 void Timer::timeoutAfter(long long ms, Timer::TimeOutCallback callback,
-                         Timer::ExecutorIFPtr executor) {
-  timeoutAfter(milliseconds{ms}, move(callback), move(executor));
+                         const ComponentInstance& comp) {
+  timeoutAfter(milliseconds{ms}, move(callback), comp);
 }
 
 void Timer::timeoutAfter(milliseconds milliseconds,
                          Timer::TimeOutCallback callback,
-                         Timer::ExecutorIFPtr executor) {
-  auto tm = make_shared<TimerData>();
-  runTimer(tm, milliseconds, move(callback), move(executor));
+                         const ComponentInstance& comp) {
+  comp->execute([callback{move(callback)}, milliseconds]() mutable {
+    auto tm = make_shared<TimerData>();
+    runTimer(tm, milliseconds, move(callback));
+  });
 }
 
 void TimerMgr::cleanup() {
   records_.clear();
-  setRunningOnThisThread(false);
+  state_ = State::NoTimer;
 }
 
-void TimerMgr::refresh() {
-  using namespace std;
-  make_heap(begin(), end(), timerGreater);
-}
+void TimerMgr::refresh() { make_heap(begin(), end(), timerGreater); }
 
 void TimerMgr::runAllTimers() {
-  util::CallOnExit onExit = [this] { cleanup(); };
-  setRunningOnThisThread();
+  //  auto onExit = util::CallOnExit([this] { cleanup(); });
   auto comp = this_component::instance();
-  do {
-    auto timer = getShortestTimer();
-    if (!timer) {
-      break;
-    }
 
+  while (auto timer = getShortestTimer()) {
     try {
       if (!timer->expired()) {
-        comp->runUntil(timer->deadline);
-        if (!timer->expired()) {
-          if (!comp->stopped()) {
-            continue;
-          } else {
-            break;
-		  }
+        state_ = State::Waiting;
+        auto now = system_clock::now();
+        if (timer->deadline - now > 1s) {
+          comp->runUntil(now + 1s);
+        } else {
+          comp->runUntil(timer->deadline);
         }
-      }
-
-      if (!comp->stopped()) {
-        onShortestTimerExpired(timer);
-      } else {
+        state_ = State::HaveTimer;
+        comp->execute([this] { runAllTimers(); });
         break;
       }
+      if (comp->stopped()) {
+        break;
+      }
+      state_ = State::HaveTimer;
+      // shortest timer might be stopped while waiting
+      if (timer->running) {
+        onShortestTimerExpired(timer);
+      }
     } catch (TimerInterrupt) {
-      continue;
     }
-  } while (true);
+  }
 }
 
 void TimerMgr::start(TimerDataPtr record) {
@@ -210,16 +212,34 @@ void TimerMgr::start(TimerDataPtr record) {
   } else {
     refresh();
   }
-  // triggerTimer should be executed async to avoid blocking the current
-  // thread
-  this_component::instance()->execute([this] { this->onTimerModified(); });
+  onTimerModified();
+}
+
+void TimerMgr::stop(TimerDataPtr record) {
+  if (record->running) {
+    record->running = false;
+    if (auto removedShortest = remove(record);
+        removedShortest && !records_.empty()) {
+      interruptCurrentTimer(this_component::instance());
+    }
+  }
 }
 
 void TimerMgr::onTimerModified() {
-  if (runningOnThisThread()) {
-    interruptCurrentTimer(this_component::instance());
-  } else {
-    runAllTimers();
+  switch (state_) {
+    case State::NoTimer:
+      state_ = State::HaveTimer;
+      [[fallthrough]];
+    case State::HaveTimer:
+      // [IMPORTANT]: triggerTimer should be executed async to avoid blocking
+      // the current thread
+      this_component::instance()->execute([this] { this->runAllTimers(); });
+      break;
+    case State::Waiting:
+      interruptCurrentTimer(this_component::instance());
+      break;
+    default:
+      break;
   }
 }
 
@@ -241,6 +261,7 @@ void TimerMgr::restart(const TimerDataPtr& r) {
   } else {
     refresh();
   }
+  onTimerModified();
 }
 
 void TimerMgr::add(TimerDataPtr newRecord) {
@@ -249,22 +270,20 @@ void TimerMgr::add(TimerDataPtr newRecord) {
   push_heap(begin(), end(), timerGreater);
 }
 
-bool TimerMgr::runningOnThisThread() const {
-  return std::this_thread::get_id() == mythreadID;
-}
-
-void TimerMgr::setRunningOnThisThread(bool yes) {
-  if (yes) {
-    mythreadID = std::this_thread::get_id();
-  } else {
-    mythreadID = {};
+bool TimerMgr::remove(TimerDataPtr tm) {
+  auto removedShortestOne = false;
+  if (!records_.empty()) {
+    if (records_.front() == tm) {
+      removeShortestTimer();
+      removedShortestOne = true;
+    } else if (auto it = std::remove(begin(), end(), tm); it != end()) {
+      records_.erase(it);
+      if (!checkRecordListEmpty()) {
+        refresh();
+      }
+    }
   }
-}
-
-void TimerMgr::remove(TimerDataPtr tm) {
-  using namespace std;
-  records_.erase(std::remove(begin(), end(), tm));
-  make_heap(begin(), end(), timerGreater);
+  return removedShortestOne;
 }
 
 TimerDataPtr TimerMgr::getShortestTimer() {
@@ -279,6 +298,7 @@ TimerDataPtr TimerMgr::removeShortestTimer() {
   pop_heap(begin(), end(), timerGreater);
   auto tm = move(records_.back());
   records_.pop_back();
+  checkRecordListEmpty();
   return tm;
 }
 
@@ -289,11 +309,21 @@ void TimerMgr::updateShortestTimer() {
 }
 
 void TimerMgr::interruptCurrentTimer(const ComponentInstance& comp) {
-  comp->execute([this] {
-    if (runningOnThisThread()) {
-      throw TimerInterrupt{};
-    }
-  });
+  if (comp) {
+    comp->execute([this] {
+      if (state_ == State::Waiting) {
+        throw TimerInterrupt{};
+      }
+    });
+  }
+}
+
+bool TimerMgr::checkRecordListEmpty() {
+  if (records_.empty()) {
+    state_ = State::NoTimer;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace messaging

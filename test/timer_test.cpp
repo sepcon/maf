@@ -106,8 +106,8 @@ void multiTimersTest() {
   auto comp = Component::create();
 
   const auto totalTimers = 100;
-  const auto testTime = 10;
-  const auto eachTimerDuration = 1;
+  const auto testTime = 16;
+  const auto eachTimerDuration = 4;
   TimerCreater tc{totalTimers, testTime, eachTimerDuration};
   auto expectation = vector<int>(totalTimers, testTime / eachTimerDuration);
   comp->connect<int>([](int x) { std::cout << "got x = " << x << std::endl; });
@@ -123,16 +123,19 @@ void multiTimersTest() {
 
 void singleShotTest() {
   maf::util::TimeMeasurement tm;
-  long long elapsedMs = 0;
+  long long elapsedMicroseconds = 0;
   Component::create()->run([&]() mutable {
     tm.restart();
     Timer::timeoutAfter(1, [&] {
-      elapsedMs = tm.elapsedTime().count() / 1000;
+      elapsedMicroseconds = tm.elapsedTime().count();
       this_component::stop();
     });
   });
 
-  TEST_CASE_B(signal_timer) { EXPECT(elapsedMs == 1); }
+  cout << elapsedMicroseconds << endl;
+  TEST_CASE_B(signal_timer) {
+    EXPECT(elapsedMicroseconds > 900 && elapsedMicroseconds <= 3000);
+  }
   TEST_CASE_E()
 }
 

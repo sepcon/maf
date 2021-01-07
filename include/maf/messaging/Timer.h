@@ -8,6 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include "Component.h"
+
 namespace maf {
 namespace messaging {
 
@@ -18,21 +20,31 @@ class Timer : public pattern::Unasignable {
   typedef std::function<void()> TimeOutCallback;
   MAF_EXPORT Timer(bool cyclic = false);
   MAF_EXPORT ~Timer();
-  MAF_EXPORT void start(long long milliseconds, TimeOutCallback callback,
-                        ExecutorIFPtr = {});
+  MAF_EXPORT void start(long long milliseconds, TimeOutCallback callback);
   MAF_EXPORT void start(std::chrono::milliseconds milliseconds,
-                        TimeOutCallback callback, ExecutorIFPtr = {});
+                        TimeOutCallback callback);
+
+  MAF_EXPORT void start(long long milliseconds, TimeOutCallback callback,
+                        const ComponentInstance& comp);
+  MAF_EXPORT void start(std::chrono::milliseconds milliseconds,
+                        TimeOutCallback callback,
+                        const ComponentInstance& comp);
 
   MAF_EXPORT void restart();
   MAF_EXPORT void stop();
+  MAF_EXPORT void stop(const ComponentInstance& comp);
   MAF_EXPORT bool running() const;
   MAF_EXPORT void setCyclic(bool cyclic = true);
   MAF_EXPORT static void timeoutAfter(long long milliseconds,
+                                      TimeOutCallback callback);
+  MAF_EXPORT static void timeoutAfter(std::chrono::milliseconds milliseconds,
+                                      TimeOutCallback callback);
+  MAF_EXPORT static void timeoutAfter(long long milliseconds,
                                       TimeOutCallback callback,
-                                      ExecutorIFPtr executor = {});
+                                      const ComponentInstance& comp);
   MAF_EXPORT static void timeoutAfter(std::chrono::milliseconds milliseconds,
                                       TimeOutCallback callback,
-                                      ExecutorIFPtr executor = {});
+                                      const ComponentInstance& comp);
 
  private:
   std::shared_ptr<struct TimerData> d_;

@@ -222,18 +222,19 @@ void Component::run(ThreadFunction threadInit, ThreadFunction threadDeinit) {
 }
 
 void Component::runFor(ExecutionTimeout duration) {
-  using namespace std::chrono;
-  runUntil(system_clock::now() + duration);
+  runUntil(std::chrono::system_clock::now() + duration);
 }
 
 void Component::runUntil(ExecutionDeadline deadline) {
+  using namespace std::chrono;
   ExecutionUPtr exc;
   auto justSet = this_component::testAndSetThreadLocalInstance(this);
   CallOnExit deinit = [justSet] {
     this_component::clearTLInstanceIfSet(justSet);
   };
 
-  while (d_->pendingExecutions.waitUntil(exc, deadline)) {
+  while (d_->pendingExecutions.waitUntil(exc, deadline) &&
+         system_clock::now() <= deadline) {
     invoke(exc);
   }
 }
