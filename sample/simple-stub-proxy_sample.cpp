@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         std::cerr << "[MAF] " << msg << std::endl;
       });
 
-  constexpr auto MAX_BUFFER_SIZE = size_t{500000};
+  constexpr auto MAX_BUFFER_SIZE = std::streamsize{500000};
 
   MAF_LOGGER_DEBUG("Start copying file ", sourceFile, " to ", destFile);
 
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
           auto callstatus = ActionCallStatus::Success;
 
           do {
-            if (buffer.size() < buffersize) {
+            if (static_cast<std::streamsize>(buffer.size()) < buffersize) {
               buffer.resize(buffersize);
             }
             auto readCount = readStream

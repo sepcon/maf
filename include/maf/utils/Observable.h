@@ -70,9 +70,12 @@ template <class... SubStates>
 using M_StateBasedKeeper_ = StateBasedSlotKeeper<MultiSlotKeeper, SubStates...>;
 
 template <class T, class Derived_>
-struct ArithmeticStateBase_ {
+class ArithmeticStateBase_ {
+ private:
   Derived_* derived() { return static_cast<Derived_*>(this); }
   const Derived_* derived() const { return static_cast<const Derived_*>(this); }
+
+ public:
   void operator=(T v) { *derived()->mut() = v; }
   operator T() const { return (*derived()->immut()); }
   T operator++() { return ++(*derived()->mut()); }
@@ -87,17 +90,6 @@ struct ArithmeticStateBase_ {
   T operator<<=(int bits) { return (*derived()->mut()) <<= bits; }
   T operator>>=(int bits) { return (*derived()->mut()) >>= bits; }
   T operator^=(const T& other) { return (*derived()->mut()) ^= other; }
-
-  T operator+(const T& other) const { return (*derived()->immut()) + other; }
-  T operator-(const T& other) const { return (*derived()->immut()) - other; }
-  T operator*(const T& other) const { return (*derived()->immut()) * other; }
-  T operator/(const T& other) const { return (*derived()->immut()) / other; }
-  T operator%(const T& other) const { return (*derived()->immut()) % other; }
-  T operator|(const T& other) const { return (*derived()->immut()) | other; }
-  T operator&(const T& other) const { return (*derived()->immut()) & other; }
-  T operator<<(int bits) const { return (*derived()->immut()) << bits; }
-  T operator>>(int bits) const { return (*derived()->immut()) >> bits; }
-  T operator^(const T& other) const { return (*derived()->immut()) ^ other; }
 };
 
 template <class SlotsKeeper_, class... SubStates_>

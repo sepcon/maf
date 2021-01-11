@@ -346,17 +346,23 @@ void arithmetic_observable_test_impl() {
     state = 20;
     // won't notify
     auto newVal = state + 10;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState + 10);
     newVal = state - 10;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState - 10);
     newVal = state * 10;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState * 10);
     newVal = state / 10;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState / 10);
     newVal = state << 2;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState << 2);
     newVal = state >> 2;
-    EXPECT(state.get() == 20 && observedState == 20);
+    EXPECT(state.get() == 20 && observedState == 20 &&
+           newVal == observedState >> 2);
   }
   TEST_CASE_E()
 }
