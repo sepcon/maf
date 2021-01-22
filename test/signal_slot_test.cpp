@@ -443,6 +443,31 @@ void observable_multi_state_test() {
     EXPECT(notifyCount == 2);
   }
   TEST_CASE_E(observable_multi_state_concurrent_set)
+
+  TEST_CASE_B(observable_multi_state_sub_states_set) {
+    Observable<int, bool, string> o{-1, false, ""};
+    int ei = 0;
+    bool eb = false;
+    string es;
+    int notifiedCount = 0;
+    o = tuple{-1, false, ""};
+    o.connect([&](int i, bool b, const string& s) {
+      ei = i;
+      eb = b;
+      es = s;
+      ++notifiedCount;
+    });
+
+    o.set<1, 2>(true, "true");
+    EXPECT(ei == -1 && eb && es == "true");
+
+    o.set<0, 2>(100, "false");
+    EXPECT(ei == 100 && eb && es == "false");
+
+    o.set<1, 0>(false, 10);
+    EXPECT(ei == 10 && !eb && es == "false");
+  }
+  TEST_CASE_E()
 }
 
 void compound_observable_test() {
@@ -482,6 +507,31 @@ void compound_observable_test() {
   TEST_CASE_E()
 }
 
+void connect_to_other_signal_test() {
+  TEST_CASE_B(connect_to_other_signal) {
+    Signal<const char*> rootSignal;
+    string expectedString;
+    Connection con;
+    {
+      SignalST<string> triggeredSignal;
+      con = rootSignal.connect(triggeredSignal);
+      triggeredSignal.connect([&](const string& val) {
+        expectedString = val;
+      });
+
+      EXPECT(con.connected());
+      EXPECT(expectedString == "");
+      rootSignal("100");
+      EXPECT(expectedString == "100");
+    }
+
+    rootSignal("300");
+    EXPECT(!con.connected());
+    EXPECT(expectedString == "100");
+  }
+
+  TEST_CASE_E()
+}
 void performance_test() {
   Signal<string> stringSignal;
   const string* s1 = nullptr;
@@ -509,6 +559,7 @@ int main() {
   arithmetic_observable_test();
   observable_multi_state_test();
   compound_observable_test();
+  connect_to_other_signal_test();
   performance_test();
   return 0;
 }

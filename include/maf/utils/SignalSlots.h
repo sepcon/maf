@@ -284,6 +284,7 @@ class BasicSignal_ {
   BasicSignal_& operator=(const BasicSignal_&) = default;
   BasicSignal_(BasicSignal_&&) = default;
   BasicSignal_& operator=(BasicSignal_&&) = default;
+  ~BasicSignal_() { disconnect(); }
 
   void operator()(ConstRef_<Args_>... args) const { notify(args...); }
 
@@ -352,6 +353,25 @@ class BasicSignal_ {
     return connect(combineSlotWithExecutor<Args_...>(move(ps), move(executor)));
   }
 
+  template <class _Keeper, class... _Args,
+            enable_if_t<is_constructible_v<SlotType,
+                                           function<void(ConstRef_<_Args>...)>>,
+                        bool> = true>
+  Connection connect(const BasicSignal_<_Keeper, _Args...>& otherSignal) {
+    using OtherSignal = BasicSignal_<_Keeper, _Args...>;
+    using OtherKeeperType = typename OtherSignal::SlotsKeeperType;
+    auto otherKeeperRef = weak_ptr<OtherKeeperType>{otherSignal.sharedKeeper()};
+
+    return connect([otherKeeperRef](const ConnectionPtrType& con,
+                                    ConstRef_<_Args>... args) {
+      if (auto otherSharedKeeper = otherKeeperRef.lock()) {
+        (*otherSharedKeeper)->notify(args...);
+      } else {
+        con->disconnect();
+      }
+    });
+  }
+
   bool disconnect(const SlotPtrType& ps) { return keeper()->remove(ps); }
 
   void disconnect() { keeper()->clear(); }
@@ -359,6 +379,9 @@ class BasicSignal_ {
   bool connected() const { return keeper()->valid(); }
 
  protected:
+  template <class OtherKeeper_, class... OtherArgs>
+  friend class BasicSignal_;
+
   struct MyKeeper_ : public SlotsKeeper_, public ConnectableIF {
     using Base_ = SlotsKeeper_;
     using Base_::Base_;
@@ -377,6 +400,7 @@ class BasicSignal_ {
     }
   };
 
+  using SlotsKeeperType = MyKeeper_;
   using SlotKeeperPtr = shared_ptr<MyKeeper_>;
 
   template <class... Ts>
@@ -417,23 +441,53 @@ class BasicSignal_ {
   SlotKeeperPtr slotKeeper_ = make_shared<MyKeeper_>();
 };
 
+template <class SlotsKeeper_, class... Args_>
+struct BasicSignal;
+
+template <class SlotsKeeper_, class... Args_>
+struct BasicSignal : public BasicSignal_<SlotsKeeper_, Args_...> {
+  using Base_ = BasicSignal_<SlotsKeeper_, Args_...>;
+  using Base_::Base_;
+  using State = tuple<PurgeType_<Args_>...>;
+  using Base_::connect;
+  Connection connect(function<void(const State&)> tpSl) {
+    assert(tpSl);
+    return connect(
+        [tpSl{move(tpSl)}](ConstRef_<Args_>... args) { tpSl(tie(args...)); });
+  }
+
+  Connection connect(function<void(const State&)> tpSl,
+                     util::ExecutorIFPtr executor) {
+    assert(tpSl);
+    return connect(
+        [tpSl{move(tpSl)}](ConstRef_<Args_>... args) { tpSl(tie(args...)); },
+        move(executor));
+  }
+};
+
+template <class SlotsKeeper_, class Arg_>
+struct BasicSignal<SlotsKeeper_, Arg_>
+    : public BasicSignal_<SlotsKeeper_, Arg_> {
+  using State = PurgeType_<Arg_>;
+};
+
 template <class... Args>
 using SignalST =
-    BasicSignal_<NonAtomicObject_<MultiSlotKeeper<Args...>>, Args...>;
+    BasicSignal<NonAtomicObject_<MultiSlotKeeper<Args...>>, Args...>;
 
 template <class... Args>
 using SCSignalST =
-    BasicSignal_<NonAtomicObject_<SingleSlotKeeper<Args...>>, Args...>;
+    BasicSignal<NonAtomicObject_<SingleSlotKeeper<Args...>>, Args...>;
 
 template <class... Args>
 using SCSignal =
-    BasicSignal_<AtomicObject<SingleSlotKeeper<Args...>, recursive_mutex>,
-                 Args...>;
+    BasicSignal<AtomicObject<SingleSlotKeeper<Args...>, recursive_mutex>,
+                Args...>;
 
 template <class... Args>
 using Signal =
-    BasicSignal_<AtomicObject<MultiSlotKeeper<Args...>, recursive_mutex>,
-                 Args...>;
+    BasicSignal<AtomicObject<MultiSlotKeeper<Args...>, recursive_mutex>,
+                Args...>;
 
 template <template <typename...> class Signal_, typename... Args_>
 class FutureInvocation {

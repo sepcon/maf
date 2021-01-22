@@ -36,10 +36,13 @@ class StateBasedSlotKeeper : public KeeperBase_<SubStates_...> {
   SubState<idx>& get() {
     return std::get<idx>(state_);
   }
-  template <size_t idx>
-  void set(SubState<idx> val) {
-    if (val != std::get<idx>(state_)) {
-      std::get<idx>(state_) = move(val);
+
+  template <size_t... idx>
+  void set(SubState<idx>... vals) {
+    auto current = tie(std::get<idx>(state_)...);
+    auto newVals = tie(vals...);
+    if (current != newVals) {
+      current = move(newVals);
       notifyState();
     }
   }
@@ -93,8 +96,8 @@ class ArithmeticStateBase_ {
 };
 
 template <class SlotsKeeper_, class... SubStates_>
-class ObservableBasic_ : public BasicSignal_<SlotsKeeper_, SubStates_...> {
-  using Base_ = BasicSignal_<SlotsKeeper_, SubStates_...>;
+class ObservableBasic_ : public BasicSignal<SlotsKeeper_, SubStates_...> {
+  using Base_ = BasicSignal<SlotsKeeper_, SubStates_...>;
   using Base_::notify;
   using Base_::operator();
 
@@ -203,9 +206,9 @@ class BasicObservable_ : public ObservableBasic_<SlotsKeeper_, SubStates_...> {
     this->keeper()->set(substates...);
   }
 
-  template <size_t idx>
-  void set(const SubState<idx>& val) {
-    this->keeper()->template set<idx>(val);
+  template <size_t... idx>
+  void set(const SubState<idx>&... vals) {
+    this->keeper()->template set<idx...>(vals...);
   }
 
   State get() const { return this->keeper()->get(); }
@@ -213,21 +216,6 @@ class BasicObservable_ : public ObservableBasic_<SlotsKeeper_, SubStates_...> {
   template <size_t idx>
   SubState<idx> get() const {
     return this->keeper()->template get<idx>();
-  }
-
-  typename Base_::Connection connect(function<void(const State&)> tpSl) {
-    assert(tpSl);
-    return connect([tpSl{move(tpSl)}](ConstRef_<SubStates_>... args) {
-      tpSl(tie(args...));
-    });
-  }
-
-  typename Base_::Connection connect(function<void(const State&)> tpSl,
-                                     util::ExecutorIFPtr executor) {
-    assert(tpSl);
-    return connect([tpSl{move(tpSl)}](
-                       ConstRef_<SubStates_>... args) { tpSl(tie(args...)); },
-                   move(executor));
   }
 
  private:
