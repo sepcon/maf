@@ -28,6 +28,8 @@ class Component final : pattern::Unasignable,
                       ThreadFunction threadDeinit = {});
   MAF_EXPORT void runFor(ExecutionTimeout duration);
   MAF_EXPORT void runUntil(ExecutionDeadline deadline);
+  MAF_EXPORT bool runOnceFor(ExecutionTimeout duration);
+  MAF_EXPORT bool runOnceUntil(ExecutionDeadline deadline);
   MAF_EXPORT void stop();
   MAF_EXPORT bool stopped() const;
   MAF_EXPORT bool post(Message msg);

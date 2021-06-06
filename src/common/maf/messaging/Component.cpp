@@ -233,10 +233,29 @@ void Component::runUntil(ExecutionDeadline deadline) {
     this_component::clearTLInstanceIfSet(justSet);
   };
 
-  while (d_->pendingExecutions.waitUntil(exc, deadline) &&
-         system_clock::now() <= deadline) {
+  while (d_->pendingExecutions.waitUntil(exc, deadline)) {
     invoke(exc);
   }
+}
+
+bool Component::runOnceFor(ExecutionTimeout duration) {
+  return runOnceUntil(std::chrono::system_clock::now() + duration);
+}
+
+bool Component::runOnceUntil(ExecutionDeadline deadline) {
+  using namespace std::chrono;
+  ExecutionUPtr exc;
+  auto justSet = this_component::testAndSetThreadLocalInstance(this);
+  CallOnExit deinit = [justSet] {
+    this_component::clearTLInstanceIfSet(justSet);
+  };
+
+  if (d_->pendingExecutions.waitUntil(exc, deadline)) {
+    invoke(exc);
+    return true;
+  }
+
+  return false;
 }
 
 void Component::stop() {

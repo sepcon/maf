@@ -28,8 +28,6 @@ using std::shared_ptr;
 using TimerDataPtr = shared_ptr<TimerData>;
 using util::ExecutorIFPtr;
 
-struct TimerInterrupt {};
-
 struct TimerData {
   TimeOutCallback callback;
   DeadLine deadline = Clock::now();
@@ -70,7 +68,7 @@ struct TimerMgr {
 
   void cleanup();
   void refresh();
-  void runAllTimers();
+  void checkAllTimers();
   void start(TimerDataPtr record);
   void stop(TimerDataPtr record);
   void onTimerModified();
@@ -174,33 +172,28 @@ void TimerMgr::cleanup() {
 
 void TimerMgr::refresh() { make_heap(begin(), end(), timerGreater); }
 
-void TimerMgr::runAllTimers() {
-  //  auto onExit = util::CallOnExit([this] { cleanup(); });
+void TimerMgr::checkAllTimers() {
+  if (state_ == State::Waiting) {
+    return;
+  }
   auto comp = this_component::instance();
-
   while (auto timer = getShortestTimer()) {
-    try {
-      if (!timer->expired()) {
-        state_ = State::Waiting;
-        auto now = system_clock::now();
-        if (timer->deadline - now > 1s) {
-          comp->runUntil(now + 1s);
-        } else {
-          comp->runUntil(timer->deadline);
-        }
-        state_ = State::HaveTimer;
-        comp->execute([this] { runAllTimers(); });
-        break;
-      }
-      if (comp->stopped()) {
-        break;
-      }
+    if (!timer->expired()) {
+      state_ = State::Waiting;
+      comp->runOnceUntil(timer->deadline);
       state_ = State::HaveTimer;
-      // shortest timer might be stopped while waiting
-      if (timer->running) {
-        onShortestTimerExpired(timer);
-      }
-    } catch (TimerInterrupt) {
+      comp->execute([this] { checkAllTimers(); });
+      break;
+    }
+
+    if (comp->stopped()) {
+      break;
+    }
+
+    state_ = State::HaveTimer;
+    // shortest timer might be stopped while waiting
+    if (timer->running) {
+      onShortestTimerExpired(timer);
     }
   }
 }
@@ -226,21 +219,7 @@ void TimerMgr::stop(TimerDataPtr record) {
 }
 
 void TimerMgr::onTimerModified() {
-  switch (state_) {
-    case State::NoTimer:
-      state_ = State::HaveTimer;
-      [[fallthrough]];
-    case State::HaveTimer:
-      // [IMPORTANT]: triggerTimer should be executed async to avoid blocking
-      // the current thread
-      this_component::instance()->execute([this] { this->runAllTimers(); });
-      break;
-    case State::Waiting:
-      interruptCurrentTimer(this_component::instance());
-      break;
-    default:
-      break;
-  }
+  this_component::instance()->execute([this] { this->checkAllTimers(); });
 }
 
 void TimerMgr::onShortestTimerExpired(const TimerDataPtr& record) {
@@ -309,11 +288,9 @@ void TimerMgr::updateShortestTimer() {
 }
 
 void TimerMgr::interruptCurrentTimer(const ComponentInstance& comp) {
-  if (comp) {
-    comp->execute([this] {
-      if (state_ == State::Waiting) {
-        throw TimerInterrupt{};
-      }
+  if (state_ == State::Waiting && comp) {
+    comp->execute([] {
+      // an empty callback just to wakeup runOnceUntil wait
     });
   }
 }
