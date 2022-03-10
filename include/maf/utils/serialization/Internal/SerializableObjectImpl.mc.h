@@ -1,23 +1,26 @@
 #pragma once
 
-#include <maf/utils/cppextension/Loop.mc.h>
-#include <maf/utils/serialization/Tuplizable.h>
+#include <maf/utils/cppextension/Macros.h>
+#include <maf/utils/serialization/JsonTrait.h>
 
-#define mc_maf_sb_object(name) struct name : public maf::srz::Tuplizable {
-#define mc_maf_sb_object_ex(name, base) \
-  struct name : public maf::srz::Tuplizable, public base {
+#define mc_maf_sb_object(name) struct name {
+#define mc_maf_sb_object_ex(name, base) struct name : public base {
 #define mc_maf_sb_endobject(name)                                        \
  public:                                                                 \
   mc_maf_sb_define_constructors(name) bool operator==(const name &other) \
       const {                                                            \
-    return as_tuple() == other.as_tuple();                               \
+    return cas_tuple() == other.cas_tuple();                             \
   }                                                                      \
   bool operator!=(const name &other) const { return !(*this == other); } \
   bool operator<(const name &other) const {                              \
-    return this->as_tuple() < other.as_tuple();                          \
+    return this->cas_tuple() < other.cas_tuple();                        \
   }                                                                      \
   }                                                                      \
-  ;
+  ;                                                                      \
+  template <class OStream>                                               \
+  void _dump(OStream &os, const name &obj, int indent = 0) {             \
+    os << obj.dump(indent);                                              \
+  }
 
 #define mc_maf_sb_members(...)                                           \
   mc_maf_sb_define_as_tuple_funcs(__VA_ARGS__)                           \
@@ -39,11 +42,12 @@
   name &operator=(name &&other) = default;  \
   name &operator=(const name &other) = default;
 
-#define mc_maf_sb_define_set_all_function(...)                          \
- public:                                                                \
-  void set_all(mc_maf_sb_remove_first_arg(                              \
-      mc_maf_for_each(mc_maf_sb_declare_function_param, __VA_ARGS__))){ \
-      mc_maf_for_each(mc_maf_sb_set_member_value, __VA_ARGS__)}
+#define mc_maf_sb_define_set_all_function(...)                           \
+ public:                                                                 \
+  void set_all(mc_maf_sb_remove_first_arg(                               \
+      mc_maf_for_each(mc_maf_sb_declare_function_param, __VA_ARGS__))) { \
+    mc_maf_for_each(mc_maf_sb_set_member_value, __VA_ARGS__)             \
+  }
 
 #define mc_maf_sb_declare_function_param(parentheses) \
   mc_maf_sb_declare_function_param_no_prt(mc_strip_parentheses(parentheses))
@@ -113,16 +117,9 @@
 #define mc_maf_sb_declare_member_var_default(type, name, default_val) \
   type mc_maf_sb_get_member_var_name(name) = default_val;
 
-#define mc_maf_sb_define_as_tuple_funcs(...)                      \
- public:                                                          \
-  decltype(auto) as_tuple() {                                     \
-    return std::tie(mc_maf_sb_remove_first_arg(mc_maf_for_each(   \
-        mc_maf_sb_get_member_var_name_with_comma, __VA_ARGS__))); \
-  }                                                               \
-  decltype(auto) as_tuple() const {                               \
-    return std::tie(mc_maf_sb_remove_first_arg(mc_maf_for_each(   \
-        mc_maf_sb_get_member_var_name_with_comma, __VA_ARGS__))); \
-  }
+#define mc_maf_sb_define_as_tuple_funcs(...)                  \
+  MC_MAF_GENERATE_AS_TUPLE_METHOD(mc_maf_sb_remove_first_arg( \
+      mc_maf_for_each(mc_maf_sb_get_member_var_name_with_comma, __VA_ARGS__)))
 
 #define mc_maf_sb_get_member_var_name_with_comma(parentheses) \
   , mc_maf_sb_get_member_var_name(mc_maf_sb_take_second_param(parentheses))
@@ -137,30 +134,32 @@
 #define mc_maf_sb_take_second_param_impl_(first, second, ...) second
 
 #ifndef MAF_DISABLE_DUMP
-#define mc_maf_sb_define_dump_functions(...)                      \
-  std::string dump(int indent = -1) {                             \
-    std::string out;                                              \
-    dump(indent, out);                                            \
-    return out;                                                   \
-  }                                                               \
-  void dump(int indent, std::string &strOut) const {              \
-    strOut = maf::srz::getIndent(indent) + "{";                   \
-    mc_maf_for_each(mc_maf_sb_dump_each_member,                   \
-                    __VA_ARGS__) if (strOut.back() == ',') {      \
-      strOut.resize(strOut.size() - 1);                           \
-    }                                                             \
-    strOut += maf::srz::getIndent(indent, true) + "}";            \
-  }                                                               \
-                                                                  \
- private:                                                         \
-  template <typename T>                                           \
-  static void dump(const char *valName, const T &val, int indent, \
-                   std::string &strOut) {                         \
-    strOut += maf::srz::getIndent(indent, true);                  \
-    maf::srz::dump(valName, indent, strOut);                      \
-    strOut += maf::srz::keyValueSeparator(indent);                \
-    maf::srz::dump(val, indent, strOut);                          \
-    strOut += ",";                                                \
+#define mc_maf_sb_define_dump_functions(...)                            \
+  std::string dump(int indent = -1) const {                             \
+    std::ostringstream os;                                              \
+    dump(os, indent);                                                   \
+    auto out = os.str();                                                \
+    out[out.find_last_of(',')] = ' ';                                   \
+    return out;                                                         \
+  }                                                                     \
+                                                                        \
+ private:                                                               \
+  void dump(std::ostream &os, int indent) const {                       \
+    maf::srz::writeIndent(os, indent);                                  \
+    os << "{";                                                          \
+    mc_maf_for_each(mc_maf_sb_dump_each_member, __VA_ARGS__)            \
+        maf::srz::writeIndent(os, indent, true);                        \
+    os << "}";                                                          \
+  }                                                                     \
+                                                                        \
+  template <typename T>                                                 \
+  static void dump(std::ostream &os, const char *valName, const T &val, \
+                   int indent) {                                        \
+    maf::srz::writeIndent(os, indent, true);                            \
+    maf::srz::dump(os, valName, indent);                                \
+    maf::srz::keyValueSeparator(os, indent);                            \
+    maf::srz::dump(os, val, indent);                                    \
+    os << ",";                                                          \
   }
 
 #define mc_maf_sb_dump_each_member(parentheses) \
@@ -168,7 +167,7 @@
 #define mc_maf_sb_dump_each_member_impl(name) \
   mc_maf_sb_dump_each_member_impl_(name)
 #define mc_maf_sb_dump_each_member_impl_(name) \
-  dump(#name, get_##name(), maf::srz::nextLevel(indent), strOut);
+  dump(os, #name, get_##name(), maf::srz::nextLevel(indent));
 
 #else
 #define mc_maf_sb_define_dump_functions(...)    \
@@ -187,6 +186,7 @@
 #ifndef MAF_DISABLE_JSON
 #include <maf/utils/serialization/JsonTrait.h>
 #define mc_maf_sb_define_load_from_json_functions(...)                    \
+  static constexpr bool jsonizable = true;                                \
   template <                                                              \
       typename JsonType,                                                  \
       std::enable_if_t<maf::srz::is_maf_compatible_json<JsonType>::value, \
@@ -199,9 +199,9 @@
       typename JsonType,                                                  \
       std::enable_if_t<maf::srz::is_maf_compatible_json<JsonType>::value, \
                        bool> = true>                                      \
-  void load_from_json(const std::string &json_string) {                   \
+  void load_from_json_str(const std::string &json_string) {               \
     using TheJsonTrait = maf::srz::JsonTrait<JsonType>;                   \
-    load_from_json(TheJsonTrait::fromString(json_string));                \
+    load_from_json(TheJsonTrait::parse(json_string));                     \
   }
 
 #define mc_maf_sb_load_json_on_each_member(TypeName) \
@@ -229,5 +229,5 @@
       typename JsonType,                                                  \
       std::enable_if_t<maf::srz::is_maf_compatible_json<JsonType>::value, \
                        bool> = true>                                      \
-  void load_from_json(const std::string & /*json_string*/) {}
+  void load_from_json_str(const std::string & /*json_string*/) {}
 #endif

@@ -60,11 +60,11 @@ int main(int argc, char **argv) {
   auto proxy = localipc::createProxy(DataTransmissionServerAddress,
                                      DataTransmissionServiceID);
 
-  AsyncComponent serverComponent = Component::create("Server");
+  AsyncProcessor serverProcessor = Processor::create("Server");
 
   auto stub = localipc::createStub(DataTransmissionServerAddress,
                                    DataTransmissionServiceID,
-                                   serverComponent->getExecutor());
+                                   serverProcessor->getExecutor());
 
   auto dataTransmissionServiceStatusSignal = serviceStatusSignal(proxy);
 
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
         request.respond();
       });
 
-  serverComponent.launch();
+  serverProcessor.launch();
   stub->startServing();
 
   if (dataTransmissionServiceStatusSignal->waitIfNot(Availability::Available)
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 
           do {
             if (static_cast<std::streamsize>(buffer.size()) < buffersize) {
-              buffer.resize(buffersize);
+              buffer.resize(static_cast<size_t>(buffersize));
             }
             auto readCount = readStream
                                  .read(&(buffer[0]),
@@ -193,6 +193,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  serverComponent->stop();
+  serverProcessor->stop();
   return 0;
 }

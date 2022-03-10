@@ -1,7 +1,7 @@
 #include <maf/ITCProxy.h>
 #include <maf/ITCStub.h>
 #include <maf/logging/Logger.h>
-#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ProcessorEx.h>
 #include <maf/utils/TimeMeasurement.h>
 
 #include <iostream>
@@ -13,7 +13,7 @@
 int main() {
   using namespace maf;
   maf::logging::init(
-      maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_FROM_INFO,
+      maf::logging::LOG_LEVEL_DEBUG | maf::logging::LOG_LEVEL_VERBOSE,
       [](const std::string &msg) { std::cout << msg << std::endl; },
       [](const std::string &msg) { std::cerr << msg << std::endl; });
 
@@ -25,18 +25,21 @@ int main() {
   auto proxy = itc::createProxy("helloworld");
   auto stub = itc::createStub("helloworld");
 
-  ServerComponent<itc::Stub> server{stub};
-  auto asyncServer = AsyncComponent{server.instance()};
-  std::vector<std::unique_ptr<ClientComponent<itc::Proxy>>> clients;
+  ServerProcessor<itc::Stub> server{stub};
+  auto asyncServer = AsyncProcessor{server.instance()};
+  std::vector<std::unique_ptr<ClientProcessor<itc::Proxy>>> clients;
   asyncServer.launch();
 
-  auto clientComponent = ClientComponent{proxy};
+  auto clientProcessor = ClientProcessor{proxy};
 
-  clientComponent->connect<EndOfRequestChainMsg>(
-      [](auto) { this_component::stop(); });
+  clientProcessor->connect<EndOfRequestChainMsg>(
+      [](auto) { this_processor::stop(); });
 
-  clientComponent.run();
+  clientProcessor.run();
   asyncServer.stopAndWait();
+
+  messaging::csmgmt::shutdownAllClients();
+  messaging::csmgmt::shutdownAllServers();
 
   return 0;
 }

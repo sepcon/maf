@@ -8,6 +8,13 @@
 
 #include "Request.h"
 
+#define CONCAT(a, b) CONCAT_INNER(a, b)
+#define CONCAT_INNER(a, b) a##b
+
+#define UNIQUE_NAME(base) CONCAT(base, __LINE__)
+
+#define LOCK(lockable) std::lock_guard UNIQUE_NAME(__lock)(lockable)
+
 namespace maf {
 namespace messaging {
 
@@ -54,10 +61,7 @@ ServiceProvider::ServiceProvider(ServiceID sid, std::weak_ptr<ServerIF> server)
   assert(server_.lock() && "Server must not be null");
 }
 
-ServiceProvider::~ServiceProvider() {
-  removeAllRegisterInfo();
-  invalidateAndRemoveAllRequests();
-}
+ServiceProvider::~ServiceProvider() { ServiceProvider::deinit(); }
 
 const ServiceID &ServiceProvider::serviceID() const { return sid_; }
 
@@ -72,16 +76,32 @@ ActionCallStatus ServiceProvider::respondToRequest(const CSMessagePtr &csMsg) {
 
 ActionCallStatus ServiceProvider::setStatus(const OpID &propertyID,
                                             const CSPayloadIFPtr &newProperty) {
-  std::lock_guard lock(propertyMap_);
+  auto notify = false;
+  {
+    std::lock_guard lock(propertyMap_);
+    auto &currentProperty = (*propertyMap_)[propertyID];
+    if (!currentProperty || !currentProperty->equal(newProperty.get())) {
+      currentProperty = newProperty;
+      notify = true;
+    }
+  }
 
-  auto &currentProperty = (*propertyMap_)[propertyID];
-  if (!currentProperty || !currentProperty->equal(newProperty.get())) {
-    currentProperty = newProperty;
+  if (notify) {
     return broadcast(propertyID, OpCode::StatusRegister, newProperty);
   } else {
     MAF_LOGGER_INFO("Don't set status of property `", propertyID,
                     "` due to unchanged!");
     return ActionCallStatus::NoAction;
+  }
+}
+
+ActionCallStatus ServiceProvider::removeProperty(const OpID &propertyID,
+                                                 bool notify) {
+  propertyMap_.atomic()->erase(propertyID);
+  if (notify) {
+    return broadcast(propertyID, OpCode::StatusRegister, {});
+  } else {
+    return ActionCallStatus::Success;
   }
 }
 
@@ -92,7 +112,22 @@ ActionCallStatus ServiceProvider::broadcastSignal(
 
 ActionCallStatus ServiceProvider::broadcast(const OpID &propertyID,
                                             OpCode opCode,
-                                            const CSPayloadIFPtr &content) {
+                                            const CSPayloadIFPtr &payload) {
+  broadcastServerSide(propertyID, payload);
+  return broadcastToClients(propertyID, opCode, payload);
+}
+
+void ServiceProvider::broadcastServerSide(const OpID &opID,
+                                          const CSPayloadIFPtr &payload) {
+  LOCK(serverSideListenersMap_);
+  auto it = serverSideListenersMap_->find(opID);
+  if (it != serverSideListenersMap_->end()) {
+    it->second.notify(payload);
+  }
+}
+
+ActionCallStatus ServiceProvider::broadcastToClients(
+    const OpID &propertyID, OpCode opCode, const CSPayloadIFPtr &payload) {
   using AddressList = std::vector<Address>;
   bool success = false;
   AddressList addresses;
@@ -111,7 +146,7 @@ ActionCallStatus ServiceProvider::broadcast(const OpID &propertyID,
     MAF_LOGGER_WARN("There's no register for property: ", propertyID);
   } else {
     auto csMsg = createCSMessage(serviceID(), propertyID, opCode,
-                                 RequestIDInvalid, content);
+                                 RequestIDInvalid, payload);
 
     auto trySendToDestinations =
         [this, &csMsg](AddressList &addresses) -> AddressList {
@@ -162,6 +197,14 @@ CSPayloadIFPtr ServiceProvider::getStatus(const OpID &propertyID) {
 }
 
 Availability ServiceProvider::availability() const { return availability_; }
+
+void ServiceProvider::init() {}
+
+void ServiceProvider::deinit() {
+  removeAllRegisterInfo();
+  invalidateAndRemoveAllRequests();
+  propertyMap_.atomic()->clear();
+}
 
 void ServiceProvider::startServing() {
   availability_ = Availability::Available;
@@ -245,6 +288,8 @@ void ServiceProvider::invalidateAndRemoveAllRequests() {
 }
 
 void ServiceProvider::saveRegisterInfo(const CSMessagePtr &msg) {
+  MAF_LOGGER_INFO("Client from ", msg->sourceAddress().get_name(),
+                  " registers for property: ", msg->operationID());
   (*regEntriesMap_.atomic())[msg->sourceAddress()].insert(msg->operationID());
 }
 
@@ -303,6 +348,12 @@ bool ServiceProvider::registerRequestHandler(
 
 bool ServiceProvider::unregisterRequestHandler(const OpID &opID) {
   return requestHandlerMap_.atomic()->erase(opID) != 0;
+}
+
+signal_slots::Connection ServiceProvider::registerNotification(
+    const OpID &opID, CSPayloadProcessCallback callback) {
+  LOCK(serverSideListenersMap_);
+  return (*serverSideListenersMap_)[opID].connect(move(callback));
 }
 
 void ServiceProvider::updateLatestStatus(const CSMessagePtr &registerMsg) {

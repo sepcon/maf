@@ -34,24 +34,23 @@ bool ServerBase::onIncomingMessage(const CSMessagePtr &csMsg) {
 bool ServerBase::init(const Address &) { return true; }
 
 void ServerBase::deinit() {
-  auto providers = *(providers_.atomic());
-  providers_.atomic()->clear();
+  auto providers = std::move(*providers_.atomic());
+
+  for (auto &[_, provider] : providers) {
+    provider->stopServing();
+  }
+  for (auto &[_, provider] : providers) {
+    provider->deinit();
+  }
 }
 
 void ServerBase::onServiceStatusChanged(const ServiceID &sid,
                                         Availability oldStatus,
                                         Availability newStatus) {
-  auto shouldNotify = false;
   if (oldStatus != newStatus) {
-    if (newStatus == Availability::Available) {
-      shouldNotify = hasServiceProvider(sid);
-    } else {
-      shouldNotify = providers_.atomic()->erase(sid) != 0;
+    if (hasServiceProvider(sid)) {
+      notifyServiceStatusToClient(sid, oldStatus, newStatus);
     }
-  }
-
-  if (shouldNotify) {
-    notifyServiceStatusToClient(sid, oldStatus, newStatus);
   }
 }
 

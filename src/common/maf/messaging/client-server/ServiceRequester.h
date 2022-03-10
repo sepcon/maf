@@ -11,12 +11,14 @@
 #include <list>
 #include <map>
 #include <set>
+#include <variant>
 
 namespace maf {
 namespace messaging {
 
 class ClientIF;
 struct ServiceRequester : public ServiceRequesterIF {
+ public:
   struct RegEntry {
     RegID::RequestIDType requestID;
     CSPayloadProcessCallback callback;
@@ -46,6 +48,10 @@ struct ServiceRequester : public ServiceRequesterIF {
 
   const ServiceID &serviceID() const override { return sid_; }
   Availability serviceStatus() const noexcept override;
+
+  void init() override;
+  void deinit() override;
+
   bool serviceUnavailable() const noexcept;
 
   RegID registerStatus(const OpID &propertyID,
@@ -128,6 +134,7 @@ struct ServiceRequester : public ServiceRequesterIF {
   void cachePropertyStatus(const OpID &propertyID, CSPayloadIFPtr &&property);
   void removeCachedProperty(const OpID &propertyID);
   bool cachedPropertyUpToDate(const OpID &propertyID) const;
+  bool subscribingProperty(const OpID &propertyID) const;
 
   RegEntriesMap registerEntriesMap_;
   RegEntriesMap requestEntriesMap_;

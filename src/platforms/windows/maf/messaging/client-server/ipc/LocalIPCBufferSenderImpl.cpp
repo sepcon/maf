@@ -12,6 +12,8 @@ namespace messaging {
 namespace ipc {
 namespace local {
 
+using namespace std;
+using namespace chrono_literals;
 static constexpr int MAX_ATEMPTS = 10;
 
 static HANDLE openPipe(const std::string &pipeName);
@@ -24,55 +26,76 @@ LocalIPCBufferSenderImpl::~LocalIPCBufferSenderImpl() {}
 
 ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
                                                 const Address &destination) {
-  auto errCode = ActionCallStatus::ReceiverUnavailable;
-  bool success = false;
-  if (checkReceiverStatus(destination) == Availability::Available) {
-    int retryTimes = 0;
-    while (retryTimes < MAX_ATEMPTS) {
-      memset(&oOverlap_, 0, sizeof(oOverlap_));
-      AutoCloseHandle pipeHandle = openPipe(constructPipeName(destination));
-      if (pipeHandle != INVALID_HANDLE_VALUE) {
-        uint32_t baSize = static_cast<uint32_t>(ba.size());
-        if ((success = writeToPipe(pipeHandle, oOverlap_,
-                                   reinterpret_cast<const char *>(&baSize),
-                                   sizeof(baSize)))) {
-          if ((success =
-                   writeToPipe(pipeHandle, oOverlap_, ba.data(), ba.size()))) {
-            //            FlushFileBuffers(pipeHandle);
-            break;
-          }
-        }
-      } else if (GetLastError() == ERROR_PIPE_BUSY) {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(std::rand() % 100));
-        MAF_LOGGER_WARN("Retry to send ", ba.size(), " bytes ", ++retryTimes,
-                        " times to address ", destination.dump());
-      } else {
-        MAF_LOGGER_ERROR("Connect pipe with error: ", GetLastError());
-        break;
-      }
+  auto tryCount = 0;
+  auto status = ActionCallStatus::ReceiverUnavailable;
+  do {
+    if (checkReceiverStatus(destination) == Availability::Available) {
+      status = _send(ba, destination);
+      break;
+    }
+    MAF_LOGGER_ERROR("Receiver unavailable, gle = ", GetLastError());
+    if (++tryCount >= 10) {
+      status = GetLastError() == ERROR_PIPE_BUSY
+                   ? ActionCallStatus::ReceiverBusy
+                   : ActionCallStatus::ReceiverUnavailable;
+      break;
     }
 
-    if (success) {
-      errCode = ActionCallStatus::Success;
-    } else if (GetLastError() == ERROR_PIPE_BUSY) {
-      errCode = ActionCallStatus::ReceiverBusy;
-      if (retryTimes >= MAX_ATEMPTS) {
-        MAF_LOGGER_ERROR("Give up trying send byte to receiver!");
-      }
+    if (GetLastError() == ERROR_PIPE_BUSY) {
+      this_thread::sleep_for(10ms);
     } else {
-      errCode = ActionCallStatus::ReceiverUnavailable;
+      break;
     }
-  } else {
-    // errCode = ActionCallStatus::ReceiverUnavailable;
+  } while (true);
+  if (status != ActionCallStatus::Success) {
+    // status = ActionCallStatus::ReceiverUnavailable;
     // dont need to set here, it must be default failed
-    MAF_LOGGER_WARN(
-        "Receiver is not available for receiving message, "
-        "receiver's address = ",
-        destination.dump());
+    MAF_LOGGER_WARN("Failed to send message to = ", destination.dump(),
+                    " call status = ", status, " GLE = ", GetLastError());
+  }
+  return status;
+}
+
+ActionCallStatus LocalIPCBufferSenderImpl::_send(const maf::srz::Buffer &ba,
+                                                 const Address &destination) {
+  auto status = ActionCallStatus::ReceiverUnavailable;
+  bool success = false;
+  int retryTimes = 0;
+  while (retryTimes < MAX_ATEMPTS) {
+    memset(&oOverlap_, 0, sizeof(oOverlap_));
+    AutoCloseHandle pipeHandle = openPipe(constructPipeName(destination));
+    if (pipeHandle != INVALID_HANDLE_VALUE) {
+      uint32_t baSize = static_cast<uint32_t>(ba.size());
+      if ((success = writeToPipe(pipeHandle, oOverlap_,
+                                 reinterpret_cast<const char *>(&baSize),
+                                 sizeof(baSize)))) {
+        if ((success =
+                 writeToPipe(pipeHandle, oOverlap_, ba.data(), ba.size()))) {
+          //            FlushFileBuffers(pipeHandle);
+          break;
+        }
+      }
+    } else if (GetLastError() == ERROR_PIPE_BUSY) {
+      this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
+      MAF_LOGGER_WARN("Retry to send ", ba.size(), " bytes ", ++retryTimes,
+                      " times to address ", destination.dump());
+    } else {
+      MAF_LOGGER_ERROR("Connect pipe with error: ", GetLastError());
+      break;
+    }
   }
 
-  return errCode;
+  if (success) {
+    status = ActionCallStatus::Success;
+  } else if (GetLastError() == ERROR_PIPE_BUSY) {
+    status = ActionCallStatus::ReceiverBusy;
+    if (retryTimes >= MAX_ATEMPTS) {
+      MAF_LOGGER_ERROR("Give up trying send byte to receiver!");
+    }
+  } else {
+    status = ActionCallStatus::ReceiverUnavailable;
+  }
+  return status;
 }
 
 // clang-format off

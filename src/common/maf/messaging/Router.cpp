@@ -1,52 +1,55 @@
 #include "Router.h"
 
+#include <vector>
+
 namespace maf {
 namespace messaging {
 namespace details {
+using namespace std;
 
-static bool askThenPost(const ComponentInstance &r, Message msg);
-static Component::CompleteSignal askThenSend(const ComponentInstance &r,
+static bool askThenPost(const ProcessorInstance &r, Message msg);
+static Processor::CompleteSignal askThenSend(const ProcessorInstance &r,
                                              Message msg);
-static void notifyAllAboutNewComponent(const Components &joinedComponents,
-                                       const ComponentInstance &newComponent);
-static void informNewComponentAboutJoinedOnes(
-    const ComponentInstance &newComponent, const Components &joinedComponents);
+static void notifyAllAboutNewProcessor(const Processors &joinedProcessors,
+                                       const ProcessorInstance &newProcessor);
+static void informNewProcessorAboutJoinedOnes(
+    const ProcessorInstance &newProcessor, const Processors &joinedProcessors);
 
-bool Router::post(const ComponentID &componentID, Message &&msg) {
-  if (auto comp = findComponent(componentID)) {
+bool Router::post(const ProcessorID &messageprocessorID, Message &&msg) {
+  if (auto comp = findProcessor(messageprocessorID)) {
     return comp->post(std::move(msg));
   }
   return false;
 }
 
-Component::CompleteSignal Router::send(const ComponentID &componentID,
+Processor::CompleteSignal Router::send(const ProcessorID &messageprocessorID,
                                        Message msg) {
-  if (auto comp = findComponent(componentID)) {
-    return comp->send(std::move(msg));
+  if (auto comp = findProcessor(messageprocessorID)) {
+    return comp->waitablePost(std::move(msg));
   }
   return {};
 }
 
 bool Router::postToAll(const Message &msg) {
   bool delivered = false;
-  auto atComponents = components_.atomic();
-  for (const auto &comp : *atComponents) {
+  auto atProcessors = messageprocessors_.atomic();
+  for (const auto &comp : *atProcessors) {
     delivered |= askThenPost(comp, std::move(msg));
   }
   return delivered;
 }
 
-Component::CompleteSignal Router::sendToAll(const Message &msg) {
-  auto msgMessageHandledSignals = vector<Component::CompleteSignal>{};
-  auto atComponents = components_.atomic();
-  for (const auto &comp : *atComponents) {
+Processor::CompleteSignal Router::sendToAll(const Message &msg) {
+  auto msgMessageHandledSignals = vector<Processor::CompleteSignal>{};
+  auto atProcessors = messageprocessors_.atomic();
+  for (const auto &comp : *atProcessors) {
     if (auto sig = askThenSend(comp, std::move(msg)); sig.valid()) {
       msgMessageHandledSignals.emplace_back(move(sig));
     }
   }
 
   if (!msgMessageHandledSignals.empty()) {
-    return Component::CompleteSignal{async(
+    return Processor::CompleteSignal{async(
         launch::deferred, [sigs{move(msgMessageHandledSignals)}]() mutable {
           for (auto &sig : sigs) {
             sig.get();
@@ -57,67 +60,67 @@ Component::CompleteSignal Router::sendToAll(const Message &msg) {
   }
 }
 
-ComponentInstance Router::findComponent(const ComponentID &id) const {
-  auto atComponents = components_.atomic();
-  if (auto itComponent = atComponents->find(id);
-      itComponent != atComponents->end()) {
-    return *itComponent;
+ProcessorInstance Router::findProcessor(const ProcessorID &id) const {
+  auto atProcessors = messageprocessors_.atomic();
+  if (auto itProcessor = atProcessors->find(id);
+      itProcessor != atProcessors->end()) {
+    return *itProcessor;
   }
   return {};
 }
 
-bool Router::addComponent(ComponentInstance comp) {
+bool Router::addProcessor(ProcessorInstance comp) {
   if (comp) {
-    auto joinedComponents = components_.atomic();
-    if (joinedComponents->count(comp) == 0) {
-      informNewComponentAboutJoinedOnes(comp, *joinedComponents);
-      notifyAllAboutNewComponent(*joinedComponents, comp);
-      joinedComponents->insert(move(comp));
+    auto joinedProcessors = messageprocessors_.atomic();
+    if (joinedProcessors->count(comp) == 0) {
+      informNewProcessorAboutJoinedOnes(comp, *joinedProcessors);
+      notifyAllAboutNewProcessor(*joinedProcessors, comp);
+      joinedProcessors->insert(move(comp));
     }
   }
   return false;
 }
 
-bool Router::removeComponent(const ComponentInstance &comp) {
-  if (components_.atomic()->erase(comp) != 0) {
-    postToAll(ComponentStatusUpdateMsg{
-        comp, ComponentStatusUpdateMsg::Status::UnReachable});
+bool Router::removeProcessor(const ProcessorInstance &comp) {
+  if (messageprocessors_.atomic()->erase(comp) != 0) {
+    postToAll(ProcessorStatusUpdateMsg{
+        comp, ProcessorStatusUpdateMsg::Status::UnReachable});
     return true;
   }
   return false;
 }
 
-static bool askThenPost(const ComponentInstance &r, Message msg) {
+static bool askThenPost(const ProcessorInstance &r, Message msg) {
   if (r->connected(msg.type())) {
     return r->post(std::move(msg));
   }
   return false;
 }
 
-static Component::CompleteSignal askThenSend(const ComponentInstance &r,
+static Processor::CompleteSignal askThenSend(const ProcessorInstance &r,
                                              Message msg) {
   if (r->connected(msg.type())) {
-    return r->send(std::move(msg));
+    return r->waitablePost(std::move(msg));
   }
   return {};
 }
 
-static void notifyAllAboutNewComponent(const Components &joinedComponents,
-                                       const ComponentInstance &newComponent) {
-  auto msg = ComponentStatusUpdateMsg{
-      newComponent, ComponentStatusUpdateMsg::Status::Reachable};
+static void notifyAllAboutNewProcessor(const Processors &joinedProcessors,
+                                       const ProcessorInstance &newProcessor) {
+  auto msg = ProcessorStatusUpdateMsg{
+      newProcessor, ProcessorStatusUpdateMsg::Status::Reachable};
 
-  for (const auto &joinedComponent : joinedComponents) {
-    askThenPost(joinedComponent, msg);
+  for (const auto &joinedProcessor : joinedProcessors) {
+    askThenPost(joinedProcessor, msg);
   }
 }
 
-static void informNewComponentAboutJoinedOnes(
-    const ComponentInstance &newComponent, const Components &joinedComponents) {
-  if (newComponent->connected(msgid<ComponentStatusUpdateMsg>())) {
-    for (const auto &joinedOne : joinedComponents) {
-      newComponent->post<ComponentStatusUpdateMsg>(
-          joinedOne, ComponentStatusUpdateMsg::Status::Reachable);
+static void informNewProcessorAboutJoinedOnes(
+    const ProcessorInstance &newProcessor, const Processors &joinedProcessors) {
+  if (newProcessor->connected(msgid<ProcessorStatusUpdateMsg>())) {
+    for (const auto &joinedOne : joinedProcessors) {
+      newProcessor->post<ProcessorStatusUpdateMsg>(
+          joinedOne, ProcessorStatusUpdateMsg::Status::Reachable);
     }
   }
 }

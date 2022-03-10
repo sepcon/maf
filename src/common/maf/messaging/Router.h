@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/messaging/Component.h>
+#include <maf/messaging/Processor.h>
 #include <maf/messaging/Routing.h>
 #include <maf/patterns/Patterns.h>
 #include <maf/threading/Lockable.h>
@@ -13,40 +13,40 @@ namespace messaging {
 namespace details {
 using namespace routing;
 
-struct ComponentCompare {
+struct ProcessorCompare {
   typedef int is_transparent;
-  bool operator()(const ComponentInstance &r1,
-                  const ComponentInstance &r2) const {
+  bool operator()(const ProcessorInstance &r1,
+                  const ProcessorInstance &r2) const {
     return r1 != r2 && r1->id() < r2->id();
   }
 
-  bool operator()(const ComponentInstance &r, const ComponentID &id) const {
+  bool operator()(const ProcessorInstance &r, const ProcessorID &id) const {
     return r->id() < id;
   }
 
-  bool operator()(const ComponentID &id, const ComponentInstance &r) const {
+  bool operator()(const ProcessorID &id, const ProcessorInstance &r) const {
     return id < r->id();
   }
 };
 
-using Components = std::set<ComponentInstance, ComponentCompare>;
+using Processors = std::set<ProcessorInstance, ProcessorCompare>;
 
 class Router : public pattern::SingletonObject<Router> {
  public:
   Router(Invisible) noexcept {}
-  bool post(const ComponentID &componentID, Message &&msg);
-  Component::CompleteSignal send(const ComponentID &componentID, Message msg);
+  bool post(const ProcessorID &messageprocessorID, Message &&msg);
+  Processor::CompleteSignal send(const ProcessorID &messageprocessorID, Message msg);
   bool postToAll(const Message &msg);
-  Component::CompleteSignal sendToAll(const Message &msg);
+  Processor::CompleteSignal sendToAll(const Message &msg);
 
-  ComponentInstance findComponent(const ComponentID &id) const;
-  bool addComponent(ComponentInstance comp);
-  bool removeComponent(const ComponentInstance &comp);
+  ProcessorInstance findProcessor(const ProcessorID &id) const;
+  bool addProcessor(ProcessorInstance comp);
+  bool removeProcessor(const ProcessorInstance &comp);
 
  private:
-  using AtomicComponents = threading::Lockable<Components, std::mutex>;
+  using AtomicProcessors = threading::Lockable<Processors, std::mutex>;
 
-  AtomicComponents components_;
+  AtomicProcessors messageprocessors_;
 };
 
 }  // namespace details

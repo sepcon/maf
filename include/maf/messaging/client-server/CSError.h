@@ -1,7 +1,8 @@
 #pragma once
 
-#include "CSMessage.h"
 #include <maf/utils/StringifyableEnum.h>
+
+#include "CSMessage.h"
 
 namespace maf {
 namespace messaging {
@@ -22,7 +23,7 @@ MC_MAF_STRINGIFYABLE_ENUM(CSErrorCode, char,
 // clang-format on
 
 class CSError : public CSMsgPayloadIF {
-public:
+ public:
   using ErrorCode = CSErrorCode;
   using Description = std::string;
 
@@ -33,6 +34,7 @@ public:
   MAF_EXPORT CSPayloadType type() const override;
   MAF_EXPORT bool equal(const CSMsgPayloadIF *other) const override;
   MAF_EXPORT CSMsgPayloadIF *clone() const override;
+  MAF_EXPORT void dump(std::ostream &os) const override;
 
   MAF_EXPORT const Description &description() const;
   MAF_EXPORT void setDescription(Description description);
@@ -42,9 +44,9 @@ public:
 
   MAF_EXPORT std::string dump(int = 0) const;
 
-private:
+ private:
   struct CSErrorDataPrv *d_;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

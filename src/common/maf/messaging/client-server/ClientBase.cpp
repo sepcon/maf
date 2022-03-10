@@ -95,6 +95,7 @@ ServiceRequesterIFPtr ClientBase::getServiceRequester(const ServiceID &sid) {
                                         Availability::Unknown,
                                         itServiceStatus->second);
     }
+    requester->init();
     _requestersMap->emplace(sid, requester);
     return requester;
   }
@@ -113,13 +114,24 @@ Availability ClientBase::getServiceStatus(const ServiceID &sid) {
 bool ClientBase::init(const Address &) { return true; }
 
 void ClientBase::deinit() {
-  _requestersMap.atomic()->clear();
-  std::lock_guard lock(_serviceStatusMap);
-  for (auto &[serviceID, status] : *_serviceStatusMap) {
-    sendMessageToServer(createCSMessage(serviceID, OpIDInvalid,
-                                        OpCode::UnregisterServiceStatus));
+  {
+    std::lock_guard lock(_requestersMap);
+    for (auto &[_, requester] : *_requestersMap) {
+      requester->deinit();
+    }
+
+    _requestersMap->clear();
   }
-  _serviceStatusMap->clear();
+
+  {
+    std::lock_guard lock(_serviceStatusMap);
+    for (auto &[serviceID, status] : *_serviceStatusMap) {
+      sendMessageToServer(createCSMessage(serviceID, OpIDInvalid,
+                                          OpCode::UnregisterServiceStatus));
+    }
+
+    _serviceStatusMap->clear();
+  }
 }
 
 }  // namespace messaging

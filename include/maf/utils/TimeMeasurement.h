@@ -6,20 +6,10 @@
 namespace maf {
 namespace util {
 
-class TimeMeasurement {
- public:
+struct TimeCounter {
+  using SystemClock = std::chrono::system_clock;
+  using TimePoint = SystemClock::time_point;
   using MicroSeconds = std::chrono::microseconds;
-  TimeMeasurement() = default;
-  TimeMeasurement(std::function<void(MicroSeconds)> onReportCallback)
-      : _onReportCallback(std::move(onReportCallback)) {
-    _startTime = std::chrono::system_clock::now();
-  }
-  TimeMeasurement(TimeMeasurement&&) = default;
-  TimeMeasurement& operator=(TimeMeasurement&&) = default;
-  TimeMeasurement(const TimeMeasurement&) = delete;
-  TimeMeasurement& operator=(const TimeMeasurement&) = delete;
-
-  ~TimeMeasurement() { stop(); }
 
   void restart() { _startTime = std::chrono::system_clock::now(); }
 
@@ -27,6 +17,28 @@ class TimeMeasurement {
     return std::chrono::duration_cast<MicroSeconds>(
         std::chrono::system_clock::now() - _startTime);
   }
+  template <class _Duration>
+  _Duration elapsedTime() const {
+    return std::chrono::duration_cast<_Duration>(
+        std::chrono::system_clock::now() - _startTime);
+  }
+
+ protected:
+  TimePoint _startTime = SystemClock::now();
+};
+
+class TimeMeasurement : public TimeCounter {
+ public:
+  using MicroSeconds = std::chrono::microseconds;
+  TimeMeasurement() = default;
+  TimeMeasurement(std::function<void(MicroSeconds)> onReportCallback)
+      : _onReportCallback(std::move(onReportCallback)) {}
+  TimeMeasurement(TimeMeasurement&&) = default;
+  TimeMeasurement& operator=(TimeMeasurement&&) = default;
+  TimeMeasurement(const TimeMeasurement&) = delete;
+  TimeMeasurement& operator=(const TimeMeasurement&) = delete;
+
+  ~TimeMeasurement() { stop(); }
 
   MicroSeconds stop() {
     auto elapsed = this->elapsedTime();
@@ -41,8 +53,10 @@ class TimeMeasurement {
     _onReportCallback = {};
     return elapsedTime();
   }
+
+ protected:
   std::function<void(MicroSeconds)> _onReportCallback;
-  std::chrono::system_clock::time_point _startTime;
 };
+
 }  // namespace util
 }  // namespace maf

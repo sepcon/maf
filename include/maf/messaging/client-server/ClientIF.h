@@ -11,9 +11,9 @@ namespace messaging {
 using ServiceRequesterIFPtr = std::shared_ptr<class ServiceRequesterIF>;
 
 class ClientIF : public CSMessageReceiverIF,
-                 private ServiceStatusObserverIF,
-                 private ServerStatusObserverIF {
-public:
+                 public ServiceStatusObserverIF,
+                 public ServerStatusObserverIF {
+ public:
   virtual ~ClientIF() = default;
   virtual ActionCallStatus sendMessageToServer(const CSMessagePtr &msg) = 0;
   virtual bool hasServiceRequester(const ServiceID &sid) = 0;
@@ -25,5 +25,5 @@ public:
   virtual void deinit() = 0;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

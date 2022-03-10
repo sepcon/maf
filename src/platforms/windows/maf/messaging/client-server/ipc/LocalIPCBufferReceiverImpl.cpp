@@ -4,6 +4,8 @@
 #include <AclAPI.h>
 #include <maf/logging/Logger.h>
 
+#include <string_view>
+
 #include "PipeShared.h"
 
 #define MAX_INSTANCES 10
@@ -130,12 +132,16 @@ static void disablePermissionRestriction(HANDLE hPipe) {
 
 LocalIPCBufferReceiverImpl::LocalIPCBufferReceiverImpl() {}
 
+LocalIPCBufferReceiverImpl::~LocalIPCBufferReceiverImpl() { stop(); }
+
 bool LocalIPCBufferReceiverImpl::stop() {
   stopped_.store(true, std::memory_order_release);
   disconnectAndClosePipeInstances(pipeInstances_);
   for (auto &hE : hEvents_) {
     SetEvent(hE);
   }
+  hEvents_.clear();
+  pipeInstances_.clear();
   return true;
 }
 
@@ -156,6 +162,7 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
   // along with an event object for each instance.  An
   // overlapped ConnectNamedPipe operation is started for
   // each instance.
+  int instanceNumber = 0;
   for (auto &instance : pipeInstances_) {
     // Create an event object for this instance.
 
@@ -187,8 +194,13 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
         nullptr);                   // default security attributes
 
     // clang-format on
+    auto printError = [&](const std::string_view &message) {
+      MAF_LOGGER_ERROR(message, " - at instance number( ", instanceNumber,
+                       ") with error: ", GetLastError());
+    };
+
     if (instance->hPipeInst == INVALID_HANDLE_VALUE) {
-      MAF_LOGGER_ERROR("CreateNamedPipe failed with ", GetLastError());
+      printError("CreateNamedPipe failed");
       return false;
     }
 
@@ -196,8 +208,10 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
 
     // Call the subroutine to connect to the new client
     if (!connectToNewClient(instance->hPipeInst, &instance->oOverlap)) {
+      printError("Connecting new client failed!");
       return false;
     }
+    ++instanceNumber;
   }
   return true;
 }
@@ -229,6 +243,7 @@ void LocalIPCBufferReceiverImpl::startListening() {
     } else {
       MAF_LOGGER_WARN("Read nothing, GLE = ", GetLastError(), "-->",
                       pipeInstances_[index]->ba, "<--");
+      pipeInstances_[index]->ba.clear();
     }
 
     disconnectAndReconnect(index);

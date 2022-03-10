@@ -1,23 +1,18 @@
-#include <maf/messaging/Component.h>
+#include <maf/messaging/Processor.h>
 #include <maf/messaging/SignalTimer.h>
 #include <maf/messaging/Timer.h>
 #include <maf/utils/TimeMeasurement.h>
 
-#include "test.h"
+#include <iostream>
+
+#define CATCH_CONFIG_MAIN
+#include "catch/catch_amalgamated.hpp"
 
 using namespace std;
 using namespace chrono;
 using namespace maf::util;
 using namespace maf::signal_slots;
 using namespace maf::messaging;
-
-template <class Iterable>
-void print(const Iterable& c) {
-  for (const auto& e : c) {
-    cout << e << ", ";
-  }
-  cout << "\n";
-}
 
 struct stop_request_signal {};
 struct stop_msg {};
@@ -46,10 +41,11 @@ struct TimerCreater {
     }
 
     controllerTimer.start(runningTime, [start = system_clock::now()] {
-      cout << "total execution time of controller timer = "
-           << duration_cast<milliseconds>(system_clock::now() - start).count()
-           << endl;
-      this_component::post(stop_msg{});
+      //      cout << "total execution time of controller timer = "
+      //           << duration_cast<milliseconds>(system_clock::now() -
+      //           start).count()
+      //           << endl;
+      this_processor::post(stop_msg{});
     });
   }
 };
@@ -61,9 +57,9 @@ class TimerRestartTester {
   int counterHits = 0;
   int restarteeHits = 0;
   void start() {
-    auto comp = Component::create();
+    auto comp = Processor::create();
     comp->connect<int>([this](auto) { this->start_(); });
-    comp->connect<stop_msg>([] { this_component::stop(); });
+    comp->connect<stop_msg>([] { this_processor::stop(); });
 
     comp->post(1);
     comp->run();
@@ -78,12 +74,10 @@ class TimerRestartTester {
     restartee.setCyclic();
     restartee.start(restarteInterval,
                     [maxCounterHits, startTime = system_clock::now()] {
-                      TEST_CASE_B(test_service) {
-                        auto elapsed = system_clock::now() - startTime;
-                        EXPECT(elapsed > milliseconds{maxCounterHits});
-                      }
-                      TEST_CASE_E(test_service)
-                      this_component::post(stop_msg{});
+                      auto elapsed = system_clock::now() - startTime;
+                      REQUIRE(elapsed > milliseconds{maxCounterHits});
+
+                      this_processor::post(stop_msg{});
                     });
 
     counter.start(counterInterval, [this, maxCounterHits] {
@@ -97,13 +91,13 @@ class TimerRestartTester {
   }
 };
 
-void restartTimerTest() {
+TEST_CASE("restartTimer") {
   TimerRestartTester tr;
   tr.start();
 }
 
-void multiTimersTest() {
-  auto comp = Component::create();
+TEST_CASE("multiTimers") {
+  auto comp = Processor::create();
 
   const auto totalTimers = 100;
   const auto testTime = 16;
@@ -112,38 +106,49 @@ void multiTimersTest() {
   auto expectation = vector<int>(totalTimers, testTime / eachTimerDuration);
   comp->connect<int>([](int x) { std::cout << "got x = " << x << std::endl; });
 
-  comp->connect<stop_msg>([](auto) { this_component::stop(); });
+  comp->connect<stop_msg>([](auto) { this_processor::stop(); });
 
   comp->run([&tc] { tc.start(); });
 
-  //  print(tc.timersHitCount);
-  TEST_CASE_B(timer_expiration) { EXPECT(tc.timersHitCount >= expectation); }
-  TEST_CASE_E(timer_expiration)
+  REQUIRE(tc.timersHitCount >= expectation);
 }
 
-void singleShotTest() {
+TEST_CASE("singleShot") {
   maf::util::TimeMeasurement tm;
   long long elapsedMicroseconds = 0;
-  Component::create()->run([&]() mutable {
+  Processor::create()->run([&]() mutable {
     tm.restart();
     Timer::timeoutAfter(1, [&] {
       elapsedMicroseconds = tm.elapsedTime().count();
-      this_component::stop();
+      this_processor::stop();
     });
   });
 
-  cout << elapsedMicroseconds << endl;
-  TEST_CASE_B(signal_timer) {
-    EXPECT(elapsedMicroseconds > 900 && elapsedMicroseconds <= 3000);
-  }
-  TEST_CASE_E()
+  INFO("Elapsed time = " << elapsedMicroseconds);
+  REQUIRE(elapsedMicroseconds > 900);
+  REQUIRE(elapsedMicroseconds <= 3000);
 }
 
-int main() {
-  cout.sync_with_stdio(false);
-  maf::test::init_test_cases();
-  multiTimersTest();
-  restartTimerTest();
-  singleShotTest();
-  return 0;
+TEST_CASE("messageprocessorCorrectness") {
+  auto c = Processor::create();
+  const auto totalExecutions = 100000;
+  auto executedCount = 0;
+  Timer t;
+  c->run([&] {
+    for (int i = 0; i < totalExecutions; ++i) {
+      this_processor::instance()->executeAsync([&] {
+        executedCount++;
+        if (executedCount == totalExecutions) {
+          this_processor::stop();
+        }
+      });
+    }
+
+    t.setCyclic(true);
+    t.start(10ms, [] {
+      this_processor::stop();
+    });
+  });
+
+  REQUIRE(executedCount == totalExecutions);
 }

@@ -1,5 +1,5 @@
 #include <maf/logging/Logger.h>
-#include <maf/messaging/Component.h>
+#include <maf/messaging/Processor.h>
 #include <maf/messaging/Timer.h>
 #include <maf/utils/CallOnExit.h>
 
@@ -64,7 +64,7 @@ struct TimerMgr {
   using Heap = std::vector<TimerDataPtr>;
   enum class State : char { NoTimer, HaveTimer, Waiting };
   Heap records_;
-  State state_;
+  State state_ = State::NoTimer;
 
   void cleanup();
   void refresh();
@@ -79,7 +79,7 @@ struct TimerMgr {
   TimerDataPtr getShortestTimer();
   TimerDataPtr removeShortestTimer();
   void updateShortestTimer();
-  void interruptCurrentTimer(const ComponentInstance& comp);
+  void interruptCurrentTimer(const ProcessorInstance& comp);
   bool checkRecordListEmpty();
 
   decltype(auto) begin() { return std::begin(records_); }
@@ -112,13 +112,13 @@ void Timer::start(std::chrono::milliseconds interval,
 }
 
 void Timer::start(long long milliseconds, Timer::TimeOutCallback callback,
-                  const ComponentInstance& comp) {
+                  const ProcessorInstance& comp) {
   start(std::chrono::milliseconds{milliseconds}, move(callback), comp);
 }
 
 void Timer::start(milliseconds milliseconds, Timer::TimeOutCallback callback,
-                  const ComponentInstance& comp) {
-  comp->execute(
+                  const ProcessorInstance& comp) {
+  comp->executeAsync(
       [timerData = d_, callback{move(callback)}, milliseconds]() mutable {
         runTimer(timerData, milliseconds, move(callback));
       });
@@ -128,9 +128,9 @@ void Timer::restart() { mgr().restart(d_); }
 
 void Timer::stop() { mgr().stop(d_); }
 
-void Timer::stop(const ComponentInstance& comp) {
+void Timer::stop(const ProcessorInstance& comp) {
   assert(comp);
-  comp->execute([timerData{d_}] { mgr().stop(timerData); });
+  comp->executeAsync([timerData{d_}] { mgr().stop(timerData); });
 }
 
 bool Timer::running() const { return d_->running; }
@@ -152,14 +152,14 @@ void Timer::timeoutAfter(milliseconds milliseconds,
 }
 
 void Timer::timeoutAfter(long long ms, Timer::TimeOutCallback callback,
-                         const ComponentInstance& comp) {
+                         const ProcessorInstance& comp) {
   timeoutAfter(milliseconds{ms}, move(callback), comp);
 }
 
 void Timer::timeoutAfter(milliseconds milliseconds,
                          Timer::TimeOutCallback callback,
-                         const ComponentInstance& comp) {
-  comp->execute([callback{move(callback)}, milliseconds]() mutable {
+                         const ProcessorInstance& comp) {
+  comp->executeAsync([callback{move(callback)}, milliseconds]() mutable {
     auto tm = make_shared<TimerData>();
     runTimer(tm, milliseconds, move(callback));
   });
@@ -176,18 +176,20 @@ void TimerMgr::checkAllTimers() {
   if (state_ == State::Waiting) {
     return;
   }
-  auto comp = this_component::instance();
+  auto comp = this_processor::instance();
   while (auto timer = getShortestTimer()) {
     if (!timer->expired()) {
       state_ = State::Waiting;
       comp->runOnceUntil(timer->deadline);
       state_ = State::HaveTimer;
-      comp->execute([this] { checkAllTimers(); });
-      break;
     }
 
     if (comp->stopped()) {
       break;
+    }
+
+    if (!timer->expired()) {
+      continue;
     }
 
     state_ = State::HaveTimer;
@@ -213,13 +215,13 @@ void TimerMgr::stop(TimerDataPtr record) {
     record->running = false;
     if (auto removedShortest = remove(record);
         removedShortest && !records_.empty()) {
-      interruptCurrentTimer(this_component::instance());
+      interruptCurrentTimer(this_processor::instance());
     }
   }
 }
 
 void TimerMgr::onTimerModified() {
-  this_component::instance()->execute([this] { this->checkAllTimers(); });
+  this_processor::instance()->executeAsync([this] { this->checkAllTimers(); });
 }
 
 void TimerMgr::onShortestTimerExpired(const TimerDataPtr& record) {
@@ -287,9 +289,9 @@ void TimerMgr::updateShortestTimer() {
   push_heap(begin(), end(), timerGreater);
 }
 
-void TimerMgr::interruptCurrentTimer(const ComponentInstance& comp) {
+void TimerMgr::interruptCurrentTimer(const ProcessorInstance& comp) {
   if (state_ == State::Waiting && comp) {
-    comp->execute([] {
+    comp->executeAsync([] {
       // an empty callback just to wakeup runOnceUntil wait
     });
   }

@@ -40,12 +40,12 @@ class ParamTrait : public ParamTraitBase {
 
       std::shared_ptr<PureContentType> content;
       if (incomingPayload->stream()) {
-        content.reset(new PureContentType);
+        //        content.reset(new PureContentType);
         auto streamView = incomingPayload->streamView();
 
         auto ds = srz::DSR{streamView};
 
-        ds >> *content;
+        ds >> content;
 
         if (!streamView.fail()) {
           assign_ptr(status, TranslationStatus::Success);
@@ -68,16 +68,6 @@ class ParamTrait : public ParamTraitBase {
   template <class Message>
   static CSPayloadIFPtr translate(const std::shared_ptr<Message> &content) {
     return std::make_shared<OutgoingPayloadT<Message>>(content);
-  }
-
-  template <class Message>
-  static std::string dump(const std::shared_ptr<Message> &msg) {
-    if (msg) {
-      return msg->dump();
-    } else {
-      return "Null";
-    }
-    //    return "Not Dumpable!";
   }
 };
 

@@ -1,3 +1,6 @@
+#include <maf/utils/cppextension/AggregateCompare.h>
+#include <maf/utils/serialization/AggregateDump.h>
+
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -5,8 +8,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "test.h"
+#define CATCH_CONFIG_MAIN
+#include "catch/catch_amalgamated.hpp"
 
 // clang-format off
 #include <maf/utils/serialization/SerializableObjectBegin.mc.h>
@@ -37,28 +40,38 @@ OBJECT(ComplexObject)
   )
 ENDOBJECT(ComplexObject)
 
+struct Address {
+  std::string house_no;
+  std::string street;
+  std::string dist;
+};
+
+MC_MAF_MAKE_COMPARABLE(Address);
+OBJECT(StudentInfo)
+  MEMBERS
+  (
+    (Address, members),
+    (int, age, 0)
+  )
+ENDOBJECT(StudentInfo)
+
 #include <maf/utils/serialization/SerializableObjectEnd.mc.h>
 // clang-format on
 
 enum class TheEnum : char { Val0, Val1, Val2, ValN, DefauLtVal };
-class AbstractClass {
-  virtual void abstractFunction() = 0;
-  virtual ~AbstractClass() = default;
-};
 
 static ComplexObject ocomplex = {
     1001001,
     "hell world",
-    HeaderMap{{"header", Header{"index", "name"}}},
+    HeaderMap{{"header", Header{/*Temp{},*/ "index", "name"}}},
     std::vector<std::string>{"one", "two", "three", "..."},
     100.00,
     SpecialMap{{"map", {{"vector_of_set", {{1, 2, 3, 4}, {2, 3, 4, 4}}}}}}};
 
-static AbstractClass *abstract = nullptr;
 static int oi = 1000;
 static long ol = 10000;
-static float of = 200;
-static double od = 3000;
+static float of = 200.101f;
+static double od = 3000.202;
 static std::string os = "hello";
 static std::vector<int> ovi = {1, 2, 3};
 static std::set<int> oseti = {1, 2, 3};
@@ -66,12 +79,12 @@ static std::map<std::string, std::vector<int>> omsvi = {{os, ovi}};
 static std::map<std::set<int>, std::set<int>> omsseti = {{oseti, oseti}};
 static std::shared_ptr<std::string> osptr =
     std::make_shared<std::string>("Hello world");
-static std::string *orptr = new std::string{"hello world"};
+static std::string* orptr = new std::string{"hello world"};
 static std::unique_ptr<std::string> ouptr{new std::string{"hello world"}};
 static TheEnum oenum = TheEnum::Val1;
 
 template <class OStream, class IStream, typename IOConnector>
-static void serializationTest(OStream &theostream, IStream &theistream,
+static void serializationTest(OStream& theostream, IStream& theistream,
                               IOConnector ioconnect) {
   maf::srz::SR srz{theostream};
   maf::srz::DSR dsrz{theistream};
@@ -83,7 +96,7 @@ static void serializationTest(OStream &theostream, IStream &theistream,
   ioconnect(theostream, theistream);
 
   ComplexObject dcomplex;
-  int di;
+  int di = -1;
   long dl;
   float df;
   double dd;
@@ -93,7 +106,7 @@ static void serializationTest(OStream &theostream, IStream &theistream,
   std::map<std::string, std::vector<int>> dmsvi;
   std::map<std::set<int>, std::set<int>> dmsseti;
   std::shared_ptr<std::string> dsptr;
-  std::string *drptr = nullptr;
+  std::string* drptr = nullptr;
   std::unique_ptr<std::string> duptr;
   TheEnum denum = TheEnum::DefauLtVal;
 
@@ -101,90 +114,149 @@ static void serializationTest(OStream &theostream, IStream &theistream,
       dsptr >> drptr >> duptr >> denum;
 
   // clang-format off
-  TEST_CASE_B(stream_serialization_all_types)
+  SECTION("stream_serialization_all_types")
   {
-    EXPECT(ocomplex  == dcomplex );
-    EXPECT(oi  == di );
-    EXPECT(ol  == dl );
-    EXPECT(of  == df );
-    EXPECT(od  == dd );
-    EXPECT(os  == ds );
-    EXPECT(ovi  == dvi );
-    EXPECT(oseti  == dseti );
-    EXPECT(omsvi  == dmsvi );
-    EXPECT(*osptr  == *dsptr );
-    EXPECT(*orptr == *drptr);
-    EXPECT(*ouptr == *duptr);
-    EXPECT(oenum == denum);
+    REQUIRE(ocomplex  == dcomplex );
+    REQUIRE(oi  == di );
+    REQUIRE(ol  == dl );
+    REQUIRE(of  == df );
+    REQUIRE(od  == dd );
+    REQUIRE(os  == ds );
+    REQUIRE(ovi  == dvi );
+    REQUIRE(oseti  == dseti );
+    REQUIRE(omsvi  == dmsvi );
+    REQUIRE(*osptr  == *dsptr );
+    REQUIRE(*orptr == *drptr);
+    REQUIRE(*ouptr == *duptr);
+    REQUIRE(oenum == denum);
 
-    EXPECT( maf::srz::dump(ocomplex) == maf::srz::dump(dcomplex) );
-    EXPECT( maf::srz::dump(oi) == maf::srz::dump(di) );
-    EXPECT( maf::srz::dump(ol) == maf::srz::dump(dl) );
-    EXPECT( maf::srz::dump(of) == maf::srz::dump(df) );
-    EXPECT( maf::srz::dump(od) == maf::srz::dump(dd) );
-    EXPECT( maf::srz::dump(os) == maf::srz::dump(ds) );
-    EXPECT( maf::srz::dump(ovi) == maf::srz::dump(dvi) );
-    EXPECT( maf::srz::dump(oseti) == maf::srz::dump(dseti) );
-    EXPECT( maf::srz::dump(omsvi) == maf::srz::dump(dmsvi) );
-    EXPECT( maf::srz::dump(*osptr) == maf::srz::dump(*dsptr) );
-    EXPECT( maf::srz::dump(*orptr) == maf::srz::dump(*drptr) );
-    EXPECT( maf::srz::dump(oenum) == maf::srz::dump(denum) );
-  } TEST_CASE_E()
+    REQUIRE( maf::srz::toString(ocomplex) == maf::srz::toString(dcomplex) );
+    REQUIRE( maf::srz::toString(oi) == maf::srz::toString(di) );
+    REQUIRE( maf::srz::toString(ol) == maf::srz::toString(dl) );
+    REQUIRE( maf::srz::toString(of) == maf::srz::toString(df) );
+    REQUIRE( maf::srz::toString(od) == maf::srz::toString(dd) );
+    REQUIRE( maf::srz::toString(os) == maf::srz::toString(ds) );
+    REQUIRE( maf::srz::toString(ovi) == maf::srz::toString(dvi) );
+    REQUIRE( maf::srz::toString(oseti) == maf::srz::toString(dseti) );
+    REQUIRE( maf::srz::toString(omsvi) == maf::srz::toString(dmsvi) );
+    REQUIRE( maf::srz::toString(*osptr) == maf::srz::toString(*dsptr) );
+    REQUIRE( maf::srz::toString(*orptr) == maf::srz::toString(*drptr) );
+    REQUIRE( maf::srz::toString(oenum) == maf::srz::toString(denum) );
+  }
   // clang-format on
 }
 
-static void fileStreamSerializationTest() {
+TEST_CASE("file stream serialization test", "[FileSerialization]") {
   std::string path = "helloworld.dat";
   std::ofstream ofs{path, std::ios_base::binary};
   std::ifstream ifs;
-  auto ioconnect = [&path](std::ofstream &ofs, std::ifstream &ifs) {
+  auto ioconnect = [&path](std::ofstream& ofs, std::ifstream& ifs) {
     ofs.close();
     ifs.open(path, std::ios_base::in | std::ios_base::binary);
   };
   serializationTest(ofs, ifs, ioconnect);
 }
 
-static void stringStreamSerializationTest() {
+TEST_CASE("string stream serialization test", "[InmemorySerialization]") {
   std::istringstream iss;
   std::ostringstream oss;
-  auto ioconnect = [](std::ostringstream &oss, std::istringstream &iss) {
+  auto ioconnect = [](std::ostringstream& oss, std::istringstream& iss) {
     oss.flush();
     iss.str(oss.str());
   };
   serializationTest(oss, iss, ioconnect);
 }
 
-void dumpheperTest() {
+TEST_CASE("Dumper", "[Dumper]") {
   // clang-format off
-  TEST_CASE_B(dump_helper_all_types)
+  SECTION("dump_helper_all_types")
   {
-    EXPECT(maf::srz::dump(oi)  == "1000");
-    EXPECT(maf::srz::dump(ol)  == "10000");
-    EXPECT(maf::srz::dump(of)  == "200.000000");
-    EXPECT(maf::srz::dump(od)  == "3000.000000");
-    EXPECT(maf::srz::dump(os)  == R"("hello")");
-    EXPECT(maf::srz::dump(ovi)  == "[\n  1,\n  2,\n  3\n]");
-    EXPECT(maf::srz::dump(oseti)  == "[\n  1,\n  2,\n  3\n]");
-    EXPECT(maf::srz::dump(omsvi)  == "{\n  \"hello\": [\n    1,\n    2,\n    3\n  ]\n}");
-    EXPECT(maf::srz::dump(omsseti)  == "{\n  [\n    1,\n    2,\n    3\n  ]: [\n    1,\n    2,\n    3\n  ]\n}");
-    EXPECT(maf::srz::dump(osptr)  == R"("Hello world")");
-    EXPECT(maf::srz::dump(orptr)  == R"("hello world")");
-    EXPECT(maf::srz::dump(ouptr)  == R"("hello world")");
-    EXPECT(maf::srz::dump(oenum)  == "1");
-    EXPECT(maf::srz::dump(abstract)  == maf::srz::dump(std::string{typeid(AbstractClass*).name()}));
-
+    REQUIRE(maf::srz::toString(oi)  == "1000");
+    REQUIRE(maf::srz::toString(ol)  == "10000");
+    REQUIRE(maf::srz::toString(of)  == "200.101");
+    REQUIRE(maf::srz::toString(od)  == "3000.2");
+    REQUIRE(maf::srz::toString(os)  == "hello");
+    REQUIRE(maf::srz::toString(ovi)  == "[\n  1,\n  2,\n  3\n]");
+    REQUIRE(maf::srz::toString(oseti)  == "[\n  1,\n  2,\n  3\n]");
+    REQUIRE(maf::srz::toString(omsvi)  == "{\n  hello: [\n    1,\n    2,\n    3\n  ]\n}");
+    REQUIRE(maf::srz::toString(omsseti)  == "{\n  [\n    1,\n    2,\n    3\n  ]: [\n    1,\n    2,\n    3\n  ]\n}");
+    REQUIRE(maf::srz::toString(osptr)  == R"(Hello world)");
+    REQUIRE(maf::srz::toString(orptr)  == R"(hello world)");
+    REQUIRE(maf::srz::toString(ouptr)  == R"(hello world)");
+    REQUIRE(maf::srz::toString(oenum)  == "1");
   }
-TEST_CASE_E(dump_helper_all_types)
   // clang-format on
 }
 
-#include <thread>
-int main() {
-  maf::test::init_test_cases();
+namespace ns {
 
-  fileStreamSerializationTest();
-  stringStreamSerializationTest();
-  dumpheperTest();
+struct CustomType {
+  std::string val;
+};
 
-  return 0;
+MC_MAF_DEFINE_DUMP_FUNCTION(CustomType, val) {
+  maf::srz::dump(os, val.val, indentLevel);
+}
+
+MC_MAF_DEFINE_SERIALIZE_FUNCTION(CustomType, val) {
+  maf::srz::serialize(os, val.val);
+}
+
+MC_MAF_DEFINE_DESERIALIZE_FUNCTION(CustomType, val) {
+  return maf::srz::deserialize(is, val.val);
+}
+
+}  // namespace ns
+
+TEST_CASE("custom_object_test", "[CustomObject]") {
+  std::string str = "hello world";
+  REQUIRE(maf::srz::toString(ns::CustomType{str}, -1) ==
+          maf::srz::toString(str));
+
+  ns::CustomType before{"hello world"};
+  ns::CustomType after{"hello world"};
+
+  std::stringstream ss;
+  maf::srz::SR sr(ss);
+  maf::srz::DSR dsr(ss);
+
+  sr << before;
+  dsr >> after;
+
+  REQUIRE(before.val == after.val);
+}
+
+TEST_CASE("aggregate_serialization_test") {
+  struct Aggregate {
+    int int_ = 0;
+    std::string string_ = "string";
+    std::set<std::string> stringSet_ = {"set_of_string", "set_of_string1"};
+    struct SubAggregate {
+      std::vector<int> vec_ = {1, 2, 3};
+      bool bool_ = true;
+    } subAggregate_;
+  };
+
+  Aggregate a;
+
+  REQUIRE(maf::srz::toString(a, -1) ==
+          "[0,string,[set_of_string,set_of_string1],[[1,2,3],true]]");
+
+  std::stringstream ss;
+  maf::srz::SR sr(ss);
+  maf::srz::DSR dsr(ss);
+
+  Aggregate sbefore, safter;
+  sbefore.subAggregate_.vec_ = {2, 3, 4, 5, 6, 7};
+  safter.subAggregate_.vec_.clear();
+  sr << sbefore;
+  dsr >> safter;
+
+  REQUIRE(maf::srz::toString(sbefore) == maf::srz::toString(safter));
+  StudentInfo inf{Address{"house.no", "street", "dist"}, 10}, ninf;
+
+  ss.str("");
+  sr << inf;
+  dsr >> ninf;
+  REQUIRE(inf == ninf);
 }

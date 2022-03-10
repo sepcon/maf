@@ -1,30 +1,31 @@
 #pragma once
 
-#include "Component.h"
+#include "Processor.h"
 
 namespace maf {
 namespace messaging {
 
-class ComponentExBase {
+class ProcessorExBase {
  protected:
-  ComponentInstance instance_;
+  ProcessorInstance instance_;
 
  public:
-  ComponentExBase(ComponentID id = {}) {
-    instance_ = Component::create(std::move(id));
+  ProcessorExBase(ProcessorID id = {}) {
+    instance_ = Processor::create(std::move(id));
   }
-  ComponentExBase(ComponentInstance inst) : instance_(std::move(inst)) {}
-  Component *operator->() noexcept { return instance_.get(); }
-  const Component *operator->() const noexcept { return instance_.get(); }
-  Component &operator*() noexcept { return *instance_; }
-  const Component &operator*() const noexcept { return *instance_; }
-  ComponentInstance instance() const { return instance_; }
+  ProcessorExBase(ProcessorInstance inst) : instance_(std::move(inst)) {}
+  Processor *operator->() noexcept { return instance_.get(); }
+  const Processor *operator->() const noexcept { return instance_.get(); }
+  Processor &operator*() noexcept { return *instance_; }
+  const Processor &operator*() const noexcept { return *instance_; }
+  ProcessorInstance instance() const { return instance_; }
 };
 
-class ComponentEx : public ComponentExBase {
+class ProcessorEx : public ProcessorExBase {
  public:
-  using ComponentExBase::ComponentExBase;
-  ComponentEx() = default;
+  using ProcessorExBase::ProcessorExBase;
+  virtual ~ProcessorEx() = default;
+  ProcessorEx() = default;
   void run() {
     instance_->run([this] { threadInit(); }, [this] { threadDeinit(); });
   }
@@ -36,28 +37,28 @@ class ComponentEx : public ComponentExBase {
   virtual void threadDeinit() {}
 };
 
-class AsyncComponent : public ComponentExBase {
+class AsyncProcessor : public ProcessorExBase {
  public:
-  using ThreadFunction = Component::ThreadFunction;
+  using ThreadFunction = Processor::ThreadFunction;
   using StoppedSignal = std::future<void>;
   using Timeout = std::chrono::milliseconds;
-  using ComponentExBase::ComponentExBase;
-  AsyncComponent(AsyncComponent &&) = default;
-  AsyncComponent &operator=(AsyncComponent &&) = default;
-  ~AsyncComponent() { stopAndWait(); }
+  using ProcessorExBase::ProcessorExBase;
+  AsyncProcessor(AsyncProcessor &&) = default;
+  AsyncProcessor &operator=(AsyncProcessor &&) = default;
+  ~AsyncProcessor() { stopAndWait(); }
 
-  static StoppedSignal launchComponent(const ComponentInstance &comp,
+  static StoppedSignal launchProcessor(const ProcessorInstance &comp,
                                        ThreadFunction threadInit = {},
                                        ThreadFunction threadDeinit = {}) {
     return std::async(std::launch::async,
-                      std::bind(&Component::run, comp, std::move(threadInit),
+                      std::bind(&Processor::run, comp, std::move(threadInit),
                                 std::move(threadDeinit)));
   }
 
   void launch(ThreadFunction threadInit = {},
               ThreadFunction threadDeinit = {}) {
     if (instance_ && !running()) {
-      stopSignal_ = launchComponent(instance_, std::move(threadInit),
+      stopSignal_ = launchProcessor(instance_, std::move(threadInit),
                                     std::move(threadDeinit));
     }
   }

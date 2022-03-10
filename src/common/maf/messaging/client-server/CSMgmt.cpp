@@ -2,25 +2,26 @@
 #include <maf/messaging/client-server/CSMgmt.h>
 
 #include "ClientFactory.h"
-#include "SingleThreadPool.h"
 #include "ServerFactory.h"
+#include "SingleThreadPool.h"
 
 namespace maf {
 namespace messaging {
 namespace csmgmt {
 
-struct CSInit {
-  CSInit() { single_threadpool::init(); }
-  ~CSInit() { single_threadpool::deinit(); }
-};
-
-static void csinit() { static CSInit _; }
+static ClientFactory *clientFactory() {
+  static auto factory = new ClientFactory;
+  return factory;
+}
+static ServerFactory *serverFactory() {
+  static auto factory = new ServerFactory;
+  return factory;
+}
 
 std::shared_ptr<ServiceRequesterIF> getServiceRequester(
     const ConnectionType &conntype, const Address &serverAddr,
     const ServiceID &sid) noexcept {
-  csinit();
-  if (auto client = ClientFactory::instance().getClient(conntype, serverAddr)) {
+  if (auto client = clientFactory()->getClient(conntype, serverAddr)) {
     if (auto requester = client->getServiceRequester(sid)) {
       return requester;
     } else {
@@ -36,13 +37,21 @@ std::shared_ptr<ServiceRequesterIF> getServiceRequester(
 ServiceProviderIFPtr getServiceProvider(const ConnectionType &conntype,
                                         const Address &serverAddr,
                                         const ServiceID &sid) noexcept {
-  csinit();
-  if (auto server = ServerFactory::instance().getServer(conntype, serverAddr)) {
+  if (auto server = serverFactory()->getServer(conntype, serverAddr)) {
     // if already had provider on found server
     return server->getServiceProvider(sid);
   }
   return {};
 }
+
+void shutdownAllClients() { clientFactory()->close(); }
+
+void shutdownAll() {
+  shutdownAllServers();
+  shutdownAllClients();
+}
+
+void shutdownAllServers() { serverFactory()->close(); }
 
 }  // namespace csmgmt
 }  // namespace messaging

@@ -2,6 +2,7 @@
 
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/CSMgmt.h>
+#include <maf/messaging/client-server/ParamTranslatingStatus.h>
 #include <maf/messaging/client-server/ServiceProviderIF.h>
 #include <maf/utils/ExecutorIF.h>
 
@@ -24,6 +25,12 @@ class BasicStub {
   template <typename InputType>
   using RequestHandlerFunction = std::function<void(Request<InputType>)>;
 
+  template <typename StatusOrSignal>
+  using OnNotificationCallback =
+      std::function<void(std::shared_ptr<StatusOrSignal> const &)>;
+
+  using OnEmptyNotificationCallback = std::function<void()>;
+
   using ExecutorIFPtr = util::ExecutorIFPtr;
   using ProviderPtr = std::shared_ptr<ServiceProviderIF>;
 
@@ -31,6 +38,7 @@ class BasicStub {
                             const ServiceID &sid, ExecutorIFPtr executor = {});
 
   const ServiceID &serviceID() const;
+  Availability availability() const;
 
   template <class Status, AllowOnlyStatusT<PTrait, Status> = true>
   ActionCallStatus setStatus(const std::shared_ptr<Status> &status);
@@ -39,8 +47,17 @@ class BasicStub {
             AllowOnlyStatusT<PTrait, Status> = true>
   ActionCallStatus setStatus(Args &&...);
 
+  template <class PropertyOrStatus,
+            AllowOnlyPropertyOrStatusT<PTrait, PropertyOrStatus> = true>
+  ActionCallStatus removeProperty(bool notify = false);
+
+  ActionCallStatus removeProperty(const OpID &propID, bool notify = false);
+
   template <class Status, AllowOnlyStatusT<PTrait, Status> = true>
-  std::shared_ptr<Status> getStatus();
+  std::shared_ptr<const Status> getStatus();
+
+  template <class Status, AllowOnlyStatusT<PTrait, Status> = true>
+  std::shared_ptr<Status> cloneStatus();
 
   template <class Attributes, AllowOnlyAttributesT<PTrait, Attributes> = true>
   ActionCallStatus broadcastSignal(const std::shared_ptr<Attributes> &attr);
@@ -62,6 +79,15 @@ class BasicStub {
   template <typename Request, AllowOnlyRequestT<PTrait, Request> = true>
   bool unregisterRequestHandler();
 
+  template <class AttributesOrStatus,
+            AllowOnlyAttributesOrStatusT<PTrait, AttributesOrStatus> = true>
+  signal_slots::Connection registerNotification(
+      OnNotificationCallback<AttributesOrStatus> callback);
+
+  template <class Signal, AllowOnlySignalT<PTrait, Signal> = true>
+  signal_slots::Connection registerNotification(
+      OnEmptyNotificationCallback callback);
+
   void startServing();
   void stopServing();
 
@@ -71,6 +97,10 @@ class BasicStub {
 
  private:
   BasicStub(ProviderPtr provider, ExecutorIFPtr executor);
+
+  template <class CSParam>
+  CSPayloadProcessCallback createPayloadProcessCallback(
+      OnNotificationCallback<CSParam> callback) noexcept;
 
   ProviderPtr provider_;
   ExecutorIFPtr executor_;
@@ -98,6 +128,11 @@ const ServiceID &BasicStub<PTrait>::serviceID() const {
 }
 
 template <class PTrait>
+Availability BasicStub<PTrait>::availability() const {
+  return provider_->availability();
+}
+
+template <class PTrait>
 template <class Status, AllowOnlyStatusT<PTrait, Status>>
 ActionCallStatus BasicStub<PTrait>::setStatus(
     const std::shared_ptr<Status> &status) {
@@ -112,14 +147,37 @@ ActionCallStatus BasicStub<PTrait>::setStatus(Args &&... args) {
 }
 
 template <class PTrait>
+template <class PropertyOrStatus,
+          AllowOnlyPropertyOrStatusT<PTrait, PropertyOrStatus>>
+ActionCallStatus BasicStub<PTrait>::removeProperty(bool notify) {
+  return removeProperty(PTrait::template getOperationID<PropertyOrStatus>(),
+                        notify);
+}
+
+template <class PTrait>
+ActionCallStatus BasicStub<PTrait>::removeProperty(const OpID &propID,
+                                                   bool notify) {
+  return provider_->removeProperty(propID, notify);
+}
+
+template <class PTrait>
 template <class Status, AllowOnlyStatusT<PTrait, Status>>
-std::shared_ptr<Status> BasicStub<PTrait>::getStatus() {
+std::shared_ptr<const Status> BasicStub<PTrait>::getStatus() {
   if (auto baseStatus =
           provider_->getStatus(PTrait::template getOperationID<Status>())) {
     return PTrait::template translate<Status>(baseStatus);
   } else {
     return {};
   }
+}
+
+template <class PTrait>
+template <class Status, AllowOnlyStatusT<PTrait, Status>>
+std::shared_ptr<Status> BasicStub<PTrait>::cloneStatus() {
+  static_assert(std::is_default_constructible_v<Status>,
+                "must be default constructed");
+  auto status = getStatus<const Status>();
+  return std::make_shared<Status>(status ? *status : Status{});
 }
 
 template <class PTrait>
@@ -183,6 +241,51 @@ template <class PTrait>
 template <typename Request, AllowOnlyRequestT<PTrait, Request>>
 bool BasicStub<PTrait>::unregisterRequestHandler() {
   return unregisterRequestHandler(PTrait::template getOperationID<Request>());
+}
+
+template <class PTrait>
+template <class AttributesOrStatus,
+          AllowOnlyAttributesOrStatusT<PTrait, AttributesOrStatus>>
+signal_slots::Connection BasicStub<PTrait>::registerNotification(
+    OnNotificationCallback<AttributesOrStatus> callback) {
+  return provider_->registerNotification(
+      PTrait::template getOperationID<AttributesOrStatus>(),
+      createPayloadProcessCallback(std::move(callback)));
+}
+
+template <class PTrait>
+template <class Signal, AllowOnlySignalT<PTrait, Signal>>
+signal_slots::Connection BasicStub<PTrait>::registerNotification(
+    OnEmptyNotificationCallback callback) {
+  assert(executor_ && callback);
+  return provider_->registerNotification(
+      PTrait::template getOperationID<Signal>(),
+      [callback = std::move(callback), executor = this->executor_](
+          const CSPayloadIFPtr &) { executor->execute(callback); });
+}
+
+template <class PTrait>
+template <class CSParam>
+CSPayloadProcessCallback BasicStub<PTrait>::createPayloadProcessCallback(
+    OnNotificationCallback<CSParam> callback) noexcept {
+  assert(callback && executor_);
+  return [callback = std::move(callback),
+          executor = this->executor_](const CSPayloadIFPtr &payload) mutable {
+    executor->execute([payload, callback] {
+      // getResposne must be called on thread of executor
+      // try not block thread of service requester untill
+      // finish translating message
+      auto transStatus = TranslationStatus::Success;
+      auto translated =
+          PTrait::template translate<CSParam>(payload, &transStatus);
+      if (transStatus == TranslationStatus::Success) {
+        callback(translated);
+      } else {
+        MAF_LOGGER_ERROR("Cannot translate message of type: ",
+                         PTrait::template getOperationID<CSParam>());
+      }
+    });
+  };
 }
 
 template <class PTrait>

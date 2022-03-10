@@ -36,6 +36,21 @@ class ThreadSafeQueue {
     }
   }
 
+  template <
+      class _Sequence,
+      std::enable_if_t<
+          std::is_same_v<
+              std::void_t<decltype(std::declval<_Sequence>().begin())>, void>,
+          bool> = true>
+  void push(const _Sequence &seq) {
+    if (!isClosed()) {
+      std::lock_guard lock(queue_);
+      for (auto &item : seq) {
+        queue_->push(item);
+      }
+      queueNotEmpty_.notify_all();
+    }
+  }
   template <class TimePoint>
   bool waitUntil(value_type &value, const TimePoint &absTime) {
     std::unique_lock lock(queue_);
@@ -91,9 +106,7 @@ class ThreadSafeQueue {
     return false;
   }
 
-  void reOpen() {
-    closed_.store(false, std::memory_order_release);
-  }
+  void reOpen() { closed_.store(false, std::memory_order_release); }
 
   void close() {
     bool alreadyClosed = false;

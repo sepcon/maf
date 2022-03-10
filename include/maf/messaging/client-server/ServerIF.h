@@ -11,9 +11,9 @@ namespace messaging {
 class ServiceProviderIF;
 using ServiceProviderIFPtr = std::shared_ptr<ServiceProviderIF>;
 
-class MAF_EXPORT ServerIF : protected CSMessageReceiverIF,
+class MAF_EXPORT ServerIF : public CSMessageReceiverIF,
                             public ServiceStatusObserverIF {
-public:
+ public:
   virtual ~ServerIF() = default;
   virtual ActionCallStatus sendMessageToClient(const CSMessagePtr &msg,
                                                const Address &addr) = 0;
@@ -25,5 +25,5 @@ public:
   virtual void deinit() = 0;
 };
 
-} // namespace messaging
-} // namespace maf
+}  // namespace messaging
+}  // namespace maf

@@ -1,10 +1,12 @@
-#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ProcessorEx.h>
 #include <maf/messaging/Routing.h>
 #include <maf/utils/StringifyableEnum.h>
 
 #include <atomic>
+#include <iostream>
 
-#include "test.h"
+#define CATCH_CONFIG_MAIN
+#include "catch/catch_amalgamated.hpp"
 
 using namespace maf::messaging;
 using namespace maf::messaging::routing;
@@ -17,20 +19,20 @@ static constexpr auto SlaveID = "id.slave.";
 static const std::string MasterGreetString = "Master Hello";
 
 struct HasSenderMessage {
-  HasSenderMessage(ComponentInstance sender = {}) : sender{std::move(sender)} {
+  HasSenderMessage(ProcessorInstance sender = {}) : sender{std::move(sender)} {
     if (!this->sender) {
-      this->sender = this_component::instance();
+      this->sender = this_processor::instance();
     }
   }
-  ComponentInstance sender;
+  ProcessorInstance sender;
 };
 
 struct TaskInputRequest : public HasSenderMessage {};
 struct TaskSubmitted {};
 using Text = std::string;
 
-static auto master = ComponentInstance{};
-static auto slaves = std::vector<AsyncComponent>{};
+static auto master = ProcessorInstance{};
+static auto slaves = std::vector<AsyncProcessor>{};
 
 static std::atomic_uint greetCount = 0;
 static std::atomic_uint taskSubmittedCount = 0;
@@ -45,7 +47,7 @@ MC_MAF_STRINGIFYABLE_ENUM(BinOp, char,
 // clang-format on
 
 using Task = std::tuple<BinOp, int, int>;
-using TaskResult = std::tuple<ComponentInstance, BinOp, int>;
+using TaskResult = std::tuple<ProcessorInstance, BinOp, int>;
 
 static constexpr Task TasksForSlaves[] = {{BinOp::Add, 1, 222},
                                           {BinOp::Sub, 111, 2},
@@ -93,31 +95,31 @@ CompLogRecord log() { return CompLogRecord(); }
 
 static void setupSlaves() {
   for (unsigned i = 0; i < TaskCount; ++i) {
-    auto slave = Component::create(SlaveID + std::to_string(i));
+    auto slave = Processor::create(SlaveID + std::to_string(i));
     slaves.emplace_back(slave);
     slave->connect<std::string>([](const auto &msg) {
       ++greetCount;
-      log() << "Slave " << this_component::instance()->id()
+      log() << "Slave " << this_processor::instance()->id()
             << " received string msg from master: " << msg;
       post(MasterID, TaskInputRequest{});
     });
 
     slave->connect<Task>([](const Task &task) {
-      post(MasterID, TaskResult{this_component::instance(), std::get<0>(task),
+      post(MasterID, TaskResult{this_processor::instance(), std::get<0>(task),
                                 eval(task)});
     });
     slave->connect<TaskSubmitted>([](auto) {
       log() << "Task submitted to master then quit!";
       taskSubmittedCount++;
-      this_component::stop();
+      this_processor::stop();
     });
   }
 }
 
 static void setupMaster() {
-  master = Component::create(MasterID);
-  master->connect<ComponentStatusUpdateMsg>(
-      [](const ComponentStatusUpdateMsg &msg) {
+  master = Processor::create(MasterID);
+  master->connect<ProcessorStatusUpdateMsg>(
+      [](const ProcessorStatusUpdateMsg &msg) {
         static int availableSlaves = 0;
         if (msg.ready()) {
           if (++availableSlaves == TaskCount) {
@@ -126,7 +128,7 @@ static void setupMaster() {
         } else {
           if (--availableSlaves == 0) {
             log() << "Sum all value = " << sumAll;
-            this_component::stop();
+            this_processor::stop();
           }
         }
       });
@@ -145,9 +147,9 @@ static void setupMaster() {
   });
 }
 
-static void routingTest() {
+TEST_CASE("routing") {
   // clang-format off
-  TEST_CASE_B(message_routing)
+  SECTION("message_routing")
   {
     setupMaster();
     setupSlaves();
@@ -165,11 +167,11 @@ static void routingTest() {
     }
 
     master->run();
-    EXPECT(sumAllTasks() == sumAll);
-    EXPECT(greetCount == TaskCount);
-    EXPECT(taskSubmittedCount == TaskCount);
+    REQUIRE(sumAllTasks() == sumAll);
+    REQUIRE(greetCount == TaskCount);
+    REQUIRE(taskSubmittedCount == TaskCount);
   }
-  TEST_CASE_E()
+
   // clang-format on
 
   for (auto &slave : slaves) {
@@ -177,87 +179,76 @@ static void routingTest() {
   }
 }
 
-static void receiverStatusTest() {
+TEST_CASE("receiverStatus") {
   using namespace std;
-  vector<AsyncComponent> asyncComponents;
+  vector<AsyncProcessor> asyncProcessors;
   static const int asyncCount = 10;
 
-  auto mainComponent = Component::create("main");
+  auto mainProcessor = Processor::create("main");
   int totalAvailable = 0;
   int totalUnavailable = 0;
 
-  mainComponent->connect<routing::ComponentStatusUpdateMsg>(
+  mainProcessor->connect<routing::ProcessorStatusUpdateMsg>(
       [&totalAvailable,
-       &totalUnavailable](const routing::ComponentStatusUpdateMsg &msg) {
+       &totalUnavailable](const routing::ProcessorStatusUpdateMsg &msg) {
         if (msg.ready()) {
           ++totalAvailable;
           msg.compref.lock()->stop();
         } else {
           ++totalUnavailable;
           if (totalUnavailable == asyncCount) {
-            this_component::stop();
+            this_processor::stop();
           }
         }
       });
 
   for (int i = 0; i < asyncCount; ++i) {
-    asyncComponents.emplace_back(Component::create("async" + to_string(i)));
+    asyncProcessors.emplace_back(Processor::create("async" + to_string(i)));
   }
 
-  for (auto &comp : asyncComponents) {
+  for (auto &comp : asyncProcessors) {
     comp.launch();
   }
 
-  mainComponent->run();
+  mainProcessor->run();
 
-  TEST_CASE_B(receiver_status) {
-    EXPECT(totalAvailable == asyncCount);
-    EXPECT(totalUnavailable == asyncCount);
-  }
+  REQUIRE(totalAvailable == asyncCount);
+  REQUIRE(totalUnavailable == asyncCount);
 
-  TEST_CASE_E(receiver_status)
-  for (auto &comp : asyncComponents) {
+  for (auto &comp : asyncProcessors) {
     comp.stopAndWait();
   }
 }
 
-void sendMessageTest() {
+TEST_CASE("sendMessage") {
   struct waitable_msg {};
   int count = 0;
   const int totalCount = 10;
-  AsyncComponent logic = Component::create("logic");
+  AsyncProcessor logic = Processor::create("logic");
   for (int i = 0; i < totalCount; ++i) {
     logic->connect<waitable_msg>([&count] { ++count; });
   }
   logic.launch();
 
-  while (!routing::findComponent("logic")) {
+  while (!routing::findProcessor("logic")) {
   };
 
-  TEST_CASE_B(routing_send_message) {
+  SECTION("routing_send_message") {
     routing::sendToAll<waitable_msg>()
-        .then([] { std::cout << "msg is all handled" << std::endl; })
+        .then([] { log() << "msg is all handled"; })
         .wait();
-    EXPECT(totalCount == count);
+    REQUIRE(totalCount == count);
   }
-  TEST_CASE_E(routing_send_message)
+
   logic->disconnect<waitable_msg>();
 
   count = 0;
-  TEST_CASE_B(routing_send_message) {
+  SECTION("routing_send_message") {
     auto handledSignal = routing::sendToAll<waitable_msg>().then(
-        [] { std::cout << "msg is all handled" << std::endl; });
-    EXPECT(!handledSignal.valid());
-    EXPECT(0 == count);
+        [] { log() << "msg is all handled"; });
+    REQUIRE(!handledSignal.valid());
+    REQUIRE(0 == count);
   }
-  TEST_CASE_E(routing_send_message)
 
   logic.stopAndWait();
-}
-
-int main() {
-  maf::test::init_test_cases();
-  routingTest();
-  receiverStatusTest();
-  sendMessageTest();
 }

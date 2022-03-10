@@ -1,10 +1,8 @@
 #include <maf/messaging/client-server/Address.h>
-#include <maf/utils/serialization/DumpHelper.h>
+#include <maf/utils/serialization/Dumper.h>
 
 namespace maf {
 namespace messaging {
-
-using namespace srz;
 
 Address::Address(Address::Name name, Address::Port port)
     : name_(std::move(name)), port_(port) {}
@@ -31,18 +29,16 @@ Address::Port &Address::get_port() { return port_; }
 const Address::Name &Address::get_name() const { return name_; }
 Address::Name &Address::get_name() { return name_; }
 
-void Address::dump(int indent, std::string &out) const {
-  out += getIndent(indent) + R"({ "name": )";
-  DumpHelper<Name>::dump(name_, indent, out);
-  out += R"(, "port": )";
-  DumpHelper<Port>::dump(port_, indent, out);
-  out += "}";
-}
-
 std::string Address::dump(int indent) const {
-  std::string out;
-  dump(indent, out);
-  return out;
+  using namespace srz;
+  std::ostringstream os;
+  writeIndent(os, indent);
+  os << R"({ "name": )";
+  srz::dump(os, get_name(), indent);
+  os << R"(, "port": )";
+  srz::dump(os, get_port(), indent);
+  os << "}";
+  return os.str();
 }
 
 }  // namespace messaging

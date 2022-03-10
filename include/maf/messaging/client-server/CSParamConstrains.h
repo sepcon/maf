@@ -43,6 +43,10 @@ template <class PaCo, class T>
 using AllowOnlyPropertyT = std::enable_if_t<IsProperty<PaCo, T>, bool>;
 
 template <class PaCo, class T>
+using AllowOnlyAttributesOrStatusT =
+    std::enable_if_t<IsStatus<PaCo, T> || IsAttributes<PaCo, T>, bool>;
+
+template <class PaCo, class T>
 using AllowOnlyRequestOrOutputT =
     std::enable_if_t<IsRequest<PaCo, T> || IsOutput<PaCo, T>, bool>;
 
@@ -50,6 +54,10 @@ template <class PaCo, class T>
 using AllowOnlyRequestOrInputT =
     std::enable_if_t<IsRequest<PaCo, T> || IsInput<PaCo, T>, bool>;
 
-} // namespace paco
-} // namespace messaging
-} // namespace maf
+template <class PaCo, class T>
+using AllowOnlyPropertyOrStatusT =
+    std::enable_if_t<IsProperty<PaCo, T> || IsStatus<PaCo, T>, bool>;
+
+}  // namespace paco
+}  // namespace messaging
+}  // namespace maf

@@ -2,7 +2,7 @@
 
 #include <ostream>
 
-#include "cppextension/Loop.mc.h"
+#include "cppextension/Macros.h"
 
 /// Allow you to declare enum and stringify its values as the values' name using
 /// std::ostream.
@@ -50,7 +50,7 @@
 #define MC_MAF_STRINGIFYABLE_ENUM(TheEnum, base_type, ...)              \
   enum class TheEnum : base_type { __VA_ARGS__, __ };                   \
                                                                         \
-  static inline constexpr const char *TheEnum##StrArr[] = {             \
+  constexpr const char *TheEnum##StrArr[] = {                           \
       mc_maf_for_each(MC_MAF_STRINGIFY, __VA_ARGS__) "_"};              \
   inline std::ostream &operator<<(std::ostream &os, TheEnum en) {       \
     os << TheEnum##StrArr[static_cast<unsigned long long>(en)];         \

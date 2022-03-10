@@ -25,3 +25,5 @@ template <typename T> void assign_ptr(T &dest, T *src) {
 
 } // namespace util
 } // namespace maf
+
+#define MAF_SAFE_PTR(p) if(p) p

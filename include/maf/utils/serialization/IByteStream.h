@@ -32,20 +32,24 @@ class BasicIByteStream {
   void read(char *buf, SizeType size) noexcept {
     if (good()) {
       if (readingPos_ + size > buffer_.size()) {
-        state_ &= Failed;
+        (state_ &= ~Good) |= Failed;
         return;
       }
       std::memcpy(buf, buffer_.data() + readingPos_, size);
       readingPos_ += size;
       if (readingPos_ == buffer_.size()) {
-        state_ &= Eof;
+        state_ |= Eof;
       }
+    } else {
+      (state_ &= ~Good) |= Failed;
     }
   }
 
   bool eof() const noexcept { return state_ & Eof; }
   bool good() const noexcept { return state_ & Good; }
   bool fail() const noexcept { return state_ & Failed; }
+  void clear(State state) { state_ &= ~state; }
+
   void reset() noexcept {
     readingPos_ = 0;
     state_ = Good;

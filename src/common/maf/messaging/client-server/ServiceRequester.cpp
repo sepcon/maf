@@ -6,6 +6,8 @@
 #include <maf/messaging/client-server/Exceptions.h>
 #include <maf/utils/Pointers.h>
 
+#include <variant>
+
 #define SET_ERROR_AND_RETURN_IF(condition, pErrorStore, errorValue, \
                                 returnedValue)                      \
   do {                                                              \
@@ -61,8 +63,8 @@ ServiceRequester::ServiceRequester(const ServiceID &sid,
     : client_(std::move(client)), sid_(sid) {}
 
 ServiceRequester::~ServiceRequester() {
-  MAF_LOGGER_INFO("Clean up service requester of service id: ", serviceID(),
-                  "...");
+  MAF_LOGGER_INFO("Clean up service requester of service id: ", sid_, "...");
+  ServiceRequester::deinit();
 }
 
 RegID ServiceRequester::sendRequestAsync(const OpID &opID,
@@ -157,6 +159,14 @@ CSPayloadIFPtr ServiceRequester::sendRequest(const OpID &opID,
 
 Availability ServiceRequester::serviceStatus() const noexcept {
   return serviceStatus_;
+}
+
+void ServiceRequester::init() {}
+
+void ServiceRequester::deinit() {
+  // Prematurely cancel the blocking requests that offers a chance to
+  // waiting-thread to exit sooner then prevent some of tricky problems
+  requestEntriesMap_.atomic()->clear();
 }
 
 bool ServiceRequester::serviceUnavailable() const noexcept {
@@ -334,17 +344,18 @@ RegID ServiceRequester::registerSignal(const OpID &eventID,
 
 ActionCallStatus ServiceRequester::unregister(const RegID &regID) {
   auto callstatus = ActionCallStatus::Success;
-
-  if (serviceUnavailable()) {
-    callstatus = ActionCallStatus::ServiceUnavailable;
-  } else if (regID.valid()) {
+  if (regID.valid()) {
     auto propertyID = regID.opID;
     auto totalRemainer = removeRegEntry(registerEntriesMap_, regID);
     if (totalRemainer == 0) {
       // send unregister if no one from client side interested
       // in this propertyID anymore
       removeCachedProperty(propertyID);
-      sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
+      if (serviceUnavailable()) {
+        callstatus = ActionCallStatus::ServiceUnavailable;
+      } else {
+        sendMessageToServer(createCSMessage(propertyID, OpCode::Unregister));
+      }
     }
   } else {
     callstatus = ActionCallStatus::InvalidParam;
@@ -370,7 +381,11 @@ ActionCallStatus ServiceRequester::unregisterAll(const OpID &propertyID) {
 CSPayloadIFPtr ServiceRequester::getStatus(const OpID &propertyID,
                                            ActionCallStatus *callStatus,
                                            RequestTimeoutMs timeout) {
-  if (cachedPropertyUpToDate(propertyID)) {
+  if (serviceUnavailable()) {
+    assign_ptr(callStatus, ActionCallStatus::ServiceUnavailable);
+    return getCachedProperty(propertyID);
+  } else if (subscribingProperty(propertyID)) {
+    assign_ptr(callStatus, ActionCallStatus::Success);
     return getCachedProperty(propertyID);
   } else {
     SET_ERROR_AND_RETURN_IF(serviceUnavailable(), callStatus,
@@ -384,15 +399,15 @@ CSPayloadIFPtr ServiceRequester::getStatus(const OpID &propertyID,
 ActionCallStatus ServiceRequester::getStatus(
     const OpID &propertyID, CSPayloadProcessCallback callback) {
   //------------------------------------------------------------
-  ActionCallStatus callstatus = ActionCallStatus::FailedUnknown;
-
-  if (cachedPropertyUpToDate(propertyID)) {
-    auto propStatus = getCachedProperty(propertyID);
-    callback(propStatus);
-    callstatus = ActionCallStatus::Success;
+  ActionCallStatus callstatus = ActionCallStatus::Success;
+  if (serviceUnavailable()) {
+    callback(getCachedProperty(propertyID));
+    callstatus = ActionCallStatus::ServiceUnavailable;
+  } else if (subscribingProperty(propertyID)) {
+    callback(getCachedProperty(propertyID));
   } else {
     sendMessageAsync(propertyID, OpCode::StatusGet, {}, std::move(callback),
-                     &callstatus);
+                     nullptr);
   }
   return callstatus;
 }
@@ -440,6 +455,9 @@ void ServiceRequester::onRequestResult(const CSMessagePtr &msg) {
           found = true;
           break;
         }
+      }
+      if (regEntries.empty()) {
+        requestEntriesMap_->erase(it);
       }
     }
 
@@ -558,6 +576,11 @@ void ServiceRequester::removeCachedProperty(const OpID &propertyID) {
 }
 
 bool ServiceRequester::cachedPropertyUpToDate(const OpID &propertyID) const {
+  std::lock_guard lock(propertiesCache_);
+  return propertiesCache_->find(propertyID) != propertiesCache_->end();
+}
+
+bool ServiceRequester::subscribingProperty(const OpID &propertyID) const {
   std::lock_guard lock(registerEntriesMap_);
   return registerEntriesMap_->find(propertyID) != registerEntriesMap_->end();
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/messaging/Component.h>
+#include <maf/messaging/Processor.h>
 
 #include <cassert>
 
@@ -10,12 +10,12 @@ namespace maf {
 namespace messaging {
 
 class AsyncServiceStatusObserver : public ServiceStatusObserverIF {
-  using CompWPtr = std::weak_ptr<Component>;
-  using CompPtr = std::shared_ptr<Component>;
+  using CompWPtr = std::weak_ptr<Processor>;
+  using CompPtr = std::shared_ptr<Processor>;
 
  public:
   AsyncServiceStatusObserver(const CompPtr& comp) : _wpcomp{comp} {
-    assert(comp && "Component must not be nullptr");
+    assert(comp && "Processor must not be nullptr");
   }
 
  private:
@@ -27,7 +27,7 @@ class AsyncServiceStatusObserver : public ServiceStatusObserverIF {
 };
 
 inline std::shared_ptr<ServiceStatusObserverIF> asyncServiceStatusObserver(
-    std::shared_ptr<Component> comp) {
+    std::shared_ptr<Processor> comp) {
   return std::shared_ptr<AsyncServiceStatusObserver>{
       new AsyncServiceStatusObserver{std::move(comp)}};
 }

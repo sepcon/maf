@@ -16,13 +16,13 @@ using namespace maf::messaging;
 struct EndOfRequestChainMsg {};
 
 template <class Proxy>
-class ClientComponent : public ComponentEx {
+class ClientProcessor : public ProcessorEx {
   using ProxyPtr = std::shared_ptr<Proxy>;
   template <class T>
   using Response = typename Proxy::template Response<T>;
 
  public:
-  ClientComponent(ProxyPtr proxy) : proxy_{std::move(proxy)} {
+  ClientProcessor(ProxyPtr proxy) : proxy_{std::move(proxy)} {
     proxy_->setExecutor(instance()->getExecutor());
 
     statusObserver_ = proxy_->onServiceStatusChanged(
@@ -67,12 +67,12 @@ class ClientComponent : public ComponentEx {
     proxy_->template sendRequest<boot_time_request::output>(nullptr, 10s);
   }
 
-  ~ClientComponent() {
+  ~ClientProcessor() {
     for (auto &regid : regids_) {
       if (auto callstatus = proxy_->unregister(regid);
           callstatus != ActionCallStatus::Success) {
-        MAF_LOGGER_ERROR("Failed to unregister status: ", regid.opID,
-                         " with error: ", callstatus);
+        MAF_LOGGER_INFO("Failed to unregister status: ", regid.opID,
+                        " with error: ", callstatus);
       } else {
         MAF_LOGGER_DEBUG("Successfully unregistered status ", regid.opID);
       }
@@ -124,8 +124,8 @@ class ClientComponent : public ComponentEx {
     if (regid.valid()) {
       regids_.push_back(std::move(regid));
     } else {
-      MAF_LOGGER_ERROR("Failed to register property ", Status::operationID(),
-                       " with call status = ", callStatus);
+      MAF_LOGGER_INFO("Failed to register property ", Status::operationID(),
+                      " with call status = ", callStatus);
     }
   }
 
@@ -172,10 +172,10 @@ class ClientComponent : public ComponentEx {
       } else if (auto error = response.getError()) {
         MAF_LOGGER_DEBUG("Got error from server: ", error->dump());
       } else {
-        MAF_LOGGER_ERROR("Server might respond nothing!");
+        MAF_LOGGER_INFO("Server might respond nothing!");
       }
     }
-    this_component::post<EndOfRequestChainMsg>();
+    this_processor::post<EndOfRequestChainMsg>();
   }
   template <class Status>
   void getStatus() {

@@ -1,34 +1,26 @@
 #include "SingleThreadPool.h"
 
-#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ProcessorEx.h>
 
 namespace maf {
 namespace messaging {
 namespace single_threadpool {
 
-class ThreadPool : public ComponentExBase {
+class ThreadPool : public ProcessorExBase {
   std::thread thread_;
 
  public:
-  void launch() {
-    thread_ = std::thread{[this] { instance_->run(); }};
-  }
-
-  void stopAndWait() {
-    instance()->stop();
-    if (thread_.joinable()) {
-      thread_.join();
-    }
+  ThreadPool() {
+    std::thread{[this] { instance_->run(); }}.detach();
   }
 };
-static ThreadPool& thepool() {
-  static ThreadPool _;
-  return _;
+
+static ThreadPool& instance() {
+  static ThreadPool* _ = new ThreadPool;
+  return *_;
 }
 
-bool submit(TaskType task) { return thepool()->execute(std::move(task)); }
-void init() { thepool().launch(); }
-void deinit() { thepool().stopAndWait(); }
+bool submit(TaskType task) { return instance()->executeAsync(std::move(task)); }
 
 }  // namespace single_threadpool
 }  // namespace messaging

@@ -23,7 +23,6 @@ class LocalIPCServer : public ServerBase, public BytesComeObserver {
   bool init(const Address &serverAddress) override;
   bool start() override;
   void stop() override;
-  void deinit() override;
 
   ActionCallStatus sendMessageToClient(const CSMessagePtr &msg,
                                        const Address &addr) override;
@@ -42,6 +41,8 @@ class LocalIPCServer : public ServerBase, public BytesComeObserver {
   std::unique_ptr<BufferReceiverIF> pReceiver_;
   std::thread listeningThread_;
 };
+
+std::shared_ptr<ServerIF> makeServer();
 
 }  // namespace local
 }  // namespace ipc

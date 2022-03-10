@@ -1,6 +1,7 @@
 #pragma once
 
 #include <maf/patterns/Patterns.h>
+
 #include <mutex>
 
 namespace maf {
@@ -10,7 +11,7 @@ template <class Protected, class Mutex = std::mutex>
 class Lockable : public pattern::Unasignable {
   template <class Lockable_, class Protected_>
   struct AtomicRef : public pattern::Unasignable {
-  public:
+   public:
     AtomicRef(Lockable_ *p) : _lockable{p} { _lockable->lock(); }
 
     ~AtomicRef() { _lockable->unlock(); }
@@ -18,11 +19,11 @@ class Lockable : public pattern::Unasignable {
     Protected_ *operator->() { return _lockable->operator->(); }
     Protected_ &operator*() { return _lockable->operator*(); }
 
-  private:
+   private:
     Lockable_ *_lockable;
   };
 
-public:
+ public:
   using DataType = Protected;
   using AtomicSession = AtomicRef<Lockable<Protected, Mutex>, Protected>;
   using CAtomicSession =
@@ -46,10 +47,21 @@ public:
   CAtomicSession atomic() const { return CAtomicSession{this}; }
   AtomicSession atomic() { return AtomicSession{this}; }
 
-private:
+  Mutex &getMutex() { return _mutex; }
+
+  template <class _SomeType,
+            std::enable_if_t<std::is_constructible_v<DataType, _SomeType>,
+                             bool> = true>
+  Lockable &operator=(_SomeType &&d) {
+    auto lock = atomic();
+    _protected = std::forward<_SomeType>(d);
+    return *this;
+  }
+
+ private:
   mutable Mutex _mutex;
   DataType _protected;
 };
 
-} // namespace threading
-} // namespace maf
+}  // namespace threading
+}  // namespace maf

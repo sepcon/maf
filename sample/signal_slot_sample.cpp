@@ -2,7 +2,7 @@
 #include <maf/Observable.h>
 #include <maf/messaging/SignalTimer.h>
 #include <maf/utils/TimeMeasurement.h>
-#include <maf/utils/serialization/DumpHelper.h>
+#include <maf/utils/serialization/Dumper.h>
 
 #include <iostream>
 #include <map>
@@ -52,7 +52,7 @@ class Library {
   size_t borrow(const BookName& name);
   Connection subscribe(Account* acc, const BookName& name);
   Account createAccount(string name);
-  Observable<BooksMap> availableBooks;
+  ObservableST<BooksMap> availableBooks;
 };
 
 void Library::returnBook(const Library::BookName& name) { restore(name); }
@@ -69,16 +69,17 @@ void Library::restore(const Library::BookName& name, size_t count) {
 }
 
 void Library::save(const Library::BookName& name, size_t count) {
-  (*availableBooks.mut())[name] += count;
+  (*availableBooks.mutable_())[name] += count;
 }
 
 void Library::add(Library::BooksMap books) {
-  logMsg("[ANOUNCEMENT] added new books: " + srz::dump(books));
-  availableBooks.mut()->merge(books);
+  logMsg("[ANOUNCEMENT] added new books: " + srz::toString(books));
+  availableBooks.mutable_()->merge(books);
 }
 
 size_t Library::borrow(const Library::BookName& name) {
-  auto mBooks = availableBooks.mut();
+  auto mBooks =
+      availableBooks.silentMutable();  // wont notify client on this case
   if (auto& bookCount = (*mBooks)[name]; bookCount > 0) {
     --bookCount;
     return 1;

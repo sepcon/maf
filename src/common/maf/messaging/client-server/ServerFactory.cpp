@@ -12,28 +12,18 @@ namespace maf {
 namespace messaging {
 
 class ServerFactoryImpl {
+ public:
   threading::Lockable<
       util::Map2D<ConnectionType, Address, std::shared_ptr<ServerIF>>>
       serverMap_;
 
- public:
-  ~ServerFactoryImpl() {
-    std::lock_guard lock(serverMap_);
-    for (auto &[contype, servers] : *serverMap_) {
-      for (auto &[addr, server] : servers) {
-        server->stop();
-      }
-      for (auto &[addr, server] : servers) {
-        server->deinit();
-      }
-    }
-  }
+  ~ServerFactoryImpl() { close(); }
 
   std::shared_ptr<ServerIF> makeServer(const ConnectionType &connectionType) {
     if (connectionType == itc::connection_type) {
-      return itc::Server::instance();
+      return itc::makeServer();
     } else if (connectionType == ipc::local::connection_type) {
-      return std::make_shared<ipc::local::LocalIPCServer>();
+      return ipc::local::makeServer();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
                        connectionType, "]");
@@ -61,9 +51,22 @@ class ServerFactoryImpl {
     }
     return server;
   }
+
+  void close() {
+    std::lock_guard lock(serverMap_);
+    for (auto &[contype, servers] : *serverMap_) {
+      for (auto &[addr, server] : servers) {
+        server->stop();
+      }
+      for (auto &[addr, server] : servers) {
+        server->deinit();
+      }
+    }
+    serverMap_->clear();
+  }
 };
 
-ServerFactory::ServerFactory(Invisible) noexcept
+ServerFactory::ServerFactory()
     : pImpl_{std::make_unique<ServerFactoryImpl>()} {}
 
 ServerFactory::~ServerFactory() = default;
@@ -72,6 +75,8 @@ std::shared_ptr<ServerIF> ServerFactory::getServer(
     const ConnectionType &connectionType, const Address &addr) noexcept {
   return pImpl_->getServer(connectionType, addr);
 }
+
+void ServerFactory::close() { pImpl_->close(); }
 
 }  // namespace messaging
 }  // namespace maf

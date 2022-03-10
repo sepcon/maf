@@ -2,6 +2,7 @@
 #include <maf/ITCStub.h>
 #include <maf/LocalIPCProxy.h>
 #include <maf/LocalIPCStub.h>
+#include <maf/Messaging.h>
 #include <maf/logging/Logger.h>
 #include <maf/messaging/client-server/ServiceStatusSignal.h>
 #include <maf/threading/AtomicObject.h>
@@ -14,7 +15,8 @@
 #include <map>
 #include <set>
 
-#include "test.h"
+#define CATCH_CONFIG_MAIN
+#include "catch/catch_amalgamated.hpp"
 
 // clang-format off
 #include <maf/messaging/client-server/CSContractDefinesBegin.mc.h>
@@ -38,6 +40,12 @@ VOID_REQUEST(to_be_aborted)
 
 VOID_REQUEST(no_response)
 
+SIGNAL(simple_string)
+    ATTRIBUTES((std::string, str, "hello"))
+ENDSIGNAL(simple_string)
+
+VOID_SIGNAL(nothing)
+
 SIGNAL(server_notify)
     using DetailsMap = std::map<std::string, std::string>;
     ATTRIBUTES
@@ -55,6 +63,14 @@ PROPERTY(varied_string)
 	STATUS((std::string, its_status))
 ENDPROPERTY()
 
+PROPERTY(tobe_removed)
+        STATUS((std::string, its_status, "default"))
+ENDPROPERTY()
+
+PROPERTY(not_set)
+    enum type { _1, _2};
+    STATUS((type, the_type))
+ENDPROPERTY(not_set)
 // clang-format on
 
 #include <maf/messaging/client-server/CSContractDefinesEnd.mc.h>
@@ -64,6 +80,11 @@ using namespace maf::util;
 namespace localipc = maf::localipc;
 namespace itc = maf::itc;
 using namespace std::chrono_literals;
+
+static auto& serverProcessor() {
+  static AsyncProcessor comp;
+  return comp;
+}
 
 template <class PTrait>
 class Tester {
@@ -80,13 +101,13 @@ class Tester {
 
   void test() {
     maf::util::TimeMeasurement tm([](auto elapsed) {
-      maf::test::log_rec() << "Total time for test = " << elapsed.count() / 1000
-                           << "ms";
+      std::cout << "Total time for test = " << elapsed.count() / 1000 << "ms"
+                << std::endl;
     });
 
     std::shared_ptr<Request<no_response_request>> noResponseRequestKeeper;
 
-    auto stub = stub_->with(maf::util::directExecutor());
+    auto stub = stub_->with(serverProcessor()->getExecutor());
     auto proxy = proxy_->with(maf::util::directExecutor());
     Availability serviceStatus;
     stub->template registerRequestHandler<string_request::input>(
@@ -155,26 +176,29 @@ class Tester {
 
     serviceStatusSignal(proxy)->waitIfNot(Availability::Available);
 
-    TEST_CASE_B(service_status) {
-      EXPECT(ftServiceStatusChangedSignal.wait_for(10ms) ==
-             std::future_status::ready);
-      EXPECT(serviceStatus == Availability::Available);
+    SECTION("not_set_status_get") {
+      auto status = proxy->template getStatus<not_set_property::status>();
+      REQUIRE(!status);
     }
-    TEST_CASE_E(service_status)
 
-    TEST_CASE_B(request_response_string) {
+    SECTION("service_status") {
+      REQUIRE(ftServiceStatusChangedSignal.wait_for(10ms) ==
+              std::future_status::ready);
+      REQUIRE(serviceStatus == Availability::Available);
+    }
+
+    SECTION("request_response_string") {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"Hello world"};
       auto response = proxy->template sendRequest<string_request::output>(
           string_request::make_input(inputString));
       // 2. Confirm having output
-      EXPECT(response.isOutput());
+      REQUIRE(response.isOutput());
       // 3. Confirm response's output == inputString
-      EXPECT(response.getOutput()->get_string_output() == inputString);
+      REQUIRE(response.getOutput()->get_string_output() == inputString);
     }
-    TEST_CASE_E(String_request_response)
 
-    TEST_CASE_B(request_response_vector) {
+    SECTION("request_response_vector") {
       auto ints = std::vector<int>{1, 2, 3};
       auto expectedStrings = std::vector<std::string>{};
       std::transform(std::begin(ints), std::end(ints),
@@ -186,20 +210,15 @@ class Tester {
           proxy->template sendRequest<convert_ints_2_strings_request::output>(
               convert_ints_2_strings_request::make_input(std::move(ints)));
       // 2. Confirm having output
-      EXPECT(response.isOutput());
+      REQUIRE(response.isOutput());
 
       // 3. Confirm response's output == expectedStrings
-      EXPECT(response.getOutput()->get_sints() == expectedStrings);
+      REQUIRE(response.getOutput()->get_sints() == expectedStrings);
     }
-    TEST_CASE_E(request_response_vector)
 
-    TEST_CASE_B(request_response_map_string_2_vector) {
+    SECTION("request_response_map_string_2_vector") {
       map_string_vector_2_string_request::the_map themap = {
           {"one two three", {1, 2, 3}}, {"four five six", {4, 5, 6}}};
-
-      auto expectedResponseString = std::string{};
-      maf::srz::DumpHelper<map_string_vector_2_string_request::the_map>::dump(
-          themap, 2, expectedResponseString);
 
       auto input =
           map_string_vector_2_string_request::make_input(std::move(themap));
@@ -207,26 +226,24 @@ class Tester {
       auto response = proxy->template sendRequest<
           map_string_vector_2_string_request::output>(input);
       // 2. Confirm having output
-      EXPECT(response.isOutput());
+      REQUIRE(response.isOutput());
 
       // 3. Confirm response's output == expectedResponseString
-      EXPECT(response.getOutput()->get_map_as_string() == input->dump());
+      REQUIRE(response.getOutput()->get_map_as_string() == input->dump());
     }
-    TEST_CASE_E(request_response_map_string_2_vector)
 
-    TEST_CASE_B(request_but_failed_to_response) {
+    SECTION("request_but_failed_to_response") {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"ignore_me"};
       auto response = proxy->template sendRequest<string_request::output>(
           string_request::make_input(inputString));
       // 2. Confirm having output
-      EXPECT(response.isError());
+      REQUIRE(response.isError());
       // 3. Confirm response's output == inputString
-      EXPECT(response.getError()->code() == CSErrorCode::ResponseIgnored);
+      REQUIRE(response.getError()->code() == CSErrorCode::ResponseIgnored);
     }
-    TEST_CASE_E(request_but_failed_to_response)
 
-    TEST_CASE_B(abort_request) {
+    SECTION("abort_request") {
       bool aborted = false;
       auto requestComeEventSource = std::make_shared<std::promise<void>>();
       auto requestComeEvent = requestComeEventSource->get_future();
@@ -247,27 +264,26 @@ class Tester {
       auto regid = proxy->template sendRequestAsync<to_be_aborted_request>(
           [&gotResponse](auto) { gotResponse = true; });
 
-      EXPECT(requestComeEvent.wait_for(10ms) == std::future_status::ready);
+      REQUIRE(requestComeEvent.wait_for(10ms) == std::future_status::ready);
 
-      EXPECT(aborted == false);
+      REQUIRE(aborted == false);
 
       proxy->abortRequest(regid);
       std::this_thread::sleep_for(1ms);
 
-      EXPECT(aborted == true);
+      REQUIRE(aborted == true);
 
       // After aborted expect that the Request<to_be_aborted_request> cant
       // respond anymore
-      EXPECT(requestHolder->respond() == ActionCallStatus::InvalidCall);
+      REQUIRE(requestHolder->respond() == ActionCallStatus::InvalidCall);
 
       //        std::this_thread::sleep_for(1ms);
 
       // Due to request is aborted, then gotResponse will never meet
-      EXPECT(gotResponse == false);
+      REQUIRE(gotResponse == false);
     }
-    TEST_CASE_E(abort_request)
 
-    TEST_CASE_B(broad_cast_status_signal) {
+    SECTION("broad_cast_status_signal") {
       // 1. Send string_request and expect same response
       auto inputString = std::string{"ignore_me"};
       server_notify_signal::DetailsMap details = {{"key", "value"},
@@ -288,9 +304,9 @@ class Tester {
 
       stub->broadcastSignal(sentAttribute);
 
-      EXPECT(receivedAttributeFuture.wait_for(1000ms) ==
-             std::future_status::ready);
-      EXPECT(receivedAttributeFuture.get() == *sentAttribute);
+      REQUIRE(receivedAttributeFuture.wait_for(1000ms) ==
+              std::future_status::ready);
+      REQUIRE(receivedAttributeFuture.get() == *sentAttribute);
 
       proxy->unregister(regid);
 
@@ -321,20 +337,19 @@ class Tester {
       for (size_t i = 0; i < MAX_REGISTERS - 1; ++i) {
         auto& regIDi = std::get<0>(propertyRegs[i]);
         auto& regIDi1 = std::get<0>(propertyRegs[i + 1]);
-        EXPECT(regIDi != regIDi1);
+        REQUIRE(regIDi != regIDi1);
       }
 
-      // wait for signal register comes to server
-      std::this_thread::sleep_for(1ms);
-
       stub_->setStatus(sentStatus);
-      stub_->template setStatus<some_string_property::status>("hello");
 
       for (auto& [regID, propFuture] : propertyRegs) {
-        do {
-          EXPECT(propFuture.wait_for(100ms) == std::future_status::ready);
-          EXPECT(propFuture.get() == *sentStatus);
-        } while (false);
+        SECTION("status_updated") {
+          REQUIRE(propFuture.wait_for(100ms) == std::future_status::ready);
+          REQUIRE(propFuture.get().dump() == sentStatus->dump());
+        }
+      }
+
+      for (auto& [regID, propFuture] : propertyRegs) {
         proxy->unregister(regID);
       }
 
@@ -343,13 +358,16 @@ class Tester {
 
       auto getBackedStatus =
           stub_->template getStatus<some_string_property::status>();
-      EXPECT(getBackedStatus && *getBackedStatus == *sentStatus);
+      REQUIRE(getBackedStatus);
+      REQUIRE(*getBackedStatus == *sentStatus);
+
+      std::this_thread::sleep_for(10ms);
 
       auto gotStatus =
           proxy->template getStatus<some_string_property::status>();
-      EXPECT(gotStatus);
-      maf::test::log_rec() << gotStatus->dump();
-      EXPECT(*gotStatus == *sentStatus);
+      REQUIRE(gotStatus);
+
+      REQUIRE(*gotStatus == *sentStatus);
 
       std::set<std::string> statusesToUpdate = {"1", "2", "3", "4", "5"};
       maf::threading::AtomicObject<std::set<std::string>> updatedStatuses;
@@ -371,25 +389,114 @@ class Tester {
         std::this_thread::sleep_for(1ms);
       }
 
-      EXPECT(getAllSignal.wait_for(10ms) == std::future_status::ready);
-      EXPECT(statusesToUpdate == updatedStatuses.lockee());
+      REQUIRE(getAllSignal.wait_for(10ms) == std::future_status::ready);
+      REQUIRE(statusesToUpdate == updatedStatuses.lockee());
     }
-    TEST_CASE_E(broad_cast_status_signal)
+
+    SECTION("remove_property") {
+      std::vector<std::string> expectedStatuses = {"set_status", ""};
+
+      std::vector<std::string> statuses;
+      stub->setStatus(tobe_removed_property::make_status("set_status"));
+      proxy->template registerStatus<tobe_removed_property::status>(
+          [&](tobe_removed_property::status_ptr status) {
+            if (status) {
+              statuses.push_back(status->get_its_status());
+            } else {
+              statuses.push_back("");
+            }
+          });
+      std::this_thread::sleep_for(10ms);
+
+      stub->template removeProperty<tobe_removed_property>(true);
+      std::this_thread::sleep_for(5ms);
+
+      REQUIRE(statuses == expectedStatuses);
+
+      statuses.clear();
+      stub->setStatus(tobe_removed_property::make_status("set_status"));
+      std::this_thread::sleep_for(10ms);
+      stub->template removeProperty<tobe_removed_property>(false);
+      std::this_thread::sleep_for(5ms);
+      expectedStatuses.pop_back();
+      REQUIRE(statuses == expectedStatuses);
+    }
 
     auto callstatus = ActionCallStatus{};
     auto response =
         proxy->template sendRequest<no_response_request>(&callstatus);
 
-    TEST_CASE_B(stopable_sync_request) {
-      EXPECT(callstatus == ActionCallStatus::ActionBroken);
+    SECTION("stopable_sync_request") {
+      REQUIRE(callstatus == ActionCallStatus::ActionBroken);
     }
 
-    TEST_CASE_E(stopable_sync_request)
-
-    TEST_CASE_B(service_status) {
-      EXPECT(serviceStatus == Availability::Unavailable);
+    SECTION("service_status") {
+      REQUIRE(serviceStatus == Availability::Unavailable);
     }
-    TEST_CASE_E(service_status)
+
+    SECTION("server_side_notification") {
+      auto dstub = stub->with(maf::util::directExecutor());
+      const std::string someString = "server_side_notification";
+      
+      std::shared_ptr < std::promise<std::string>> prom;
+      std::future<std::string> f;
+      auto resetPromise = [&] {
+        prom = std::make_shared<std::promise<std::string>>();
+        f = prom->get_future();
+      };
+      resetPromise();
+      
+      auto con =
+          dstub->template registerNotification<some_string_property::status>(
+              [&](const some_string_property::status_ptr& ptr) {
+                prom->set_value(ptr->get_its_status());
+              });
+
+      dstub->template setStatus<some_string_property::status>(someString);
+      REQUIRE(f.wait_for(1ms) == std::future_status::ready);
+      REQUIRE(f.get() == someString);
+
+      resetPromise();
+      dstub->template setStatus<some_string_property::status>(someString);
+      REQUIRE(f.wait_for(1ms) == std::future_status::timeout);
+
+      resetPromise();
+
+      // disconnect won't received the noti
+      con.disconnect();
+      dstub->template setStatus<some_string_property::status>(someString + "new");
+      REQUIRE(f.wait_for(1ms) == std::future_status::timeout);
+      
+      //for signal
+      auto sigcon =
+          dstub
+              ->template registerNotification<simple_string_signal::attributes>(
+                  [&](const simple_string_signal::attributes_ptr& ptr) {
+                    prom->set_value(ptr->get_str());
+                  });
+
+      auto sigcon1 =
+          dstub
+              ->template registerNotification<nothing_signal>(
+                  [&]{ prom->set_value("");
+                  });
+
+      dstub->template broadcastSignal<simple_string_signal::attributes>(someString);
+      REQUIRE(f.wait_for(1ms) == std::future_status::ready);
+      REQUIRE(f.get() == someString);
+
+      resetPromise();
+      dstub->template broadcastSignal<nothing_signal>();
+      REQUIRE(f.wait_for(1ms) == std::future_status::ready);
+      REQUIRE(f.get() == "");
+      resetPromise();
+      // disconnect won't received the noti
+      sigcon.disconnect();
+      dstub->template broadcastSignal<simple_string_signal::attributes>(
+          someString +
+                                                              "new");
+      REQUIRE(f.wait_for(1ms) == std::future_status::timeout);
+    }
   }
 
  private:
@@ -398,12 +505,14 @@ class Tester {
 };
 
 static constexpr auto ServiceIDTest = "request_response_test.service";
-void testLocalIPC() {
-  using namespace localipc;
-  maf::test::log_rec()
-      << "--------------START LOCAL IPC TEST --------------------";
-  Address addr{"maf.request_response_test.name", 0};
+static struct TestInitiliazer {
+  TestInitiliazer() { serverProcessor().launch(); }
+  ~TestInitiliazer() { serverProcessor()->stop(); }
+} testInitializer;
 
+TEST_CASE("local.ipc.test") {
+  using namespace localipc;
+  Address addr{"maf.request_response_test.name", 0};
   auto stub = createStub(addr, ServiceIDTest);
   while (!stub) {
     std::this_thread::sleep_for(10ms);
@@ -413,27 +522,9 @@ void testLocalIPC() {
   tester.test();
 }
 
-void testITC() {
+TEST_CASE("itc.test") {
   using namespace itc;
-
-  maf::test::log_rec() << "--------------START INTER THREAD COMMUNICATION TEST "
-                          "--------------------";
   Tester<itc::ParamTrait> tester{createStub(ServiceIDTest),
                                  createProxy(ServiceIDTest)};
   tester.test();
-}
-
-int main() {
-  //  maf::logging::init(maf::logging::LOG_LEVEL_FROM_INFO |
-  //                         maf::logging::LOG_LEVEL_VERBOSE |
-  //                         maf::logging::LOG_LEVEL_DEBUG,
-  //                     [](const auto& msg) { std::cout << msg << std::endl;
-  //                     });
-  static maf::util::TimeMeasurement tm([](auto elapsed) {
-    std::cout << "Total time = " << elapsed.count() / 1000 << "ms";
-  });
-  maf::test::init_test_cases();
-  testLocalIPC();
-  testITC();
-  return 0;
 }

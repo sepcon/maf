@@ -4,6 +4,23 @@
 
 namespace maf {
 namespace messaging {
+namespace details {
+
+MC_MAF_DEFINE_HAS_METHOD_CHECK_S(dump)
+
+template <class Message, typename = void>
+struct __Dumper {
+  static std::string dump(const Message&) { return typeid(Message).name(); }
+};
+template <class Message>
+struct __Dumper<Message,
+                std::enable_if_t<has_dump_method<std::decay_t<Message>,
+                                                 std::string(int) const>::value,
+                                 void>> {
+  static std::string dump(const Message& msg) { return msg.dump(0); }
+};
+
+}  // namespace details
 
 struct ParamTraitBase {
   template <class T>
@@ -29,6 +46,20 @@ struct ParamTraitBase {
   template <typename Input, typename Output>
   static bool isSameOpID(const Input* input, const Output* output) {
     return getOperationID(input) == getOperationID(output);
+  }
+
+  template <class Message>
+  static std::string dump(const std::shared_ptr<Message>& msg) {
+    if (msg) {
+      return dump(*msg);
+    } else {
+      return "null";
+    }
+  }
+
+  template <class Message>
+  static auto dump(const Message& msg) {
+    return details::__Dumper<Message>::dump(msg);
   }
 
   template <typename T>

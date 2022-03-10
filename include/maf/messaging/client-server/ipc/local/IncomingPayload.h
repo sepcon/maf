@@ -38,6 +38,9 @@ class IncomingPayload : public CSMsgPayloadIF {
 
   const StreamPtrType &stream() const { return stream_; }
   StreamViewType streamView() const { return StreamViewType(*stream_); }
+  void dump(std::ostream &os) const override {
+    os.write(stream_->buffer().c_str(), stream_->buffer().size());
+  }
 };
 
 }  // namespace local

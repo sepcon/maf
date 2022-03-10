@@ -18,23 +18,13 @@ class ClientFactoryImpl {
       _clientMap;
 
  public:
-  ~ClientFactoryImpl() {
-    std::lock_guard lock(_clientMap);
-    for (auto &[contype, clients] : *_clientMap) {
-      for (auto &[addr, client] : clients) {
-        client->stop();
-      }
-      for (auto &[addr, client] : clients) {
-        client->deinit();
-      }
-    }
-  }
+  ~ClientFactoryImpl() { close(); }
 
   std::shared_ptr<ClientIF> makeClient(const ConnectionType &connectionType) {
     if (connectionType == itc::connection_type) {
-      return itc::Client::instance();
+      return itc::makeClient();
     } else if (connectionType == ipc::local::connection_type) {
-      return std::make_shared<ipc::local::LocalIPCClient>();
+      return ipc::local::makeClient();
     } else {
       MAF_LOGGER_ERROR("Request creating with non-exist connection type [",
                        connectionType, "]");
@@ -58,9 +48,20 @@ class ClientFactoryImpl {
     }
     return client;
   }
+  void close() {
+    std::lock_guard lock(_clientMap);
+    for (auto &[contype, clients] : *_clientMap) {
+      for (auto &[addr, client] : clients) {
+        client->stop();
+      }
+      for (auto &[addr, client] : clients) {
+        client->deinit();
+      }
+    }
+  }
 };
 
-ClientFactory::ClientFactory(Invisible)
+ClientFactory::ClientFactory()
     : _pImpl{std::make_unique<ClientFactoryImpl>()} {}
 
 ClientFactory::~ClientFactory() = default;
@@ -70,5 +71,6 @@ std::shared_ptr<ClientIF> ClientFactory::getClient(
   return _pImpl->getClient(connectionType, addr);
 }
 
+void ClientFactory::close() { _pImpl->close(); }
 }  // namespace messaging
 }  // namespace maf

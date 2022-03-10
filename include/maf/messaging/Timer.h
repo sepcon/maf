@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 
-#include "Component.h"
+#include "Processor.h"
 
 namespace maf {
 namespace messaging {
@@ -25,14 +25,14 @@ class Timer : public pattern::Unasignable {
                         TimeOutCallback callback);
 
   MAF_EXPORT void start(long long milliseconds, TimeOutCallback callback,
-                        const ComponentInstance& comp);
+                        const ProcessorInstance& comp);
   MAF_EXPORT void start(std::chrono::milliseconds milliseconds,
                         TimeOutCallback callback,
-                        const ComponentInstance& comp);
+                        const ProcessorInstance& comp);
 
   MAF_EXPORT void restart();
   MAF_EXPORT void stop();
-  MAF_EXPORT void stop(const ComponentInstance& comp);
+  MAF_EXPORT void stop(const ProcessorInstance& comp);
   MAF_EXPORT bool running() const;
   MAF_EXPORT void setCyclic(bool cyclic = true);
   MAF_EXPORT static void timeoutAfter(long long milliseconds,
@@ -41,10 +41,10 @@ class Timer : public pattern::Unasignable {
                                       TimeOutCallback callback);
   MAF_EXPORT static void timeoutAfter(long long milliseconds,
                                       TimeOutCallback callback,
-                                      const ComponentInstance& comp);
+                                      const ProcessorInstance& comp);
   MAF_EXPORT static void timeoutAfter(std::chrono::milliseconds milliseconds,
                                       TimeOutCallback callback,
-                                      const ComponentInstance& comp);
+                                      const ProcessorInstance& comp);
 
  private:
   std::shared_ptr<struct TimerData> d_;

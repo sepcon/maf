@@ -1,9 +1,27 @@
 #include "Server.h"
+
+#include "../ServerBase.h"
 #include "Client.h"
 
 namespace maf {
 namespace messaging {
 namespace itc {
+
+auto client() { return makeClient(); }
+
+class Server : public ServerBase, pattern::Unasignable {
+  friend class Client;
+
+ public:
+  static std::shared_ptr<Server> instance();
+  bool start() override { return true; }
+  void stop() override {}
+  void deinit() override {}
+  ActionCallStatus sendMessageToClient(const CSMessagePtr &msg,
+                                       const Address &addr = {}) override;
+  void notifyServiceStatusToClient(const ServiceID &sid, Availability oldStatus,
+                                   Availability newStatus) override;
+};
 
 std::shared_ptr<Server> Server::instance() {
   static auto instance_ = std::make_shared<Server>();
@@ -11,8 +29,8 @@ std::shared_ptr<Server> Server::instance() {
 }
 
 ActionCallStatus Server::sendMessageToClient(const CSMessagePtr &msg,
-                                             const Address &/*addr*/) {
-  if (Client::instance()->onIncomingMessage(msg)) {
+                                             const Address & /*addr*/) {
+  if (client()->onIncomingMessage(msg)) {
     return ActionCallStatus::Success;
   } else {
     return ActionCallStatus::ReceiverUnavailable;
@@ -22,10 +40,11 @@ ActionCallStatus Server::sendMessageToClient(const CSMessagePtr &msg,
 void Server::notifyServiceStatusToClient(const ServiceID &sid,
                                          Availability oldStatus,
                                          Availability newStatus) {
-
-  Client::instance()->onServiceStatusChanged(sid, oldStatus, newStatus);
+  client()->onServiceStatusChanged(sid, oldStatus, newStatus);
 }
 
-} // namespace itc
-} // namespace messaging
-} // namespace maf
+std::shared_ptr<ServerIF> makeServer() { return Server::instance(); }
+
+}  // namespace itc
+}  // namespace messaging
+}  // namespace maf

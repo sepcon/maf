@@ -1,6 +1,6 @@
 #pragma once
 
-#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ProcessorEx.h>
 #include <maf/messaging/Timer.h>
 #include <maf/messaging/client-server/BasicStub.h>
 #include <maf/utils/TimeMeasurement.h>
@@ -53,12 +53,12 @@ inline auto createBigStringList(const std::string &item = "hello world",
 }
 
 template <class Stub>
-class ServerComponent : public maf::messaging::ComponentEx {
+class ServerProcessor : public maf::messaging::ProcessorEx {
   template <class Input>
   using Request = typename Stub::template Request<Input>;
 
  public:
-  ServerComponent(std::shared_ptr<Stub> stub) : stub_{std::move(stub)} {
+  ServerProcessor(std::shared_ptr<Stub> stub) : stub_{std::move(stub)} {
     stub_->setExecutor(instance()->getExecutor());
     MAF_LOGGER_DEBUG("Service id is: ", stub_->serviceID());
 
@@ -119,20 +119,20 @@ class ServerComponent : public maf::messaging::ComponentEx {
                   .count());
         });
 
-    stub_->template registerRequestHandler<shutdown_request>([this](
-                                                                 auto request) {
-      static auto retried = 0;
+    stub_->template registerRequestHandler<shutdown_request>(
+        [this](auto request) {
+          //          static auto retried = 0;
 
-      MAF_LOGGER_DEBUG("Recevied shutdown request from client!");
-      if (++retried == 20) {
-        MAF_LOGGER_DEBUG("Shutdown server due to many requests from client!");
-        request.respond();
-        (*this)->stop();
-      } else {
-        request.error("Client is not allowed to shutdown server",
-                      CSErrorCode::RequestRejected);
-      }
-    });
+          MAF_LOGGER_DEBUG("Recevied shutdown request from client!");
+          //      if (++retried == 5) {
+          //        MAF_LOGGER_DEBUG("Shutdown server due to many requests from
+          //        client!"); request.respond();
+          //        (*this)->stop();
+          //      } else {
+          //      }
+          request.error("Client is not allowed to shutdown server",
+                        CSErrorCode::RequestRejected);
+        });
 
     stub_->template registerRequestHandler<today_weather_request::input>(
         [](Request<today_weather_request::input> request) {

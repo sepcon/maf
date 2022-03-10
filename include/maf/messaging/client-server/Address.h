@@ -9,9 +9,9 @@
 namespace maf {
 namespace messaging {
 
-class Address : public srz::Tuplizable {
+class Address {
  public:
-  using Port = int;
+  using Port = uint16_t;
   using Name = std::string;
   using NameConstant = const char*;
 
@@ -37,9 +37,8 @@ class Address : public srz::Tuplizable {
   MAF_DECL_EXPORT Name& get_name();
 
   decltype(auto) as_tuple() { return std::tie(name_, port_); }
-  decltype(auto) as_tuple() const { return std::tie(name_, port_); }
+  decltype(auto) cas_tuple() const { return std::tie(name_, port_); }
 
-  MAF_DECL_EXPORT void dump(int indent, std::string& out) const;
   MAF_DECL_EXPORT std::string dump(int indent = -1) const;
 
  private:

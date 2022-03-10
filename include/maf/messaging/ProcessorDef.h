@@ -12,11 +12,11 @@
 namespace maf {
 namespace messaging {
 
-class Component;
-struct ConnectionID;
-using ComponentInstance = std::shared_ptr<Component>;
-using ComponentRef = std::weak_ptr<Component>;
-using ComponentID = std::string;
+class Processor;
+class MsgConnection;
+using ProcessorInstance = std::shared_ptr<Processor>;
+using ProcessorRef = std::weak_ptr<Processor>;
+using ProcessorID = std::string;
 using Message = std::any;
 using MessageID = std::type_index;
 using MessageProcessingCallback = std::function<void(const Message&)>;
@@ -27,8 +27,6 @@ template <class Msg>
 using SpecificMsgProcessingCallback = std::function<void(const Msg&)>;
 using EmptyMsgProcessingCallback = std::function<void()>;
 using threading::Upcoming;
-inline constexpr struct BlockingMode {
-} Blocked;
 
 // -----------------------------------------------------------
 
@@ -38,17 +36,6 @@ template <class Msg>
 MessageID msgid(Msg&& msg);
 template <class SpecificMsg, class... Args>
 Message makeMessage(Args&&... args);
-
-struct ConnectionID {
-  using HandlerID = void*;
-  static inline constexpr HandlerID InvalidHandlerID = nullptr;
-
-  bool valid() const { return hid_ != InvalidHandlerID; }
-  void invalidate() { hid_ = InvalidHandlerID; }
-
-  HandlerID hid_ = InvalidHandlerID;
-  MessageID mid_ = msgid<std::nullptr_t>();
-};
 
 template <class Msg>
 MessageID msgid() {

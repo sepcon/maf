@@ -11,10 +11,11 @@ class LocalIPCBufferSenderImpl : public NamedPipeSenderBase {
  public:
   LocalIPCBufferSenderImpl();
   ~LocalIPCBufferSenderImpl();
-  ActionCallStatus send(const maf::srz::Buffer &ba,
-                        const Address &destination);
+  ActionCallStatus send(const maf::srz::Buffer &ba, const Address &destination);
 
  private:
+  ActionCallStatus _send(const maf::srz::Buffer &ba,
+                         const Address &destination);
   OVERLAPPED oOverlap_;
 };
 

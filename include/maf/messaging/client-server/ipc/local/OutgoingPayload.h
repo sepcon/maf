@@ -1,6 +1,7 @@
 #pragma once
 
 #include <maf/messaging/client-server/CSMsgPayloadIF.h>
+#include <maf/utils/serialization/Dumper.h>
 #include <maf/utils/serialization/OByteStream.h>
 #include <maf/utils/serialization/Serializer.h>
 
@@ -44,12 +45,17 @@ class OutgoingPayloadT : public OutgoingPayload {
   }
 
   bool serialize(srz::OByteStream &os) const override {
+    srz::SR sr(os);
+    sr << content();
+    return !os.fail();
+  }
+
+  void dump(std::ostream &os) const override {
     if (content_) {
-      srz::SR sr(os);
-      sr << *content();
-      return !os.fail();
+      maf::srz::dump(os, *content(), -1);
+    } else {
+      os << "nullptr";
     }
-    throw std::runtime_error("OutgoingPayload: empty payload");
   }
 
  private:

@@ -23,6 +23,7 @@ class LocalIPCBufferReceiverImpl : public NamedPipeReceiverBase {
   using Handles = std::vector<HANDLE>;
 
   LocalIPCBufferReceiverImpl();
+  ~LocalIPCBufferReceiverImpl();
   bool stop();
   void setObserver(BytesComeCallback &&);
   bool init(const Address &address);

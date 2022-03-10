@@ -12,23 +12,29 @@
 
 #define MAF_ENABLE_JSON
 
-#include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
 #include <maf/utils/serialization/JsonTrait.h>
-#include <maf/utils/serialization/Tuplizable.h>
 
 #include <json11.hpp>
 
 namespace maf {
 namespace srz {
 
-using Json = json11::Json;
+#define __MC_MAF_COMPATIBLE_JSON_TYPES_MSG \
+  R"(1. std::string
+    2. integer types
+    3. double
+    4. bool
+    5. TuplizableTypeBase classes
+    6. std::vector<one_of_above_types>
+    7. std::map<string, one_of_above_types>)"
 
+using Json = json11::Json;
 template <typename T>
 struct is_json11_convertible_type
     : public std::integral_constant<bool, std::is_same_v<std::string, T> ||
                                               nstl::is_number_type_v<T> ||
-                                              is_tuplizable_type_v<T>> {};
+                                              T::jsonizable> {};
 
 template <typename T>
 struct is_json11_convertible_type<std::vector<T>>
@@ -42,27 +48,19 @@ struct is_json11_convertible_type<std::map<Key, Value>>
           bool, std::is_same_v<std::string, Key> &&
                     is_json11_convertible_type<Value>::value> {};
 
+template <typename Type, typename = void>
+struct J11TraitImpl;
+
 template <typename Type>
-struct J11TraitImpl {
-  static Type get(const Json &j) { return internal::template get<Type>(j); }
+struct J11TraitImpl<Type,
+                    decltype(std::declval<Type>().load_from_json(Json{}))> {
+  static Type get(const Json &j) {
+    Type t;
+    t.load_from_json(j);
+    return t;
+  }
 
-  static bool exist(const Json &j) { return internal::template exist<Type>(j); }
-
-  struct internal {
-    template <typename T,
-              std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
-    static T get(const Json &j) {
-      T t;
-      t.load_from_json(j);
-      return t;
-    }
-
-    template <typename T,
-              std::enable_if_t<is_tuplizable_type_v<T>, bool> = true>
-    static bool exist(const Json &j) {
-      return j.is_object();
-    }
-  };
+  static bool exist(const Json &j) { return j.is_object(); }
 };
 
 template <>
@@ -74,15 +72,9 @@ struct J11TraitImpl<json11::Json> {
 template <class T>
 struct J11TraitImpl<std::vector<T>> {
   using ReturnType = std::vector<T>;
-  static_assert(is_json11_convertible_type<T>::value,
-                R"(Please provide: vector of below types only:
-    1. std::string
-    2. integer types
-    3. double
-    4. bool
-    5. TuplizableTypeBase classes
-    6. std::vector<one_of_above_types>
-    7. std::map<string, one_of_above_types>)");
+  static_assert(
+      is_json11_convertible_type<T>::value,
+      R"(Please provide: vector of below types only: )" __MC_MAF_COMPATIBLE_JSON_TYPES_MSG);
 
   static ReturnType get(const Json &j) {
     auto &array = j.array_items();
@@ -101,14 +93,7 @@ struct J11TraitImpl<std::map<Key, Value>> {
   static_assert(
       std::is_same_v<std::string, Key> &&
           is_json11_convertible_type<Value>::value,
-      R"(Please provide: map of KEY `string` and VALUE in below types only:
-    1. std::string
-    2. integer types
-    3. double
-    4. bool
-    5. TuplizableTypeBase classes
-    6. std::vector<one_of_above_types>
-    7. std::map<string, one_of_above_types>)");
+      R"(Please provide: map of KEY `string` and VALUE in below types only:)" __MC_MAF_COMPATIBLE_JSON_TYPES_MSG);
 
   static ReturnType get(const Json &j) {
     auto &items = j.object_items();
@@ -129,24 +114,22 @@ struct J11TraitImpl<std::map<Key, Value>> {
       return static_cast<type>(j.get_function());                   \
     }                                                               \
     static bool exist(const Json &j) { return j.exist_function(); } \
-  };
+  }
 
-mc_J11TraitImpl(int16_t, is_number, int_value)
-    mc_J11TraitImpl(uint16_t, is_number, int_value)
-        mc_J11TraitImpl(int32_t, is_number, int_value)
-            mc_J11TraitImpl(uint32_t, is_number, int_value)
-                mc_J11TraitImpl(int64_t, is_number, number_value)
-                    mc_J11TraitImpl(uint64_t, is_number, number_value)
-                        mc_J11TraitImpl(float, is_number, number_value)
-                            mc_J11TraitImpl(double, is_number, number_value)
-                                mc_J11TraitImpl(std::string, is_string,
-                                                string_value)
-                                    mc_J11TraitImpl(bool, is_bool, bool_value)
+mc_J11TraitImpl(int16_t, is_number, int_value);
+mc_J11TraitImpl(uint16_t, is_number, int_value);
+mc_J11TraitImpl(int32_t, is_number, int_value);
+mc_J11TraitImpl(uint32_t, is_number, int_value);
+mc_J11TraitImpl(int64_t, is_number, number_value);
+mc_J11TraitImpl(uint64_t, is_number, number_value);
+mc_J11TraitImpl(float, is_number, number_value);
+mc_J11TraitImpl(double, is_number, number_value);
+mc_J11TraitImpl(std::string, is_string, string_value);
+mc_J11TraitImpl(bool, is_bool, bool_value);
 #undef mc_J11TraitImpl
 
-                                        template <>
-                                        struct JsonTrait<json11::Json>
-    : public JsonTraitBase<json11::Json> {
+template <>
+struct JsonTrait<json11::Json> : public JsonTraitBase<json11::Json> {
   using Json = json11::Json;
   static json11::Json unmarshall(const std::string &s) {
     std::string err;
@@ -165,11 +148,13 @@ mc_J11TraitImpl(int16_t, is_number, int_value)
     return static_cast<T>(J11TraitImpl<T>::get(j[key]));
   }
 
-  static Json fromString(const std::string &json_string) {
+  static Json parse(const std::string &json_string) {
     std::string err;
     return json11::Json::parse(json_string, err);
   }
 };
+
+#undef __MC_MAF_COMPATIBLE_JSON_TYPES_MSG
 
 }  // namespace srz
 }  // namespace maf

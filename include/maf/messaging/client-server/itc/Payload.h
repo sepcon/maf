@@ -2,14 +2,17 @@
 
 #include <maf/messaging/client-server/CSMsgPayloadIF.h>
 #include <maf/messaging/client-server/cs_param.h>
+#include <maf/utils/serialization/Dumper.h>
+
 #include <memory>
 
 namespace maf {
 namespace messaging {
 namespace itc {
 
-template <class Content> class Payload : public CSMsgPayloadIF {
-public:
+template <class Content>
+class Payload : public CSMsgPayloadIF {
+ public:
   using ContentType = std::shared_ptr<Content>;
 
   Payload(CSPayloadType type, ContentType payload = {})
@@ -37,11 +40,15 @@ public:
     return new Payload(type_, content_);
   }
 
-private:
+  void dump(std::ostream &os) const override {
+    maf::srz::dump(os, content(), -1);
+  }
+
+ private:
   ContentType content_;
   CSPayloadType type_ = CSPayloadType::NA;
 };
 
-} // namespace itc
-} // namespace messaging
-} // namespace maf
+}  // namespace itc
+}  // namespace messaging
+}  // namespace maf

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <maf/messaging/client-server/CSMessage.h>
 #include <maf/utils/serialization/SerializableIF.h>
 
 #include <cassert>
+
+#include "CSMessage.h"
 
 namespace maf {
 namespace messaging {

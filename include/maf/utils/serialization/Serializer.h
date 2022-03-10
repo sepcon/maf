@@ -3,17 +3,12 @@
 #include <maf/utils/cppextension/TupleManip.h>
 #include <maf/utils/cppextension/TypeTraits.h>
 
-#include <cassert>
 #include <string>
-#include <tuple>
 
 #include "Tuplizable.h"
 
 /// Serialization
 
-#define mc_enable_if_is_tuplelike_(TypeName) \
-  template <typename TypeName,               \
-            std::enable_if_t<is_tuplizable_type_v<TypeName>, bool> = true>
 #define mc_enable_if_is_number_or_enum_(NumberType)                     \
   template <typename NumberType,                                        \
             std::enable_if_t<nstl::is_number_type<NumberType>::value || \
@@ -51,7 +46,10 @@ template <class OStream, typename T>
 void serialize(OStream &, const T &);
 
 template <class IStream, typename T>
-T deserialize(IStream &, bool &);
+bool deserialize(IStream &is, T &value);
+
+template <typename T>
+SizeType serializedSize(const T &value);
 
 namespace internal {
 
@@ -85,18 +83,17 @@ struct StreamHelper {
 
 template <class T>
 struct DeserializableType {
-  using Type = std::remove_const_t<T>;
+  using Type = std::decay_t<T>;
 };
 
 template <class First, class Second>
 struct DeserializableType<std::pair<First, Second>> {
-  using Type =
-      std::pair<std::remove_const_t<First>, std::remove_const_t<Second>>;
+  using Type = std::pair<std::decay_t<First>, std::decay_t<Second>>;
 };
 
 template <class... Args>
 struct DeserializableType<std::tuple<Args...>> {
-  using Type = std::tuple<std::remove_const_t<Args>...>;
+  using Type = std::tuple<std::decay_t<Args>...>;
 };
 
 }  // namespace internal
@@ -112,26 +109,56 @@ struct Serializer {
   bool deserialize(IStream &is, T &val) {
     return Impl::template deserialize<T>(is, val);
   }
+
   SizeType serializedSize(const T &value) noexcept {
     return Impl::template serializedSize<T>(value);
   }
 
   struct Impl {
-    mc_enable_if_is_tuplelike_(TupleLike) inline static SizeType
-        serializedSize(const TupleLike &value) noexcept {
-      return SerializerT<decltype(value.as_tuple())>{}.serializedSize(
-          value.as_tuple());
+    template <
+        class Tuplizable,
+        std::enable_if_t<has_cas_tuple_method<Tuplizable>::value, bool> = true>
+    inline static SizeType serializedSize(const Tuplizable &value) noexcept {
+      return maf::srz::serializedSize(value.cas_tuple());
     }
 
-    mc_enable_if_is_tuplelike_(TupleLike) static void serialize(
-        OStream &os, const TupleLike &value) {
-      SerializerT<decltype(value.as_tuple())>{}.serialize(os, value.as_tuple());
+    template <
+        class Tuplizable,
+        std::enable_if_t<has_cas_tuple_method<Tuplizable>::value, bool> = true>
+    static void serialize(OStream &os, const Tuplizable &value) {
+      maf::srz::serialize(os, value.cas_tuple());
     }
 
-    mc_enable_if_is_tuplelike_(TupleLike) static bool deserialize(
-        IStream &is, TupleLike &tpl) {
+    template <
+        class Tuplizable,
+        std::enable_if_t<has_as_tuple_method<Tuplizable>::value, bool> = true>
+    static bool deserialize(IStream &is, Tuplizable &tpl) {
       auto tp = tpl.as_tuple();
-      return Serializer<OStream, IStream, decltype(tp)>{}.deserialize(is, tp);
+      return maf::srz::deserialize(is, tp);
+    }
+
+    template <class Struct>
+    using __is_pure_struct_t =
+        std::enable_if_t<std::is_aggregate_v<Struct> &&
+                             !has_cas_tuple_method<Struct>::value &&
+                             !has_as_tuple_method<Struct>::value,
+                         bool>;
+
+    template <class Struct, __is_pure_struct_t<Struct> = true>
+    inline static SizeType serializedSize(const Struct &struct_) noexcept {
+      auto tp = tuple_view(struct_);
+      return maf::srz::serializedSize(tp);
+    }
+
+    template <class Struct, __is_pure_struct_t<Struct> = true>
+    static void serialize(OStream &os, const Struct &struct_) {
+      maf::srz::serialize(os, tuple_view(struct_));
+    }
+
+    template <class Struct, __is_pure_struct_t<Struct> = true>
+    static bool deserialize(IStream &is, Struct &struct_) {
+      auto tp = tuple_view(struct_);
+      return maf::srz::deserialize(is, tp);
     }
 
     mc_enable_if_is_number_or_enum_(NumberOrEnum) static SizeType
@@ -154,9 +181,7 @@ struct Serializer {
         serializedSize(PointerType value) noexcept {
       SizeType size = 1;
       if (value) {
-        using NormalTypeOfPointerType =
-            std::remove_const_t<std::remove_pointer_t<PointerType>>;
-        size += SerializerT<NormalTypeOfPointerType>{}.serializedSize(*value);
+        size += maf::srz::serializedSize(*value);
       }
       return size;
     }
@@ -168,10 +193,8 @@ struct Serializer {
       mc_must_default_constructible(PointerType);
       char c = 1;
       if (p) {
-        using NormalTypeOfPointerType =
-            std::remove_const_t<std::remove_pointer_t<PointerType>>;
         os.write(&c, 1);
-        SerializerT<NormalTypeOfPointerType>{}.serialize(os, *p);
+        maf::srz::serialize(os, *p);
       } else {
         c = 0;
         os.write(&c, 1);
@@ -191,7 +214,7 @@ struct Serializer {
       is.read(internal::to_cstr(&isNotNull), 1);
       if (isNotNull) {
         p = new NormalTypeOfPointerType{};
-        success = SerializerT<NormalTypeOfPointerType>{}.deserialize(is, *p);
+        success = maf::srz::deserialize(is, *p);
         if (!success) {
           delete p;
           p = nullptr;
@@ -203,14 +226,12 @@ struct Serializer {
 
     mc_enable_if_is_smartptr_(SmartPtrType) static SizeType
         serializedSize(const SmartPtrType &value) noexcept {
-      using PtrType = typename SmartPtrType::element_type *;
-      return SerializerT<PtrType>{}.serializedSize(value.get());
+      return maf::srz::serializedSize(value.get());
     }
 
     mc_enable_if_is_smartptr_(SmartPtrType) static void serialize(
         OStream &os, const SmartPtrType &p) {
-      using PtrType = typename SmartPtrType::element_type *;
-      SerializerT<PtrType>{}.serialize(os, p.get());
+      maf::srz::serialize(os, p.get());
     }
 
     mc_enable_if_is_smartptr_(SmartPtrType) static bool deserialize(
@@ -218,7 +239,7 @@ struct Serializer {
       using PtrType = typename SmartPtrType::element_type *;
       auto success = false;
       PtrType ptr = nullptr;
-      if (success = SerializerT<PtrType>{}.deserialize(is, ptr); success) {
+      if (success = maf::srz::deserialize(is, ptr); success) {
         sptr.reset(ptr);
       }
       return success;
@@ -227,9 +248,8 @@ struct Serializer {
     mc_enable_if_is_iterable_(Container) inline static SizeType
         serializedSize(const Container &c) noexcept {
       SizeType contentSize = 0;
-      auto sr = SerializerT<typename Container::value_type>{};
       for (const auto &e : c) {
-        contentSize += sr.serializedSize(e);
+        contentSize += maf::srz::serializedSize(e);
       }
       return SIZETYPE_WIDE + contentSize;
     }
@@ -237,13 +257,9 @@ struct Serializer {
     mc_enable_if_is_iterable_(Container) static void serialize(
         OStream &os, const Container &c) {
       auto numberOfElems = static_cast<SizeType>(c.size());
-      auto elemSrz =
-          Serializer<OStream, IStream, typename Container::value_type>{};
-
-      SerializerT<SizeType>{}.serialize(os, numberOfElems);
-
+      maf::srz::serialize(os, numberOfElems);
       for (const auto &elem : c) {
-        elemSrz.serialize(os, elem);
+        maf::srz::serialize(os, elem);
       }
     }
 
@@ -252,20 +268,15 @@ struct Serializer {
     static bool deserialize(IStream &is, Container &c) {
       using ElemType = typename Container::value_type;
       using DSBElemType = typename internal::DeserializableType<ElemType>::Type;
-      using SizeTypeSerializer = SerializerT<SizeType>;
-
-      constexpr bool pushBackable = nstl::is_back_insertible_v<Container>;
       auto success = false;
-      auto esr = SerializerT<DSBElemType>{};
       SizeType size = 0;
 
-      if (success |= SizeTypeSerializer{}.deserialize(is, size);
-          success && size > 0) {
+      if (success |= maf::srz::deserialize(is, size); success && size > 0) {
         internal::ContainerReserver<Container>::reserve(c, size);
         for (SizeType i = 0; i < size; ++i) {
           DSBElemType elem;
-          if (success |= esr.deserialize(is, elem); success) {
-            if constexpr (pushBackable) {
+          if (success |= maf::srz::deserialize(is, elem); success) {
+            if constexpr (nstl::is_back_insertible_v<Container>) {
               c.push_back(std::move(elem));
             } else {
               c.insert(std::move(elem));
@@ -291,54 +302,46 @@ struct Serializer<OStream, IStream, std::pair<First, Second>, void> {
   using NCDType = std::pair<FirstPure, SecondPure>;
 
   SizeType serializedSize(const DType &p) noexcept {
-    return firstSr_.serializedSize(p.first) +
-           secondSr_.serializedSize(p.second);
+    return maf::srz::serializedSize(p.first) +
+           maf::srz::serializedSize(p.second);
   }
 
   void serialize(OStream &os, const DType &p) {
-    firstSr_.serialize(os, p.first);
-    secondSr_.serialize(os, p.second);
+    maf::srz::serialize(os, p.first);
+    maf::srz::serialize(os, p.second);
   }
 
   bool deserialize(IStream &is, NCDType &value) {
     bool success = false;
-    if (success |= firstSr_.deserialize(is, value.first); success) {
-      success |= secondSr_.deserialize(is, value.second);
+    if (success |= maf::srz::deserialize(is, value.first); success) {
+      success |= maf::srz::deserialize(is, value.second);
     }
     return success;
   }
-
-  SerializerT<FirstPure> firstSr_;
-  SerializerT<SecondPure> secondSr_;
 };
 
 template <class OStream, class IStream, typename Tuple>
 struct Serializer<OStream, IStream, Tuple,
                   std::enable_if_t<nstl::is_tuple_v<Tuple>, void>> {
-  template <typename T>
-  using SerializerT = Serializer<OStream, IStream, T>;
   using SrType = Tuple;
 
   SizeType serializedSize(const Tuple &tp) noexcept {
     SizeType contentSize = 0;
     nstl::tuple_for_each(tp, [&contentSize](const auto &elem) {
-      contentSize +=
-          SerializerT<pure_type_t<decltype(elem)>>{}.serializedSize(elem);
+      contentSize += maf::srz::serializedSize(elem);
     });
     return contentSize;
   }
 
   void serialize(OStream &os, const SrType &tp) {
-    nstl::tuple_for_each(tp, [&os](const auto &elem) {
-      SerializerT<pure_type_t<decltype(elem)>>{}.serialize(os, elem);
-    });
+    nstl::tuple_for_each(
+        tp, [&os](const auto &elem) { maf::srz::serialize(os, elem); });
   }
 
   bool deserialize(IStream &is, SrType &tp) {
     bool success = false;
     nstl::tuple_for_each(tp, [&is, &success](auto &elem) {
-      success |=
-          SerializerT<pure_type_t<decltype(elem)>>{}.deserialize(is, elem);
+      success |= maf::srz::deserialize(is, elem);
     });
     return success;
   }
@@ -367,7 +370,7 @@ struct Serializer<OStream, IStream, std::basic_string<CharT, Trait, Allocator>,
 
   bool deserialize(IStream &is, SrType &value) {
     SizeType size = 0;
-    if (SerializerT<SizeType>{}.deserialize(is, size)) {
+    if (maf::srz::deserialize(is, size)) {
       if (size > 0) {
         value.resize(size);
         is.read(internal::to_cstr(&value[0]), size * sizeof(CharT));
@@ -388,31 +391,61 @@ struct Serializer<
   using SrType = StringDerived;
 
   SizeType serializedSize(const SrType &value) noexcept {
-    return ssr_.serializedSize(static_cast<const std::string &>(value));
+    return maf::srz::serializedSize(static_cast<const std::string &>(value));
   }
 
   void serialize(OStream &os, const SrType &value) {
-    ssr_.serialize(os, static_cast<const std::string &>(value));
+    maf::srz::serialize(os, static_cast<const std::string &>(value));
   }
 
   bool deserialize(IStream &is, SrType &value) {
-    return ssr_.deserialize(is, static_cast<std::string &>(value));
+    return maf::srz::deserialize(is, static_cast<std::string &>(value));
   }
-
-  SerializerT<std::string> ssr_;
 };
 
+template <typename T>
+SizeType _serializedSize(const T &value) {
+  return Serializer<std::nullptr_t, std::nullptr_t, T>{}.serializedSize(value);
+}
+
 template <class OStream, typename T>
-void serialize(OStream &os, const T &v) {
+void _serialize(OStream &os, const T &v) {
   using namespace internal;
   auto sr = Serializer<OStream, std::nullptr_t, T>{};
-  StreamHelper<OStream>::prepareNextWrite(os, sr.serializedSize(v));
   sr.serialize(os, v);
 }
 
 template <class IStream, typename T>
-bool deserialize(IStream &is, T &value) {
+bool _deserialize(IStream &is, T &value) {
   return Serializer<std::nullptr_t, IStream, T>{}.deserialize(is, value);
+}
+
+template <class OStream, typename T>
+void serialize(OStream &os, const T &v) {
+  using namespace maf::srz;
+  _serialize(os, v);
+}
+
+template <class IStream, typename T>
+bool deserialize(IStream &is, T &value) {
+  using namespace maf::srz;
+  return _deserialize(is, value);
+}
+
+template <typename T>
+SizeType serializedSize(const T &value) {
+  using namespace maf::srz;
+  return _serializedSize(value);
+}
+
+template <class OStream, typename... Ts>
+void serializeBatch(OStream &os, const Ts &...ts) {
+  serialize(os, std::tie(ts...));
+}
+
+template <class IStream, typename... Ts>
+bool deserializeBatch(IStream &is, Ts &...ts) {
+  return deserialize(is, std::tie(ts...));
 }
 
 template <class OStream>
@@ -428,8 +461,8 @@ class SR {
   }
 
   template <typename... Ts>
-  void serializeBatch(const Ts &... ts) {
-    serialize(os_, std::tie(ts...));
+  void serializeBatch(const Ts &...ts) {
+    maf::srz::serializeBatch(os_, ts...);
   }
 };
 
@@ -441,26 +474,32 @@ class DSR {
   DSR(IStream &is) : is_{is} {}
   template <typename T>
   DSR &operator>>(T &value) {
-    if (!deserialize<IStream, T>(is_, value)) {
+    if (!deserialize(is_, value)) {
       throw std::runtime_error{"Could not deserialize"};
     }
     return *this;
   }
 
   template <typename... Ts>
-  DSR &deserializeBatch(Ts &... ts) {
-    auto tp = std::tie(ts...);
-    if (!deserialize<IStream, std::tuple<Ts...>>(is_, tp)) {
+  DSR &deserializeBatch(Ts &...ts) {
+    if (!maf::srz::deserializeBatch(is_, ts...)) {
       throw std::runtime_error{"Could not deserialize"};
     }
     return *this;
   }
 };
 
+#define MC_MAF_DEFINE_SERIALIZE_FUNCTION(CustomType, variableName) \
+  template <class OStream>                                         \
+  void _serialize(OStream &os, const CustomType &variableName)
+
+#define MC_MAF_DEFINE_DESERIALIZE_FUNCTION(CustomType, variableName) \
+  template <class IStream>                                           \
+  bool _deserialize(IStream &is, CustomType &variableName)
+
 }  // namespace srz
 }  // namespace maf
 
-#undef mc_enable_if_is_tuplelike_
 #undef mc_enable_if_is_number_or_enum_
 #undef mc_enable_if_is_smartptr_
 #undef mc_enable_if_is_ptr_

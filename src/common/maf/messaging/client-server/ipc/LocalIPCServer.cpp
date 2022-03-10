@@ -43,8 +43,6 @@ void LocalIPCServer::stop() {
   }
 }
 
-void LocalIPCServer::deinit() {}
-
 ActionCallStatus LocalIPCServer::sendMessageToClient(const CSMessagePtr &msg,
                                                      const Address &addr) {
   assert(msg != nullptr);
@@ -78,31 +76,44 @@ void LocalIPCServer::notifyServiceStatusToClient(const ServiceID &sid,
     for (auto itAddr = registedClAddrs_->begin();
          itAddr != registedClAddrs_->end();) {
       auto ec = sendMessageToClient(serviceStatusMsg, *itAddr);
+      MAF_LOGGER_INFO("[][][]Updated service ", sid, " status to client ",
+                      itAddr->dump(), " with result: ", ec);
       if ((ec == ActionCallStatus::ReceiverUnavailable) ||
           (ec == ActionCallStatus::FailedUnknown)) {
         // Client has been off, then don't keep their contact anymore
+        MAF_LOGGER_INFO(
+            "[][][]Client has been off, then don't keep their contact anymore");
         itAddr = registedClAddrs_->erase(itAddr);
       } else {
         ++itAddr;
       }
     }
+  } else {
+    MAF_LOGGER_INFO("[][][]Service ", sid, " status unchanged: ", newStatus);
   }
 }
 
 bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
   switch (csMsg->operationCode()) {
-    case OpCode::RegisterServiceStatus:
+    case OpCode::RegisterServiceStatus: {
+      MAF_LOGGER_INFO("[][][]Client registers for service status change: ",
+                      csMsg->sourceAddress().dump());
+
       registedClAddrs_.atomic()->insert(csMsg->sourceAddress());
-      {
-        std::lock_guard lock(providers_);
-        for (auto &[sid, provider] : *providers_) {
-          if (provider->availability() == Availability::Available) {
-            notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
-                                        Availability::Unavailable,
-                                        Availability::Available);
-          }
+
+      std::lock_guard lock(providers_);
+      for (auto &[sid, provider] : *providers_) {
+        if (provider->availability() == Availability::Available) {
+          notifyServiceStatusToClient(csMsg->sourceAddress(), sid,
+                                      Availability::Unavailable,
+                                      Availability::Available);
         }
       }
+      if (providers_->empty()) {
+        MAF_LOGGER_INFO(
+            "[][][]Theres no service available at this point of time!");
+      }
+    }
       return true;
 
     case OpCode::UnregisterServiceStatus:
@@ -125,19 +136,18 @@ bool LocalIPCServer::onIncomingMessage(const CSMessagePtr &csMsg) {
 }
 
 void LocalIPCServer::onBytesCome(srz::Buffer &&buff) {
-  single_threadpool::submit(
-      [thisw = weak_from_this(), buff = std::move(buff)]() mutable {
-        if (auto this_ = thisw.lock()) {
-          std::shared_ptr<LocalIPCMessage> csMsg =
-              std::make_shared<LocalIPCMessage>();
-          if (csMsg->fromBytes(std::move(buff))) {
-            std::static_pointer_cast<LocalIPCServer>(this_)->onIncomingMessage(
-                csMsg);
-          } else {
-            MAF_LOGGER_ERROR("incoming message is not wellformed");
-          }
-        }
-      });
+  single_threadpool::submit([thisw = weak_from_this(),
+                             buff = std::move(buff)]() mutable {
+    if (auto this_ = thisw.lock()) {
+      std::shared_ptr<LocalIPCMessage> csMsg =
+          std::make_shared<LocalIPCMessage>();
+      if (csMsg->fromBytes(std::move(buff))) {
+        static_cast<LocalIPCServer *>(this_.get())->onIncomingMessage(csMsg);
+      } else {
+        MAF_LOGGER_ERROR("incoming message is not wellformed");
+      }
+    }
+  });
 }
 
 void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,
@@ -145,19 +155,24 @@ void LocalIPCServer::notifyServiceStatusToClient(const Address &clAddr,
                                                  Availability oldStatus,
                                                  Availability newStatus) {
   if (oldStatus != newStatus) {
-    MAF_LOGGER_INFO("Update service ", sid,
-                    " status to client at address: ", clAddr.dump());
     auto serviceStatusMsg = createCSMessage<LocalIPCMessage>(
         sid,
         newStatus == Availability::Available ? OpID_ServiceAvailable
                                              : OpID_ServiceUnavailable,
         OpCode::ServiceStatusUpdate);
     auto ec = sendMessageToClient(serviceStatusMsg, clAddr);
+    MAF_LOGGER_INFO("[][][]Update service ", sid,
+                    " status to client at address: ", clAddr.dump(),
+                    " with status: ", ec);
     if ((ec != ActionCallStatus::Success) &&
         (ec != ActionCallStatus::ReceiverBusy)) {
       // Don't need to remove client if failed?
     }
   }
+}
+
+std::shared_ptr<ServerIF> makeServer() {
+  return std::make_shared<LocalIPCServer>();
 }
 
 }  // namespace local

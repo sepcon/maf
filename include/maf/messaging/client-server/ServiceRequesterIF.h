@@ -19,6 +19,10 @@ class MAF_EXPORT ServiceRequesterIF : public CSMessageReceiverIF,
 
   virtual const ServiceID &serviceID() const = 0;
 
+  virtual void init() = 0;
+
+  virtual void deinit() = 0;
+
   virtual RegID registerStatus(const OpID &propertyID,
                                CSPayloadProcessCallback callback,
                                ActionCallStatus *callStatus) = 0;

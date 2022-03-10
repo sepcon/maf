@@ -1,12 +1,18 @@
 #include "LocalIPCClient.h"
 
 #include <maf/logging/Logger.h>
+#include <maf/messaging/Timer.h>
 #include <maf/utils/Process.h>
 
 #include <cassert>
+#include <future>
+#include <thread>
 
+#include "../ClientBase.h"
 #include "../SingleThreadPool.h"
+#include "BufferReceiverIF.h"
 #include "BufferSenderIF.h"
+#include "IPCTypes.h"
 #include "LocalIPCBufferReceiver.h"
 #include "LocalIPCBufferSender.h"
 #include "LocalIPCMessage.h"
@@ -15,6 +21,37 @@ namespace maf {
 namespace messaging {
 namespace ipc {
 namespace local {
+
+class LocalIPCClient : public ClientBase, public BytesComeObserver {
+ public:
+  LocalIPCClient();
+  ~LocalIPCClient() override;
+
+  bool init(const Address &serverAddress) override;
+  bool start() override;
+  void stop() override;
+  void deinit() override;
+
+  ActionCallStatus sendMessageToServer(const CSMessagePtr &msg) override;
+
+  void onServerStatusChanged(Availability oldStatus,
+                             Availability newStatus) noexcept override;
+
+ protected:
+  void monitorServerStatus(long long intervalMs = 0);
+  void onBytesCome(srz::Buffer &&buff) override;
+
+  Address myServerAddress_;
+
+  Timer serverMonitorTimer_;
+  std::thread receiverThread_;
+
+  std::unique_ptr<BufferSenderIF> pSender_;
+  std::unique_ptr<BufferReceiverIF> pReceiver_;
+
+  Availability currentServerStatus_ = Availability::Unavailable;
+  int serverMonitorInterval = 500;
+};
 
 LocalIPCClient::LocalIPCClient()
     : pSender_{new local::LocalIPCBufferSender},
@@ -50,7 +87,7 @@ void LocalIPCClient::stop() {
 
 void LocalIPCClient::deinit() { ClientBase::deinit(); }
 
-LocalIPCClient::~LocalIPCClient() { deinit(); }
+LocalIPCClient::~LocalIPCClient() { LocalIPCClient::deinit(); }
 
 ActionCallStatus LocalIPCClient::sendMessageToServer(const CSMessagePtr &msg) {
   assert(msg != nullptr);
@@ -71,23 +108,30 @@ void LocalIPCClient::onServerStatusChanged(Availability oldStatus,
   if (newStatus == Availability::Available) {
     auto registeredMsg = messaging::createCSMessage<LocalIPCMessage>(
         ServiceIDInvalid, OpIDInvalid, OpCode::RegisterServiceStatus);
-    if (sendMessageToServer(registeredMsg) == ActionCallStatus::Success) {
+    if (auto callStatus = sendMessageToServer(registeredMsg);
+        callStatus == ActionCallStatus::Success) {
       MAF_LOGGER_INFO(
-          "Send service status change register to server successfully!");
+          "Send service status change register to server successfully! from ",
+          pReceiver_->address().dump());
+      currentServerStatus_ = newStatus;
     } else {
-      MAF_LOGGER_INFO(
-          "Could not send service status register request to server");
+      MAF_LOGGER_ERROR(
+          "Could not send service status register request to server: ",
+          callStatus);
     }
+  } else {
+    currentServerStatus_ = newStatus;
   }
 }
 
 void LocalIPCClient::monitorServerStatus(long long tunedInterval) {
   if (auto newStatus = pSender_->checkReceiverStatus(myServerAddress_);
       currentServerStatus_ != newStatus) {
+    MAF_LOGGER_INFO("Server (", myServerAddress_.get_name(),
+                    ")'s status changed from: ", currentServerStatus_, " to ",
+                    newStatus);
     tunedInterval = serverMonitorInterval;
     this->onServerStatusChanged(currentServerStatus_, newStatus);
-    currentServerStatus_ = newStatus;
-
   } else if (tunedInterval < serverMonitorInterval) {
     tunedInterval += 5;
   }
@@ -106,6 +150,10 @@ void LocalIPCClient::onBytesCome(srz::Buffer &&buff) {
       MAF_LOGGER_ERROR("incoming message is not wellformed");
     }
   });
+}
+
+std::shared_ptr<ClientIF> makeClient() {
+  return std::make_shared<LocalIPCClient>();
 }
 
 }  // namespace local

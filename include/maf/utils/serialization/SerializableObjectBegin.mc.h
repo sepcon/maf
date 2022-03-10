@@ -36,30 +36,30 @@
 
 #ifndef MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 #define MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
-#   include "Serializer.h"
-#   include "DumpHelper.h"
-#endif // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
+#include "Dumper.h"
+#include "Serializer.h"
+#endif  // MAF_UTILS_SERIALIZATION_MAFOBJECTBEGIN_MC_H
 
 // The rest of this file must be putted outside include guard
 // Make it to be use with multiple files
 #include "Internal/SerializableObjectImpl.mc.h"
 
-# ifdef OBJECT
-#     pragma push_macro("OBJECT")
-#     define maf_restore_macro_OBJECT
-# endif
-# ifdef OBJECT_EX
-#     pragma push_macro("OBJECT_EX")
-#     define maf_restore_macro_OBJECT_EX
-# endif
-# ifdef MEMBERS
-#     pragma push_macro("MEMBERS")
-#     define maf_restore_macro_MEMBERS
-# endif
-# ifdef ENDOBJECT
-#     pragma push_macro("ENDOBJECT")
-#     define maf_restore_macro_END_OBJECT
-# endif
+#ifdef OBJECT
+#pragma push_macro("OBJECT")
+#define maf_restore_macro_OBJECT
+#endif
+#ifdef OBJECT_EX
+#pragma push_macro("OBJECT_EX")
+#define maf_restore_macro_OBJECT_EX
+#endif
+#ifdef MEMBERS
+#pragma push_macro("MEMBERS")
+#define maf_restore_macro_MEMBERS
+#endif
+#ifdef ENDOBJECT
+#pragma push_macro("ENDOBJECT")
+#define maf_restore_macro_END_OBJECT
+#endif
 
 #define OBJECT mc_maf_sb_object
 #define OBJECT_EX mc_maf_sb_object_ex

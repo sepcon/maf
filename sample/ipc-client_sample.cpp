@@ -1,6 +1,7 @@
 #include <maf/LocalIPCProxy.h>
 #include <maf/utils/TimeMeasurement.h>
 
+#include <iomanip>
 #include <iostream>
 
 #include "Client.h"
@@ -9,14 +10,21 @@ using namespace maf;
 
 static const auto DataTransmissionServerAddress =
     Address{SERVER_NAME, WEATHER_SERVER_PORT};
+struct LogRequest {
+  std::string msg;
+};
 
 int main() {
   std::cout.sync_with_stdio(false);
+  auto mainComp = Processor::create("main");
+
+  mainComp->connect<LogRequest>(
+      [](LogRequest msg) { std::cout << msg.msg << "\n"; });
+
   logging::init(
-      logging::LOG_LEVEL_FROM_INFO | maf::logging::LOG_LEVEL_DEBUG /*|
-                                     maf::logging::LOG_LEVEL_VERBOSE*/
-      ,
-      [](const std::string &msg) { std::cout << msg << std::endl; },
+      logging::LOG_LEVEL_FROM_ERROR | maf::logging::LOG_LEVEL_DEBUG |
+          maf::logging::LOG_LEVEL_VERBOSE,
+      [mainComp](const std::string &msg) { mainComp->post(LogRequest{msg}); },
       [](const std::string &msg) { std::cerr << msg << std::endl; });
 
   util::TimeMeasurement tmeasure([](auto time) {
@@ -24,17 +32,24 @@ int main() {
               << static_cast<double>(time.count()) / 1000 << "ms" << std::endl;
   });
 
-  MAF_LOGGER_DEBUG("Client is starting up!");
+  MAF_LOGGER_DEBUG("[][][]Client is starting up!");
 
-  auto clientComponent = ClientComponent{
+  auto clientProcessor = new ClientProcessor{
       localipc::createProxy(DataTransmissionServerAddress, SID_WeatherService)};
 
-  clientComponent->connect<EndOfRequestChainMsg>(
-      [](auto) { this_component::stop(); });
+  (*clientProcessor)->connect<EndOfRequestChainMsg>([mainComp](auto) {
+    mainComp->stop();
+    this_processor::stop();
+  });
 
-  clientComponent.run();
+  std::thread clientThread{[&] { clientProcessor->run(); }};
 
-  MAF_LOGGER_DEBUG("Client shutdown!");
+  mainComp->run();
+  clientThread.join();
+  delete clientProcessor;
+
+  csmgmt::shutdownAllClients();
+  MAF_LOGGER_DEBUG("[][][]Client shutdown!");
 
   return 0;
 }

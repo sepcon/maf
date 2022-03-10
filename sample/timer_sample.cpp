@@ -1,4 +1,4 @@
-#include <maf/messaging/ComponentEx.h>
+#include <maf/messaging/ProcessorEx.h>
 #include <maf/messaging/Timer.h>
 
 #include <iostream>
@@ -25,13 +25,13 @@ struct Alarm {
   Timer alarmTimer;
 
   void start() {
-    auto runner = Component::create();
+    auto runner = Processor::create();
     runner->connect<next_second_hit>([this](next_second_hit h) {
       if (h.current_seconds.count() % alarmTime == 0) {
         alarmTimer.setCyclic();
 
         alarmTimer.start(eachAlarmInterval, [] {
-          this_component::post<alarm_message>("wake up!");
+          this_processor::post<alarm_message>("wake up!");
         });
       }
     });
@@ -49,7 +49,7 @@ struct Alarm {
       clock.setCyclic();
       clock.start(1s, [this] {
         cout << (currentSeconds.count() % 2 == 0 ? "tik" : "tak") << endl;
-        this_component::post<next_second_hit>(++currentSeconds);
+        this_processor::post<next_second_hit>(++currentSeconds);
       });
     });
   }

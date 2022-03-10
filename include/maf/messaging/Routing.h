@@ -2,32 +2,31 @@
 
 #include <maf/export/MafExport_global.h>
 
-#include "Component.h"
-#include "ComponentRequest.h"
+#include "Processor.h"
 
 namespace maf {
 namespace messaging {
 namespace routing {
 
-struct ComponentStatusUpdateMsg {
+struct ProcessorStatusUpdateMsg {
   enum class Status : char { Reachable, UnReachable };
-  ComponentRef compref;
+  ProcessorRef compref;
   Status status = Status::Reachable;
-  ComponentInstance component() const { return compref.lock(); }
+  ProcessorInstance messageprocessor() const { return compref.lock(); }
   bool ready() const { return status == Status::Reachable; }
 };
 
-MAF_EXPORT bool post(const ComponentID& componentID, Message msg);
+MAF_EXPORT bool post(const ProcessorID& messageprocessorID, Message msg);
 MAF_EXPORT bool postToAll(Message msg);
-MAF_EXPORT Component::CompleteSignal send(const ComponentID& componentID,
-                                                Message msg);
-MAF_EXPORT Component::CompleteSignal sendToAll(Message msg);
-MAF_EXPORT ComponentInstance findComponent(const ComponentID& id);
+MAF_EXPORT Processor::CompleteSignal send(const ProcessorID& messageprocessorID,
+                                          Message msg);
+MAF_EXPORT Processor::CompleteSignal sendToAll(Message msg);
+MAF_EXPORT ProcessorInstance findProcessor(const ProcessorID& id);
 
 template <class Msg, typename... Args>
-bool post(const ComponentID& componentID, Args&&... args) {
+bool post(const ProcessorID& messageprocessorID, Args&&... args) {
   using namespace std;
-  return post(componentID, makeMessage<Msg>(forward<Args>(args)...));
+  return post(messageprocessorID, makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
@@ -37,32 +36,16 @@ bool postToAll(Args&&... args) {
 }
 
 template <class Msg, typename... Args>
-Component::CompleteSignal send(const ComponentID& componentID,
-                                     Args&&... args) {
+Processor::CompleteSignal send(const ProcessorID& messageprocessorID,
+                               Args&&... args) {
   using namespace std;
-  return send(componentID, makeMessage<Msg>(forward<Args>(args)...));
+  return send(messageprocessorID, makeMessage<Msg>(forward<Args>(args)...));
 }
 
 template <class Msg, typename... Args>
-Component::CompleteSignal sendToAll(Args&&... args) {
+Processor::CompleteSignal sendToAll(Args&&... args) {
   using namespace std;
   return sendToAll(makeMessage<Msg>(forward<Args>(args)...));
-}
-
-template <class Output, class Input, RequestType type>
-ComponentRequest<Output, Input, type> makeRequest(
-    const ComponentID& componentID) {
-  return ComponentRequest<Output, Input, type>{findComponent(componentID)};
-}
-
-template <class Output, class Input>
-auto makeRequestAsync(const ComponentID& componentID) {
-  return makeRequest<Output, Input, RequestType::Async>(componentID);
-}
-
-template <class Output, class Input>
-auto makeRequestSync(const ComponentID& componentID) {
-  return makeRequest<Output, Input, RequestType::Sync>(componentID);
 }
 
 }  // namespace routing

@@ -7,7 +7,8 @@
 #include <map>
 #include <thread>
 
-#include "test.h"
+#define CATCH_CONFIG_MAIN
+#include "catch/catch_amalgamated.hpp"
 
 using namespace maf;
 using namespace maf::messaging;
@@ -15,37 +16,34 @@ using namespace maf::signal_slots;
 using namespace maf::util;
 using namespace std;
 
-void single_connection_single_thread_Test() {
+TEST_CASE("single_connection_single_thread_Test") {
   SCSignalST<> sig;
   bool fired = false;
   bool fired2 = false;
   auto slot1 = [&fired] { fired = true; };
   auto slot2 = [&fired2] { fired2 = true; };
 
-  TEST_CASE_B(single_connection_signal_st) {
-    sig.connect(slot1);
+  sig.connect(slot1);
 
-    auto con2 = sig.connect(slot2);
-    EXPECT(!con2.connected());  // only one slot can connect
+  auto con2 = sig.connect(slot2);
+  REQUIRE(!con2.connected());  // only one slot can connect
 
-    sig();
-    EXPECT(fired);
-    fired = false;
-    sig.disconnect();
-    sig();
+  sig();
+  REQUIRE(fired);
+  fired = false;
+  sig.disconnect();
+  sig();
 
-    auto con = sig.connect(slot1);
-    sig();
-    EXPECT(fired);
-    con.disconnect();
-    fired = false;
-    sig();
-    EXPECT(!fired);
-  }
-  TEST_CASE_E()
+  auto con = sig.connect(slot1);
+  sig();
+  REQUIRE(fired);
+  con.disconnect();
+  fired = false;
+  sig();
+  REQUIRE(!fired);
 }
 
-void multiconnection_single_thread_test() {
+TEST_CASE("multiconnection_single_thread_test") {
   SignalST<> sig;
   bool fired1 = false;
   bool fired2 = false;
@@ -54,66 +52,64 @@ void multiconnection_single_thread_test() {
   auto slot1 = [&fired1] { fired1 = true; };
   auto slot2 = [&fired2] { fired2 = true; };
 
-  TEST_CASE_B(multi_connection_signal_st) {
+  SECTION("multi_connection_signal_st") {
     auto con1 = sig.connect(slot1);
     auto con2 = sig.connect(slot2);
-    EXPECT(con1.connected());
-    EXPECT(con2.connected());
+    REQUIRE(con1.connected());
+    REQUIRE(con2.connected());
 
     sig();
-    EXPECT(fired1);
-    EXPECT(fired2);
+    REQUIRE(fired1);
+    REQUIRE(fired2);
 
     reset();
 
     con1.disconnect();
-    EXPECT(!con1.connected());
+    REQUIRE(!con1.connected());
 
     sig();
 
-    EXPECT(!fired1);
-    EXPECT(fired2);
+    REQUIRE(!fired1);
+    REQUIRE(fired2);
 
     fired2 = false;
     con2.disconnect();
 
     sig();
-    EXPECT(!fired1);
-    EXPECT(!fired2);
+    REQUIRE(!fired1);
+    REQUIRE(!fired2);
 
     reset();
     sig.connect(slot1);
     sig.connect(slot2);
     sig();
-    EXPECT(fired1);
-    EXPECT(fired2);
+    REQUIRE(fired1);
+    REQUIRE(fired2);
 
     sig.disconnect();  // disconnect all connections
     reset();
     sig();
-    EXPECT(!fired1);
-    EXPECT(!fired2);
+    REQUIRE(!fired1);
+    REQUIRE(!fired2);
   }
-  TEST_CASE_E()
 
-  TEST_CASE_B(connection_disconnect_reconnect) {
+  SECTION("connection_disconnect_reconnect") {
     Signal<int> sigInt;
     auto notifiedInt = 0;
     auto con = sigInt.connect([&notifiedInt](int val) { notifiedInt = val; });
 
     sigInt.notify(10);
-    EXPECT(notifiedInt == 10);
+    REQUIRE(notifiedInt == 10);
     con.disconnect();
     sigInt.notify(100);
-    EXPECT(notifiedInt == 10);
+    REQUIRE(notifiedInt == 10);
     con.reconnect();
     sigInt.notify(-1);
-    EXPECT(notifiedInt == -1);
+    REQUIRE(notifiedInt == -1);
   }
-  TEST_CASE_E()
 }
 
-void multi_connection_multi_thread_test() {
+TEST_CASE("multi_connection_multi_thread_test") {
   using Ints = vector<size_t>;
   Signal<size_t, Ints> dataReadySignal;
   Signal<> receiverReadySignal;
@@ -139,103 +135,155 @@ void multi_connection_multi_thread_test() {
     outOfDataSignal.notify();
   };
 
-  TEST_CASE_B(multi_connection_multi_thread) {
-    auto comp1 = Component::create("thread1");
-    AsyncComponent comp2 = Component::create("thread2");
+  auto comp1 = Processor::create("thread1");
+  AsyncProcessor comp2 = Processor::create("thread2");
 
-    comp2.launch([&] {
-      dataReadySignal.connect(onDataReady1, this_component::getExecutor());
-      dataReadySignal.connect(onDataReady2, this_component::getExecutor());
-      receiverReadySignal();
-    });
+  comp2.launch([&] {
+    dataReadySignal.connect(onDataReady1, this_processor::getExecutor());
+    dataReadySignal.connect(onDataReady2, this_processor::getExecutor());
+    receiverReadySignal();
+  });
 
-    receiverReadySignal.connect(emitDataReadySignal, comp1->getExecutor());
+  receiverReadySignal.connect(emitDataReadySignal, comp1->getExecutor());
 
-    outOfDataSignal.connect(
-        [&] {
-          this_component::stop();
-          receiverStopSignal.notify();
-        },
-        comp2->getExecutor());
+  outOfDataSignal.connect(
+      [&] {
+        this_processor::stop();
+        receiverStopSignal.notify();
+      },
+      comp2->getExecutor());
 
-    receiverStopSignal.connect([] { this_component::stop(); },
-                               comp1->getExecutor());
+  receiverStopSignal.connect([] { this_processor::stop(); },
+                             comp1->getExecutor());
 
-    comp1->run();
+  comp1->run();
 
-    EXPECT(rd1->size() > 0);
-    EXPECT(*rd1 == *rd2);
-  }
-
-  TEST_CASE_E()
+  REQUIRE(rd1->size() > 0);
+  REQUIRE(*rd1 == *rd2);
 }
 
-void scoped_connection_test() {
+TEST_CASE("scoped_connection_test") {
   Signal<int> sig;
   int normalInt = 0;
   int scopedInt = 0;
   int scopedInt1 = 0;
 
-  TEST_CASE_B(scoped_connection) {
+  {
+    auto con = sig.connect([&normalInt](int val) { normalInt = val; });
+
+    ScopedConnection scon = sig.connect([&scopedInt](int i) { scopedInt = i; });
     {
-      auto con = sig.connect([&normalInt](int val) { normalInt = val; });
+      ScopedConnection scon1 =
+          sig.connect([&scopedInt1](int x) { scopedInt1 = x; });
+      sig.notify(10);
 
-      ScopedConnection scon =
-          sig.connect([&scopedInt](int i) { scopedInt = i; });
-      {
-        ScopedConnection scon1 =
-            sig.connect([&scopedInt1](int x) { scopedInt1 = x; });
-        sig.notify(10);
-
-        EXPECT(scopedInt == 10 && scopedInt1 == 10 && normalInt == 10);
-      }
-
-      // out of scope, then scopedInt must still be 10 after emit signal again
-      sig.notify(100);
-      //      EXPECT(scopedInt == 100 && scopedInt1 == 10 && normalInt == 100);
-      EXPECT(scopedInt == 100);
-      EXPECT(normalInt == 100);
-      EXPECT(scopedInt1 == 10);
+      REQUIRE(scopedInt == 10);
+      REQUIRE(scopedInt1 == 10);
+      REQUIRE(normalInt == 10);
     }
 
-    sig.notify(1000);
-    EXPECT(scopedInt == 100 && scopedInt1 == 10 && normalInt == 1000);
-
-    sig.disconnect();
-    sig.notify(10000);
-    EXPECT(normalInt == 1000);
+    // out of scope, then scopedInt must still be 10 after emit signal again
+    sig.notify(100);
+    //      REQUIRE(scopedInt == 100 ); REQUIRE( scopedInt1 == 10 ); REQUIRE(
+    //      normalInt == 100);
+    REQUIRE(scopedInt == 100);
+    REQUIRE(normalInt == 100);
+    REQUIRE(scopedInt1 == 10);
   }
-  TEST_CASE_E()
+
+  sig.notify(1000);
+
+  REQUIRE(scopedInt == 100);
+  REQUIRE(normalInt == 1000);
+  REQUIRE(scopedInt1 == 10);
+
+  sig.disconnect();
+  sig.notify(10000);
+  REQUIRE(normalInt == 1000);
 }
 
-void connection_aware_slot_test() {
+TEST_CASE("connection_aware_slot_test") {
   Signal<int> sigInt;
   int testVal = 0;
   int testVal1 = 0;
-  TEST_CASE_B(connection_aware_slot) {
-    sigInt.connect(
-        [&testVal](const Signal<int>::ConnectionPtrType& con, int val) {
-          con->disconnect();
-          testVal = val;
-        },
-        directExecutor());
+  sigInt.connect(
+      [&testVal](const Signal<int>::ConnectionPtrType& con, int val) {
+        con->disconnect();
+        testVal = val;
+      },
+      directExecutor());
 
-    auto con = sigInt.connect([&testVal1](auto con, int val) {
-      con->disconnect();
-      testVal1 = val;
-    });
+  auto con = sigInt.connect([&testVal1](auto con, int val) {
+    con->disconnect();
+    testVal1 = val;
+  });
 
-    sigInt(1000);
-    EXPECT(testVal == 1000 && testVal1 == 1000);
-    EXPECT(!con.connected());
+  sigInt(1000);
+  REQUIRE(testVal == 1000);
+  REQUIRE(testVal1 == 1000);
+  REQUIRE(!con.connected());
 
-    sigInt(-1);
-    EXPECT(testVal == 1000 && testVal1 == 1000);
-  }
-  TEST_CASE_E()
+  sigInt(-1);
+  REQUIRE(testVal == 1000);
+  REQUIRE(testVal1 == 1000);
 }
 
-void trackable_slot_test() {
+TEST_CASE("connection_disconnect_other_slots_when_being_notified_test") {
+  Signal<> sig;
+  int notifyCount = 0;
+  shared_ptr<Connection> con1, con2;
+  con1 = make_shared<Connection>(sig.connect([&] {
+    if (con2) {
+      con2->disconnect();
+      con2.reset();
+    }
+    ++notifyCount;
+  }));
+  con2 = make_shared<Connection>(sig.connect([&] { notifyCount++; }));
+  sig();
+  REQUIRE(notifyCount == 1);
+}
+
+TEST_CASE("scoped_connection_group_test") {
+  Signal<> sig;
+  Signal<int> sigint;
+  int notifyCount = 0;
+  auto lambda1 = [&] { ++notifyCount; };
+  auto lambda2 = [&] { ++notifyCount; };
+  {
+    ScopedConnectionGroup connections;
+    connections.bind(sig).with(lambda1).with(lambda2).with(
+        [&] { ++notifyCount; });
+    connections.bind(sigint).with([&](int) { ++notifyCount; });
+    connections << sigint.connect([&](int) { ++notifyCount; });
+  }
+
+  sig();
+  sigint(100);
+  REQUIRE(notifyCount == 0);
+}
+
+TEST_CASE("connect_with_class_method_test") {
+  static int triggerCount = 0;
+  struct Hello {
+    void onTriggered(double) { ++triggerCount; }
+  };
+
+  Signal<int> intsig;
+  auto h = make_shared<Hello>();
+  intsig.connect(h, &Hello::onTriggered);
+  intsig.notify(1);
+  intsig.notify(1);
+  intsig.notify(1);
+  REQUIRE(triggerCount == 3);
+
+  h.reset();  // delete Hello and must not received notification
+  intsig.connect([](double) { ++triggerCount; });
+  intsig(1);
+  REQUIRE(triggerCount == 4);
+}
+
+TEST_CASE("trackable_slot_test") {
   SignalST<int> sig;
   struct Invokable {
     int val = 0;
@@ -250,19 +298,16 @@ void trackable_slot_test() {
     ii = i;
   });
 
-  TEST_CASE_B(trackable_slot) {
-    sig(1000);
-    EXPECT(ii == 1000);
+  sig(1000);
+  REQUIRE(ii == 1000);
 
-    pi.reset();
-    // after pi was destroyed, it should nolonger receied signal
-    sig(3000);
-    EXPECT(ii == 1000);
-  }
-  TEST_CASE_E()
+  pi.reset();
+  // after pi was destroyed, it should nolonger receied signal
+  sig(3000);
+  REQUIRE(ii == 1000);
 }
 
-void observable_single_state_test() {
+TEST_CASE("observable_single_state_test") {
   Observable<int> state;
   Observable<vector<int>> vec;
 
@@ -274,23 +319,25 @@ void observable_single_state_test() {
 
   state.connect([&](int val) { observedState = val; });
 
-  TEST_CASE_B(observable_state_pod) {
+  SECTION("observable_state_pod") {
     state = 1;
-    EXPECT(observedState == 1 && state.get() == 1);
+    REQUIRE(observedState == 1);
+    REQUIRE(state.get() == 1);
 
     state = 2;
-    EXPECT(observedState == 2 && state.get() == 2);
+    REQUIRE(observedState == 2);
+    REQUIRE(state.get() == 2);
 
-    EXPECT(*pStr == "2");
+    REQUIRE(*pStr == "2");
 
     pStr.reset();
     // must not crash here
     state = 3;
-    EXPECT(observedState == 3 && state.get() == 3);
+    REQUIRE(observedState == 3);
+    REQUIRE(state.get() == 3);
   }
-  TEST_CASE_E(observable_state_pod)
 
-  TEST_CASE_B(observable_state_class) {
+  SECTION("observable_state_class") {
     std::vector<int> observedVector;
     int notifyCount = 0;
     vec.connect([&](auto vec) {
@@ -298,20 +345,30 @@ void observable_single_state_test() {
       observedVector = move(vec);
     });
 
-    vec.mut()->assign(3, 10);
-    EXPECT((observedVector == vector<int>{10, 10, 10}) && notifyCount == 2);
+    vec.mutable_()->assign(3, 10);
+    REQUIRE(observedVector == vector<int>{10, 10, 10});
+    REQUIRE(notifyCount == 2);
     static_cast<void>(vec->size());  // call immutable methods won't notify
-    EXPECT((observedVector == vector<int>{10, 10, 10}) && notifyCount == 2);
+    REQUIRE((observedVector == vector<int>{10, 10, 10}));
+    REQUIRE(notifyCount == 2);
     {
-      auto mvec = vec.mut();
+      auto mvec = vec.mutable_();
       mvec->clear();
       mvec->push_back(100);
       mvec->insert(mvec->begin(), 1000);
     }
 
-    EXPECT((observedVector == vector<int>{1000, 100}));
+    REQUIRE((observedVector == vector<int>{1000, 100}));
+
+    {
+      notifyCount = 0;
+      auto mvec = vec.mutable_();
+      mvec->clear();
+      mvec->push_back(100);
+      mvec->insert(mvec->begin(), 1000);
+    }
+    REQUIRE(notifyCount == 0);
   }
-  TEST_CASE_E()
 }
 
 template <class Observable_>
@@ -324,57 +381,63 @@ void arithmetic_observable_test_impl() {
     observedState = val;
   });
 
-  TEST_CASE_B(arithmetic_observable_test_impl) {
-    state = 3;
-    ++state;
-    EXPECT(observedState == 4 && state.get() == 4);
-    state++;
-    EXPECT(observedState == 5 && state.get() == 5);
-    state += 1;
-    EXPECT(observedState == 6 && state.get() == 6);
-    state -= 1;
-    EXPECT(observedState == 5 && state.get() == 5);
-    state *= 2;
-    EXPECT(observedState == 10 && state.get() == 10);
-    state /= 2;
-    EXPECT(observedState == 5 && state.get() == 5);
-    state <<= 2;
-    EXPECT(observedState == 5 << 2 && state.get() == 5 << 2);
-    state >>= 2;
-    EXPECT(observedState == 5 && state.get() == 5);
+  state = 3;
+  ++state;
+  REQUIRE(observedState == 4);
+  REQUIRE(state.get() == 4);
+  state++;
+  REQUIRE(observedState == 5);
+  REQUIRE(state.get() == 5);
+  state += 1;
+  REQUIRE(observedState == 6);
+  REQUIRE(state.get() == 6);
+  state -= 1;
+  REQUIRE(observedState == 5);
+  REQUIRE(state.get() == 5);
+  state *= 2;
+  REQUIRE(observedState == 10);
+  REQUIRE(state.get() == 10);
+  state /= 2;
+  REQUIRE(observedState == 5);
+  REQUIRE(state.get() == 5);
+  state <<= 2;
+  REQUIRE(observedState == 5 << 2);
+  REQUIRE(state.get() == 5 << 2);
+  state >>= 2;
+  REQUIRE(observedState == 5);
+  REQUIRE(state.get() == 5);
 
-    state = 20;
-    // won't notify
-    auto newVal = state + 10;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState + 10);
-    newVal = state - 10;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState - 10);
-    newVal = state * 10;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState * 10);
-    newVal = state / 10;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState / 10);
-    newVal = state << 2;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState << 2);
-    newVal = state >> 2;
-    EXPECT(state.get() == 20 && observedState == 20 &&
-           newVal == observedState >> 2);
-  }
-  TEST_CASE_E()
+  state = 20;
+  // won't notify
+  auto newVal = state + 10;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  newVal = state - 10;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  newVal = state * 10;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  newVal = state / 10;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  newVal = state << 2;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  newVal = state >> 2;
+  REQUIRE(state.get() == 20);
+  REQUIRE(observedState == 20);
+  REQUIRE(newVal == (20 >> 2));
 }
 
-void arithmetic_observable_test() {
+TEST_CASE("arithmetic_observable_test") {
   arithmetic_observable_test_impl<Observable<int>>();
   arithmetic_observable_test_impl<ObservableST<int>>();
   arithmetic_observable_test_impl<SCObservableST<int>>();
   arithmetic_observable_test_impl<SCObservable<int>>();
 }
 
-void observable_multi_state_test() {
+TEST_CASE("observable_multi_state_test") {
   Observable<int, string> state;
   int iVal = -1;
   string sVal = "";
@@ -388,49 +451,54 @@ void observable_multi_state_test() {
     sVal = s;
   });
 
-  TEST_CASE_B(observable_state) {
+  SECTION("observable_state") {
     state.set(1, "1");
-    EXPECT(iVal == 1 && state.get<0>() == 1 && sVal == "1" &&
-           state.get<1>() == "1");
+    REQUIRE(iVal == 1);
+    REQUIRE(state.get<0>() == 1);
+    REQUIRE(sVal == "1");
+    REQUIRE(state.get<1>() == "1");
 
     resetExpected();
 
     state.set(1, "1");
 
-    EXPECT(iVal == -1 && state.get<0>() == 1 && sVal == "" &&
-           state.get<1>() == "1");
+    REQUIRE(iVal == -1);
+    REQUIRE(state.get<0>() == 1);
+    REQUIRE(sVal == "");
 
     resetExpected();
     state.set(2, "1");
 
-    EXPECT(iVal == 2 && state.get<0>() == 2 && sVal == "1" &&
-           state.get<1>() == "1");
+    REQUIRE(iVal == 2);
+    REQUIRE(state.get<0>() == 2);
+    REQUIRE(sVal == "1");
 
     resetExpected();
     state.set(2, "2");
 
-    EXPECT(iVal == 2 && state.get<0>() == 2 && sVal == "2" &&
-           state.get<1>() == "2");
+    REQUIRE(iVal == 2);
+    REQUIRE(state.get<0>() == 2);
+    REQUIRE(sVal == "2");
 
-    state.mut<1>()->push_back('3');
-    state.mut<0>()++;
-    EXPECT(iVal == 3 && sVal == "23");
+    state.mutable_<1>()->push_back('3');
+    state.mutable_<0>()++;
+    REQUIRE(iVal == 3);
+    REQUIRE(sVal == "23");
 
-    state.mut<0>() += 2;
-    EXPECT(iVal == 5);
+    state.mutable_<0>() += 2;
+    REQUIRE(iVal == 5);
 
-    state.mut<0>() *= 2;
-    EXPECT(iVal == 10);
+    state.mutable_<0>() *= 2;
+    REQUIRE(iVal == 10);
   }
-  TEST_CASE_E()
 
-  TEST_CASE_B(observable_multi_state_concurrent_set) {
+  SECTION("observable_multi_state_concurrent_set") {
     Observable<string, bool, int> sb;
     int notifyCount = 0;
     sb.connect([&](const string&, bool, int) { ++notifyCount; });
 
     {
-      auto msb = sb.mut();
+      auto msb = sb.mutable_();
       msb.get<0>().push_back('1');
       msb.get<1>() = false;
       msb.get<1>() = true;
@@ -440,11 +508,30 @@ void observable_multi_state_test() {
       msb.get<2>() *= 100;
     }
 
-    EXPECT(notifyCount == 2);
-  }
-  TEST_CASE_E(observable_multi_state_concurrent_set)
+    REQUIRE(notifyCount == 2);
 
-  TEST_CASE_B(observable_multi_state_sub_states_set) {
+    sb.set<0>("hello");
+
+    {
+      notifyCount = 0;
+      auto first = sb.mutable_<0>();
+      *first += "hello";
+      first->clear();
+      *first += "hello";
+    }
+    REQUIRE(notifyCount == 0);
+
+    {
+      notifyCount = 0;
+      auto first = sb.mutable_<0>();
+      first->clear();
+      first->assign("bello world");
+    }
+    REQUIRE(notifyCount == 1);
+    REQUIRE(sb.get<0>() == "bello world");
+  }
+
+  SECTION("observable_multi_state_sub_states_set") {
     Observable<int, bool, string> o{-1, false, ""};
     int ei = 0;
     bool eb = false;
@@ -459,18 +546,23 @@ void observable_multi_state_test() {
     });
 
     o.set<1, 2>(true, "true");
-    EXPECT(ei == -1 && eb && es == "true");
+    REQUIRE(ei == -1);
+    REQUIRE(eb);
+    REQUIRE(es == "true");
 
     o.set<0, 2>(100, "false");
-    EXPECT(ei == 100 && eb && es == "false");
+    REQUIRE(ei == 100);
+    REQUIRE(eb);
+    REQUIRE(es == "false");
 
     o.set<1, 0>(false, 10);
-    EXPECT(ei == 10 && !eb && es == "false");
+    REQUIRE(ei == 10);
+    REQUIRE(!eb);
+    REQUIRE(es == "false");
   }
-  TEST_CASE_E()
 }
 
-void compound_observable_test() {
+TEST_CASE("compound_observable_test") {
   enum MouseStatus {
     LeftPressed,
     RightPressed,
@@ -491,75 +583,123 @@ void compound_observable_test() {
     jump = key == "ctrl" && mouseStatus == LeftPressed;
   });
 
-  TEST_CASE_B(compound_observable) {
-    pressingKey = "ctrl";
-    mouseStatus = MiddlePressed;
-    EXPECT(jump == false && notified == 3);
+  pressingKey = "ctrl";
+  mouseStatus = MiddlePressed;
+  REQUIRE(jump == false);
+  REQUIRE(notified == 3);
 
-    mouseStatus = LeftReleased;
+  mouseStatus = LeftReleased;
 
-    EXPECT(jump == false && notified == 4);
-    mouseStatus = LeftPressed;
-    EXPECT(jump == true && notified == 5);
-    pressingKey = "q";
-    EXPECT(jump == false && notified == 6);
-  }
-  TEST_CASE_E()
+  REQUIRE(jump == false);
+  REQUIRE(notified == 4);
+  mouseStatus = LeftPressed;
+  REQUIRE(jump == true);
+  REQUIRE(notified == 5);
+  pressingKey = "q";
+  REQUIRE(jump == false);
+  REQUIRE(notified == 6);
 }
 
-void connect_to_other_signal_test() {
-  TEST_CASE_B(connect_to_other_signal) {
-    Signal<const char*> rootSignal;
-    string expectedString;
-    Connection con;
-    {
-      SignalST<string> triggeredSignal;
-      con = rootSignal.connect(triggeredSignal);
-      triggeredSignal.connect([&](const string& val) {
-        expectedString = val;
-      });
+TEST_CASE("connect_to_other_signal_test") {
+  Signal<const char*> rootSignal;
+  string expectedString;
+  Connection con;
+  {
+    SignalST<string> triggeredSignal;
+    con = rootSignal.connect(triggeredSignal);
+    triggeredSignal.connect([&](const string& val) { expectedString = val; });
 
-      EXPECT(con.connected());
-      EXPECT(expectedString == "");
-      rootSignal("100");
-      EXPECT(expectedString == "100");
-    }
-
-    rootSignal("300");
-    EXPECT(!con.connected());
-    EXPECT(expectedString == "100");
+    REQUIRE(con.connected());
+    REQUIRE(expectedString == "");
+    rootSignal("100");
+    REQUIRE(expectedString == "100");
   }
 
-  TEST_CASE_E()
+  rootSignal("300");
+  REQUIRE(!con.connected());
+  REQUIRE(expectedString == "100");
 }
-void performance_test() {
+TEST_CASE("performance_test") {
   Signal<string> stringSignal;
   const string* s1 = nullptr;
   const string* s2 = nullptr;
   stringSignal.connect([&s1](const string& s) { s1 = &s; });
   stringSignal.connect([&s2](const string& s) { s2 = &s; });
 
-  TEST_CASE_B(copy_constructor_test) {
-    string originValue = "helloworld";
-    stringSignal(originValue);
-    EXPECT(&originValue == s1 && s1 == s2);
-  }
-  TEST_CASE_E()
+  string originValue = "helloworld";
+  stringSignal(originValue);
+  REQUIRE(&originValue == s1);
+  REQUIRE(s1 == s2);
 }
 
-int main() {
-  maf::test::init_test_cases();
-  single_connection_single_thread_Test();
-  multiconnection_single_thread_test();
-  multi_connection_multi_thread_test();
-  scoped_connection_test();
-  connection_aware_slot_test();
-  trackable_slot_test();
-  observable_single_state_test();
-  arithmetic_observable_test();
-  observable_multi_state_test();
-  compound_observable_test();
-  connect_to_other_signal_test();
-  performance_test();
-  return 0;
+TEST_CASE("observable_silent_set") {
+  Observable<string, bool> ovb{"s", true};
+  int notifyCount = 0;
+  ovb.connect([&](const string&, bool) { ++notifyCount; });
+  ovb.silentSet<1>(false);
+  REQUIRE(notifyCount == 1);
+  ovb.silentSet<1>(true);
+  REQUIRE(notifyCount == 1);
+  ovb.silentSet<0>("s1");
+  REQUIRE(notifyCount == 1);
+  ovb.silentSet("s2", false);
+  REQUIRE(notifyCount == 1);
+
+  Observable<string> sovb;
+  sovb.silentlyConnect([&](const string&) { notifyCount++; });
+  REQUIRE(notifyCount == 1);
+  sovb.set("hello");
+  REQUIRE(notifyCount == 2);
+  sovb.set("hello1");
+  REQUIRE(notifyCount == 3);
+
+  Observable<string, bool> sovb2{"s", true};
+  sovb2.silentlyConnect([&](const string&, auto) { notifyCount++; });
+  REQUIRE(notifyCount == 3);
+  sovb2.set<0>("s1");
+  REQUIRE(notifyCount == 4);
+  sovb2.set<1>(false);
+  REQUIRE(notifyCount == 5);
+}
+
+TEST_CASE("multiple_thread_connect_to_observable") {
+  maf::signal_slots::details::BasicObservable_<
+      maf::threading::AtomicObject<
+          maf::signal_slots::details::M_StateBasedKeeper_<string>, mutex>,
+      string>
+      os;
+  atomic_int notifyCount = 0;
+  vector<thread> threads;
+  for (int i = 0; i < 10; ++i) {
+    threads.emplace_back([&] {
+      for (int c = 0; c < 100; ++c) {
+        os.connect([&](const std::string& s) { ++notifyCount; });
+      }
+    });
+  }
+  for (auto& th : threads) {
+    th.join();
+  }
+  REQUIRE(notifyCount == 1000);
+  REQUIRE(os.connectionCount() == 1000);
+}
+
+TEST_CASE("observable_with_executor") {
+  auto runner = Processor::create();
+  Observable<string> str;
+  int notifyCount = 0;
+  runner->run([&] {
+    str.connect(
+        [&notifyCount](auto const&) {
+          ++notifyCount;
+          this_processor::stop();
+          REQUIRE(notifyCount == 1);
+        },
+        this_processor::getExecutor());
+    REQUIRE(notifyCount == 0);
+  });
+
+  Observable<string, string> str1;
+  auto mstr0 = str1.mutable_<0>();
+  mstr0->resize(1000);
 }

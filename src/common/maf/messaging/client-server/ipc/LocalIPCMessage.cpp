@@ -17,10 +17,6 @@ using namespace maf::srz;
 
 using Serializer = SR<OByteStream>;
 using Deserializer = DSR<IByteStream>;
-static const Buffer &emptyBytes() {
-  static Buffer empty;
-  return empty;
-}
 
 using ContentType = CSPayloadType;
 static Serializer &encodeAsError(Serializer &sr,
@@ -50,13 +46,8 @@ srz::Buffer LocalIPCMessage::toBytes() noexcept {
     } else if (payload_->type() != ContentType::NA) {
       auto ipcContent = static_cast<OutgoingPayload *>(payload_.get());
       ipcContent->serialize(oss);
-    } else {
-      sr << emptyBytes();
     }
-  } else {
-    sr << emptyBytes();
   }
-
   return std::move(oss.bytes());
 }
 

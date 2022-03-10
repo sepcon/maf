@@ -8,8 +8,6 @@ namespace single_threadpool {
 
 using TaskType = std::function<void()>;
 
-void init();
-void deinit();
 bool submit(TaskType task);
 
 }  // namespace single_threadpool
