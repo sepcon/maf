@@ -126,7 +126,9 @@ TEST_CASE("singleShot") {
 
   INFO("Elapsed time = " << elapsedMicroseconds);
   REQUIRE(elapsedMicroseconds > 900);
-  REQUIRE(elapsedMicroseconds <= 3000);
+  // the min resolution in Windows is 15ms, then shouldnt expect it to work
+  // correctly with 1ms here
+  REQUIRE(elapsedMicroseconds <= 16900);
 }
 
 TEST_CASE("messageprocessorCorrectness") {
@@ -145,9 +147,7 @@ TEST_CASE("messageprocessorCorrectness") {
     }
 
     t.setCyclic(true);
-    t.start(10ms, [] {
-      this_processor::stop();
-    });
+    t.start(10ms, [] { this_processor::stop(); });
   });
 
   REQUIRE(executedCount == totalExecutions);

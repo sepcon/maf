@@ -3,13 +3,15 @@
 #include <maf/threading/AtomicObject.h>
 #include <maf/utils/ExecutorIF.h>
 
-#include <algorithm>
+#include "maf/threading/MutexRef.h"
+
+//#include <algorithm>
 #include <array>
 #include <cassert>
 #include <future>
+#include <list>
 #include <memory>
 #include <variant>
-#include <vector>
 
 namespace maf {
 namespace signal_slots {
@@ -87,7 +89,7 @@ template <class... Args_>
 class MultiSlotKeeper {
  public:
   using SlotPtrType = SlotPtr_<Args_...>;
-  using SlotsType = vector<SlotPtrType>;
+  using SlotsType = list<SlotPtrType>;
 
   bool add(SlotPtrType s) {
     slots_.push_back(move(s));
@@ -309,8 +311,8 @@ class BasicSignal_ {
   using ConnectionAwareSlotType = Slot_<ConnectionPtrType, Args_...>;
 
   BasicSignal_() = default;
-  BasicSignal_(const BasicSignal_&) = default;
-  BasicSignal_& operator=(const BasicSignal_&) = default;
+  BasicSignal_(const BasicSignal_&) = delete;
+  BasicSignal_& operator=(const BasicSignal_&) = delete;
   BasicSignal_(BasicSignal_&&) = default;
   BasicSignal_& operator=(BasicSignal_&&) = default;
   ~BasicSignal_() { disconnect(); }
@@ -318,10 +320,6 @@ class BasicSignal_ {
   void operator()(ConstRef_<Args_>... args) const { notify(args...); }
 
   void notify(ConstRef_<Args_>... args) const { keeper()->notify(args...); }
-
-  void operator()(ConstRef_<Args_>... args) { notify(args...); }
-
-  void notify(ConstRef_<Args_>... args) { keeper()->notify(args...); }
 
   ConnectionType connect(SlotType s) {
     assert(s);
@@ -565,6 +563,23 @@ struct BasicSignal<SlotsKeeper_, Arg_>
   using State = PurgeType_<Arg_>;
 };
 
+template <class Mutex, template <class...> class SlotKeeper, class... Args>
+class BasicSignalThreadSafe
+    : public BasicSignal<AtomicObject<SlotKeeper<Args...>, Mutex>, Args...> {
+  using _Base = BasicSignal<AtomicObject<SlotKeeper<Args...>, Mutex>, Args...>;
+
+ public:
+  using _Base::_Base;
+  using _Base::operator=;
+  BasicSignalThreadSafe(Mutex&& m) { this->slotKeeper_->getMutex() = move(m); }
+};
+
+template <class Mutex, class... Args>
+using SCBasicSignalTS = BasicSignalThreadSafe<Mutex, SingleSlotKeeper, Args...>;
+
+template <class Mutex, class... Args>
+using BasicSignalTS = BasicSignalThreadSafe<Mutex, MultiSlotKeeper, Args...>;
+
 template <class... Args>
 using SignalST =
     BasicSignal<NonAtomicObject_<MultiSlotKeeper<Args...>>, Args...>;
@@ -574,14 +589,17 @@ using SCSignalST =
     BasicSignal<NonAtomicObject_<SingleSlotKeeper<Args...>>, Args...>;
 
 template <class... Args>
-using SCSignal =
-    BasicSignal<AtomicObject<SingleSlotKeeper<Args...>, recursive_mutex>,
-                Args...>;
+using SCSignal = SCBasicSignalTS<recursive_mutex, Args...>;
 
 template <class... Args>
-using Signal =
-    BasicSignal<AtomicObject<MultiSlotKeeper<Args...>, recursive_mutex>,
-                Args...>;
+using Signal = BasicSignalTS<recursive_mutex, Args...>;
+
+template <class... Args>
+using SharedMutexSignal =
+    BasicSignalTS<threading::MutexReference<std::recursive_mutex>, Args...>;
+template <class... Args>
+using SharedMutexSCSignal =
+    BasicSignalTS<threading::MutexReference<std::recursive_mutex>, Args...>;
 
 template <template <class, class...> class Signal_, class SlotKeeper_,
           typename... Args_>
@@ -604,7 +622,8 @@ class FutureInvocation {
   ~FutureInvocation() { cancel(); }
 
   bool valid() const { return impl_.valid(); }
-  bool waitFor(const std::chrono::milliseconds& dur) {
+  template <class _Rep, class _Per>
+  bool waitFor(const chrono::duration<_Rep, _Per>& dur) {
     if (impl_.valid()) {
       try {
         if (impl_.wait_for(dur) == future_status::ready) {
@@ -617,7 +636,8 @@ class FutureInvocation {
     return false;
   }
 
-  bool waitUtil(const chrono::system_clock::time_point& tp) {
+  template <class _Clock, class _Dur>
+  bool waitUtil(const chrono::time_point<_Clock, _Dur>& tp) {
     if (impl_.valid()) {
       try {
         if (impl_.wait_until(tp) == future_status::ready) {
@@ -705,13 +725,17 @@ class ScopedConnectionGroup : public vector<ScopedConnection> {
 
 }  // namespace details
 
+using details::BasicSignalTS;
 using details::Connection;
 using details::ConnectionPtr;
 using details::FutureInvocation;
+using details::SCBasicSignalTS;
 using details::ScopedConnection;
 using details::ScopedConnectionGroup;
 using details::SCSignal;
 using details::SCSignalST;
+using details::SharedMutexSCSignal;
+using details::SharedMutexSignal;
 using details::Signal;
 using details::SignalST;
 using details::SlotInvokerPtr;

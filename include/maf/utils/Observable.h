@@ -106,6 +106,8 @@ class ObservableBasic_ : public BasicSignal<SlotsKeeper_, SubStates_...> {
   using Base_ = BasicSignal<SlotsKeeper_, SubStates_...>;
   using Base_::notify;
   using Base_::operator();
+  static_assert(sizeof...(SubStates_) >= 1,
+                "Observable must have at least one state");
 
  public:
   using SlotsKeeperType = SlotsKeeper_;
@@ -114,8 +116,32 @@ class ObservableBasic_ : public BasicSignal<SlotsKeeper_, SubStates_...> {
   ObservableBasic_() = default;
   ObservableBasic_(ObservableBasic_&&) = default;
   ObservableBasic_& operator=(ObservableBasic_&&) = default;
+
   template <typename... _Args>
-  auto connect(_Args&&... args) {
+  Connection connect(_Args&&... args) {
+    return connect_(std::forward<_Args>(args)...);
+  }
+
+  template <typename... _Args>
+  Connection silentlyConnect(_Args&&... args) {
+    return silentlyConnect_(std::forward<_Args>(args)...);
+  }
+
+  template <typename... _Args>
+  Connection connect(_Args&&... args) const {
+    return const_cast<ObservableBasic_*>(this)->connect_(
+        std::forward<_Args>(args)...);
+  }
+
+  template <typename... _Args>
+  Connection silentlyConnect(_Args&&... args) const {
+    return const_cast<ObservableBasic_*>(this)->silentlyConnect_(
+        std::forward<_Args>(args)...);
+  }
+
+ protected:
+  template <typename... _Args>
+  Connection connect_(_Args&&... args) {
     auto con = Base_::connect(std::forward<_Args>(args)...);
     this->keeper()->notifyOne(
         con.template getSlotPtr<typename Base_::SlotType>());
@@ -123,11 +149,10 @@ class ObservableBasic_ : public BasicSignal<SlotsKeeper_, SubStates_...> {
   }
 
   template <typename... _Args>
-  auto silentlyConnect(_Args&&... args) {
+  Connection silentlyConnect_(_Args&&... args) {
     return Base_::connect(std::forward<_Args>(args)...);
   }
 
- protected:
   template <size_t idx>
   using SubState = tuple_element_t<idx, State>;
 
@@ -550,6 +575,36 @@ auto join(const util::ExecutorIFPtr& executor, Observable_&... oN) {
   return CompoundObservable<typename Observable_::State...>(executor, oN...);
 }
 
+template <class Mutex_, template <class...> class StateKeeper_,
+          class... SubStates_>
+class BasicObservableThreadSafe
+    : public BasicObservable_<AtomicObject<StateKeeper_<SubStates_...>, Mutex_>,
+                              SubStates_...> {
+  using _Base =
+      BasicObservable_<AtomicObject<StateKeeper_<SubStates_...>, Mutex_>,
+                       SubStates_...>;
+
+ public:
+  using _Base::_Base;
+  using _Base::operator=;
+  BasicObservableThreadSafe(Mutex_&& mutex) {
+    this->slotKeeper_->getMutex() = move(mutex);
+  }
+
+  BasicObservableThreadSafe(Mutex_&& mutex, SubStates_&&... subStates)
+      : _Base(std::forward<SubStates_>(subStates)...) {
+    this->slotKeeper_->getMutex() = move(mutex);
+  }
+};
+
+template <class Mutex_, class... SubStates_>
+using BasicObservableTS =
+    BasicObservableThreadSafe<Mutex_, M_StateBasedKeeper_, SubStates_...>;
+
+template <class Mutex_, class... SubStates_>
+using SCBasicObservableTS =
+    BasicObservableThreadSafe<Mutex_, S_StateBasedKeeper_, SubStates_...>;
+
 template <class... SubStates_>
 using SCObservableST =
     BasicObservable_<NonAtomicObject_<S_StateBasedKeeper_<SubStates_...>>,
@@ -561,14 +616,17 @@ using ObservableST =
                      SubStates_...>;
 
 template <class... SubStates_>
-using SCObservable = BasicObservable_<
-    AtomicObject<S_StateBasedKeeper_<SubStates_...>, recursive_mutex>,
-    SubStates_...>;
+using SCObservable = SCBasicObservableTS<recursive_mutex, SubStates_...>;
 
 template <class... SubStates_>
-using Observable = BasicObservable_<
-    AtomicObject<M_StateBasedKeeper_<SubStates_...>, recursive_mutex>,
-    SubStates_...>;
+using Observable = BasicObservableTS<recursive_mutex, SubStates_...>;
+
+template <class... Args>
+using SharedMutexObservable =
+    BasicObservableTS<threading::MutexReference<std::recursive_mutex>, Args...>;
+template <class... Args>
+using SharedMutexSCObservable =
+    BasicObservableTS<threading::MutexReference<std::recursive_mutex>, Args...>;
 
 template <class... _Args, class _Callback>
 auto waitableConnect(BasicObservable_<_Args...>& o, _Callback callback) {
@@ -578,14 +636,18 @@ auto waitableConnect(BasicObservable_<_Args...>& o, _Callback callback) {
 
 }  // namespace details
 
+using details::BasicObservableTS;
 using details::CompoundObservable;
 using details::CompoundObservableST;
 using details::Observable;
 using details::ObservableST;
+using details::SCBasicObservableTS;
 using details::SCCompoundObservable;
 using details::SCCompoundObservableST;
 using details::SCObservable;
 using details::SCObservableST;
+using details::SharedMutexObservable;
+using details::SharedMutexSCObservable;
 
 namespace mt {
 template <class... SubStates>

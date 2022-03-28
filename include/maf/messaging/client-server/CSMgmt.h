@@ -13,6 +13,8 @@ namespace csmgmt {
 
 MAF_EXPORT void shutdownAllServers();
 MAF_EXPORT void shutdownAllClients();
+MAF_EXPORT void shutdownAll();
+
 MAF_EXPORT std::shared_ptr<ServiceRequesterIF> getServiceRequester(
     const ConnectionType &conntype, const Address &serverAddr,
     const ServiceID &sid) noexcept;

@@ -13,8 +13,50 @@
 using namespace maf;
 using namespace maf::messaging;
 using namespace maf::signal_slots;
+using namespace maf::threading;
 using namespace maf::util;
 using namespace std;
+
+TEST_CASE("shared_mutex_signal") {
+  std::recursive_mutex mutex;
+  SharedMutexSignal<int> sigint{mutex};
+  SharedMutexSignal<std::string> sigstr{mutex};
+  //  Signal<int> sigint;           |--> will crash if enable
+  //  Signal<std::string> sigstr;   |-->
+
+  int int_ = 0;
+  string str_;
+  sigint.connect([&](int val) {
+    int_ = val;
+    sigstr.connect([&](std::string const& val) {
+      str_ = val;
+      sigint.connect([](int) {});  // won't crash here
+    });
+    sigstr(std::to_string(val));
+  });
+
+  sigint(100);
+  REQUIRE(int_ == 100);
+  REQUIRE(str_ == "100");
+
+  SharedMutexObservable<int> stateInt{mutex};
+  SharedMutexObservable<std::string> stateStr{mutex};
+  // will crash with below 2 observables
+  //  SharedMutexObservable<int> stateInt;
+  //  SharedMutexObservable<std::string> stateStr;
+
+  stateInt.connect([&](int val) {
+    int_ = val;
+    stateStr.connect([&](std::string const& val) {
+      str_ = val;
+      stateInt.connect([](int) {});  // won't crash here
+    });
+    stateStr = std::to_string(val);
+  });
+  stateInt = 500;
+  REQUIRE(int_ == 500);
+  REQUIRE(str_ == "500");
+}
 
 TEST_CASE("single_connection_single_thread_Test") {
   SCSignalST<> sig;
@@ -317,7 +359,8 @@ TEST_CASE("observable_single_state_test") {
       pStr, [p = pStr.get()](int state) { *p = to_string(state); },
       maf::util::directExecutor());
 
-  state.connect([&](int val) { observedState = val; });
+  const auto& cstate = state;
+  cstate.connect([&](int val) { observedState = val; });
 
   SECTION("observable_state_pod") {
     state = 1;
@@ -693,13 +736,22 @@ TEST_CASE("observable_with_executor") {
         [&notifyCount](auto const&) {
           ++notifyCount;
           this_processor::stop();
-          REQUIRE(notifyCount == 1);
         },
         this_processor::getExecutor());
-    REQUIRE(notifyCount == 0);
+    REQUIRE(notifyCount == 1);
   });
 
   Observable<string, string> str1;
   auto mstr0 = str1.mutable_<0>();
   mstr0->resize(1000);
+}
+
+TEST_CASE("waitable_connect") {
+  Signal<bool> sig;
+  auto ret = false;
+  auto f = waitableConnect(sig, [&](bool) { ret = true; });
+  sig(false);
+  REQUIRE(ret == false);
+  f.wait();
+  REQUIRE(ret == true);
 }
