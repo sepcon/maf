@@ -1,5 +1,6 @@
 #include <maf/utils/cppextension/AggregateCompare.h>
 #include <maf/utils/serialization/AggregateDump.h>
+#include <maf/utils/serialization/VariantSerializer.h>
 
 #include <fstream>
 #include <iostream>
@@ -259,4 +260,29 @@ TEST_CASE("aggregate_serialization_test") {
   sr << inf;
   dsr >> ninf;
   REQUIRE(inf == ninf);
+}
+
+TEST_CASE("variant_serialization") {
+  using Var =
+      std::variant<std::string, int, bool, double, std::vector<int>, Address>;
+  Var varInt = 1;
+  Var varStr = "helloworld";
+  Var varBool = true;
+  Var varVec = std::vector<int>{1, 2, 3, 4};
+  Var varComplex = Address{"1", "2", "3"};
+  std::stringstream ss;
+  maf::srz::serializeBatch(ss, varInt, varStr, varBool, varVec, varComplex);
+  Var varInt1;
+  Var varStr1;
+  Var varBool1;
+  Var varVec1;
+  Var varComplex1;
+  maf::srz::deserializeBatch(ss, varInt1, varStr1, varBool1, varVec1,
+                             varComplex1);
+
+  REQUIRE(varInt == varInt1);
+  REQUIRE(varStr == varStr1);
+  REQUIRE(varBool == varBool1);
+  REQUIRE(varVec == varVec1);
+  REQUIRE(varComplex1 == varComplex);
 }
