@@ -248,11 +248,11 @@ __mc_maf_define_aggreation_compare(==)      //
 
 #undef __mc_maf_define_aggreation_compare
 
-#define __mc_maf_define_aggreation_compare(Type, Operator)        \
-  bool operator Operator(const Type& first, const Type& second) { \
-    using namespace maf::nstl;                                    \
-    using namespace std;                                          \
-    return flaten(first) Operator flaten(second);                 \
+#define __mc_maf_define_aggreation_compare(Type, Operator)               \
+  inline bool operator Operator(const Type& first, const Type& second) { \
+    using namespace maf::nstl;                                           \
+    using namespace std;                                                 \
+    return flaten(first) Operator flaten(second);                        \
   }
 
 #define MC_MAF_MAKE_COMPARABLE(Type)                           \

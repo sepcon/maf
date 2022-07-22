@@ -40,7 +40,7 @@ bool ServiceRequester::onIncomingMessage(const CSMessagePtr &csMsg) {
           cachePropertyStatus(csMsg->operationID(), csMsg->payload());
         }
       } break;
-
+      case OpCode::PartialRequestUpdate:
       case OpCode::Request:
       case OpCode::StatusGet:
         onRequestResult(csMsg);
@@ -450,8 +450,10 @@ void ServiceRequester::onRequestResult(const CSMessagePtr &msg) {
       for (auto itRegEntry = regEntries.begin(); itRegEntry != regEntries.end();
            ++itRegEntry) {
         if (itRegEntry->requestID == msg->requestID()) {
-          callback = std::move(itRegEntry->callback);
-          regEntries.erase(itRegEntry);
+          callback = itRegEntry->callback;
+          if (msg->operationCode() != OpCode::PartialRequestUpdate) {
+            regEntries.erase(itRegEntry);
+          }
           found = true;
           break;
         }

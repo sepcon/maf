@@ -1,5 +1,6 @@
-#include <atomic>
 #include <maf/logging/Logger.h>
+
+#include <atomic>
 
 namespace maf {
 namespace logging {
@@ -13,11 +14,11 @@ struct Statics {
 };
 
 static Statics &statics() {
-  static Statics s;
-  return s;
+  static auto s = new Statics;
+  return *s;
 }
 
-} // namespace
+}  // namespace
 
 void init(LogLevels allowedLevels, LoggingFunctionType outLogFunc,
           LoggingFunctionType errLogFunc) {
@@ -48,16 +49,16 @@ void disable(LogLevel level) { statics().allowedLevels &= ~level; }
 
 void logImpl(LogLevel filteredLevel, const std::string &msg) {
   switch (filteredLevel) {
-  case LOG_LEVEL_INFO:
-  case LOG_LEVEL_DEBUG:
-  case LOG_LEVEL_VERBOSE:
-    statics().out(msg);
-    break;
-  default:
-    statics().err(msg);
-    break;
+    case LOG_LEVEL_INFO:
+    case LOG_LEVEL_DEBUG:
+    case LOG_LEVEL_VERBOSE:
+      statics().out(msg);
+      break;
+    default:
+      statics().err(msg);
+      break;
   }
 }
 
-} // namespace logging
-} // namespace maf
+}  // namespace logging
+}  // namespace maf

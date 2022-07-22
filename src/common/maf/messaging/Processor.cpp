@@ -69,9 +69,10 @@ class WaitableExecutor : public util::ExecutorIF {
   bool execute(CallbackType callback) noexcept override {
     if (auto comp = compref.lock()) {
       try {
-        comp->waitableExecute(std::move(callback)).wait();
+        comp->waitableExecute(callback).wait();
         return true;
-      } catch (const std::future_error &) {
+      } catch (const std::future_error &e) {
+        MAF_LOGGER_ERROR("Cauth exception when execute callback: ", e.what());
         return false;
       }
     }
@@ -251,6 +252,8 @@ void Processor::stop() {
     leaveRoutingIfNotAnonymous(shared_from_this());
   }
 }
+
+void Processor::reuse() { d_->pendingExecutions.reOpen(); }
 
 bool Processor::stopped() const { return d_->pendingExecutions.isClosed(); }
 

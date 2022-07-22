@@ -14,27 +14,24 @@ namespace local {
 
 using namespace std;
 using namespace chrono_literals;
-static constexpr int MAX_ATEMPTS = 10;
+static constexpr int MAX_ATEMPTS = 100;
 
 static HANDLE openPipe(const std::string &pipeName);
-static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
-                        const char *buffer, size_t buffSize);
-
-LocalIPCBufferSenderImpl::LocalIPCBufferSenderImpl() {}
-
-LocalIPCBufferSenderImpl::~LocalIPCBufferSenderImpl() {}
-
+static bool writeToPipe(HANDLE pipeHandle, const char *buffer, size_t buffSize);
+static ActionCallStatus sendImpl(const maf::srz::Buffer &ba,
+                                 const Address &destination);
 ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
                                                 const Address &destination) {
   auto tryCount = 0;
   auto status = ActionCallStatus::ReceiverUnavailable;
   do {
     if (checkReceiverStatus(destination) == Availability::Available) {
-      status = _send(ba, destination);
+      status = sendImpl(ba, destination);
       break;
     }
-    MAF_LOGGER_ERROR("Receiver unavailable, gle = ", GetLastError());
-    if (++tryCount >= 10) {
+    MAF_LOGGER_WARN("Receiver ", destination.dump(-1),
+                    " is unavailable, gle = ", GetLastError());
+    if (++tryCount >= 100) {
       status = GetLastError() == ERROR_PIPE_BUSY
                    ? ActionCallStatus::ReceiverBusy
                    : ActionCallStatus::ReceiverUnavailable;
@@ -50,27 +47,25 @@ ActionCallStatus LocalIPCBufferSenderImpl::send(const srz::Buffer &ba,
   if (status != ActionCallStatus::Success) {
     // status = ActionCallStatus::ReceiverUnavailable;
     // dont need to set here, it must be default failed
-    MAF_LOGGER_WARN("Failed to send message to = ", destination.dump(),
-                    " call status = ", status, " GLE = ", GetLastError());
+    MAF_LOGGER_ERROR("Failed to send message to = ", destination.dump(),
+                     " call status = ", status, " GLE = ", GetLastError());
   }
   return status;
 }
 
-ActionCallStatus LocalIPCBufferSenderImpl::_send(const maf::srz::Buffer &ba,
-                                                 const Address &destination) {
+ActionCallStatus sendImpl(const maf::srz::Buffer &ba,
+                          const Address &destination) {
   auto status = ActionCallStatus::ReceiverUnavailable;
   bool success = false;
   int retryTimes = 0;
   while (retryTimes < MAX_ATEMPTS) {
-    memset(&oOverlap_, 0, sizeof(oOverlap_));
     AutoCloseHandle pipeHandle = openPipe(constructPipeName(destination));
     if (pipeHandle != INVALID_HANDLE_VALUE) {
       uint32_t baSize = static_cast<uint32_t>(ba.size());
-      if ((success = writeToPipe(pipeHandle, oOverlap_,
-                                 reinterpret_cast<const char *>(&baSize),
-                                 sizeof(baSize)))) {
-        if ((success =
-                 writeToPipe(pipeHandle, oOverlap_, ba.data(), ba.size()))) {
+      if ((success =
+               writeToPipe(pipeHandle, reinterpret_cast<const char *>(&baSize),
+                           sizeof(baSize)))) {
+        if ((success = writeToPipe(pipeHandle, ba.data(), ba.size()))) {
           //            FlushFileBuffers(pipeHandle);
           break;
         }
@@ -86,6 +81,10 @@ ActionCallStatus LocalIPCBufferSenderImpl::_send(const maf::srz::Buffer &ba,
   }
 
   if (success) {
+    if (retryTimes > 0) {
+      MAF_LOGGER_INFO("Successfully sent ", ba.size(), " of bytes to ",
+                      destination.get_name(), " after several retrials");
+    }
     status = ActionCallStatus::Success;
   } else if (GetLastError() == ERROR_PIPE_BUSY) {
     status = ActionCallStatus::ReceiverBusy;
@@ -111,10 +110,13 @@ static HANDLE openPipe(const std::string &pipeName) {
 }
 // clang-format on
 
-static bool writeToPipe(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
-                        const char *buffer, size_t buffSize) {
+static bool writeToPipe(HANDLE pipeHandle, const char *buffer,
+                        size_t buffSize) {
   bool success = false;
+
   if (pipeHandle != INVALID_HANDLE_VALUE) {
+    OVERLAPPED overlapStructure;
+    memset(&overlapStructure, 0, sizeof(overlapStructure));
     AutoCloseHandle hEvent = CreateEvent(nullptr,  // default security attribute
                                          TRUE,     // manual-reset event
                                          TRUE,     // initial state = signaled

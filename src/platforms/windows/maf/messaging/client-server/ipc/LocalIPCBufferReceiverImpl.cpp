@@ -20,8 +20,8 @@ namespace local {
 
 using PipeInstances = LocalIPCBufferReceiverImpl::PipeInstances;
 static bool connectToNewClient(HANDLE, LPOVERLAPPED);
-static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
-                         char *buffer, size_t buffSize) {
+static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED& overlapStructure,
+                         char* buffer, size_t buffSize) {
   bool fSuccess = false;
   size_t totalBytesRead = 0;
   do {
@@ -29,23 +29,23 @@ static size_t fillbuffer(HANDLE pipeHandle, OVERLAPPED &overlapStructure,
     fSuccess = ReadFile(pipeHandle, buffer + totalBytesRead,
                         _2dw(buffSize - totalBytesRead), &bytesRead,
                         &overlapStructure);
-
-    if (fSuccess && bytesRead != 0) {
-      totalBytesRead += bytesRead;
-      break;
-    } else {
+    if (fSuccess) {
+      if (bytesRead != 0) {
+        totalBytesRead += bytesRead;
+        break;
+      }
+    } else if (GetLastError() == ERROR_MORE_DATA) {
       fSuccess =
           GetOverlappedResult(pipeHandle, &overlapStructure, &bytesRead, true);
       totalBytesRead += bytesRead;
     }
-
   } while (!fSuccess && GetLastError() == ERROR_MORE_DATA);
 
   return totalBytesRead;
 }
 static void disconnectAndClosePipeInstances(
-    const PipeInstances &pipeInstances) {
-  for (auto &instance : pipeInstances) {
+    const PipeInstances& pipeInstances) {
+  for (auto& instance : pipeInstances) {
     DisconnectNamedPipe(instance->hPipeInst);
     CloseHandle(instance->hPipeInst);
   }
@@ -135,9 +135,9 @@ LocalIPCBufferReceiverImpl::LocalIPCBufferReceiverImpl() {}
 LocalIPCBufferReceiverImpl::~LocalIPCBufferReceiverImpl() { stop(); }
 
 bool LocalIPCBufferReceiverImpl::stop() {
-  stopped_.store(true, std::memory_order_release);
+  running_ = false;
   disconnectAndClosePipeInstances(pipeInstances_);
-  for (auto &hE : hEvents_) {
+  for (auto& hE : hEvents_) {
     SetEvent(hE);
   }
   hEvents_.clear();
@@ -145,11 +145,11 @@ bool LocalIPCBufferReceiverImpl::stop() {
   return true;
 }
 
-void LocalIPCBufferReceiverImpl::setObserver(BytesComeCallback &&callback) {
+void LocalIPCBufferReceiverImpl::setObserver(BytesComeCallback&& callback) {
   bytesComeCallback_ = std::move(callback);
 }
 
-bool LocalIPCBufferReceiverImpl::init(const Address &address) {
+bool LocalIPCBufferReceiverImpl::init(const Address& address) {
   return Base::init(address) && initPipes();
 }
 
@@ -163,7 +163,7 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
   // overlapped ConnectNamedPipe operation is started for
   // each instance.
   int instanceNumber = 0;
-  for (auto &instance : pipeInstances_) {
+  for (auto& instance : pipeInstances_) {
     // Create an event object for this instance.
 
     hEvents_.push_back(CreateEvent(nullptr,    // default security attribute
@@ -180,21 +180,21 @@ bool LocalIPCBufferReceiverImpl::initPipes() {
 
     // clang-format off
     instance->hPipeInst = CreateNamedPipeA(
-        pipeName_.c_str(),          // pipe name
-        PIPE_ACCESS_INBOUND  |      // Read only
-        WRITE_DAC            |
-        FILE_FLAG_OVERLAPPED,       // overlapped mode
-        PIPE_TYPE_MESSAGE    |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
-        PIPE_READMODE_MESSAGE|      // * block of bytes that greater than buffer_size
-        PIPE_WAIT,                  // blocking mode
-        _2dw(pipeInstances_.size()),// number of instances
-        0,                          // output buffer size
-        BUFFER_SIZE*sizeof(char),   // input buffer size
-        PIPE_TIMEOUT,               // client time-out
-        nullptr);                   // default security attributes
+            pipeName_.c_str(),          // pipe name
+            PIPE_ACCESS_INBOUND |      // Read only
+            WRITE_DAC |
+            FILE_FLAG_OVERLAPPED,       // overlapped mode
+            PIPE_TYPE_MESSAGE |      // * must use PIPE_TYPE_MESSAGE conjunction to PIPE_READMODE_MESSAGE for transferring
+            PIPE_READMODE_MESSAGE |      // * block of bytes that greater than buffer_size
+            PIPE_WAIT,                  // blocking mode
+            _2dw(pipeInstances_.size()),// number of instances
+            0,                          // output buffer size
+            BUFFER_SIZE * sizeof(char),   // input buffer size
+            PIPE_TIMEOUT,               // client time-out
+            nullptr);                   // default security attributes
 
     // clang-format on
-    auto printError = [&](const std::string_view &message) {
+    auto printError = [&](const std::string_view& message) {
       MAF_LOGGER_ERROR(message, " - at instance number( ", instanceNumber,
                        ") with error: ", GetLastError());
     };
@@ -241,8 +241,9 @@ void LocalIPCBufferReceiverImpl::startListening() {
     if (readOnPipe(index)) {
       bytesComeCallback_(std::move(pipeInstances_[index]->ba));
     } else {
-      MAF_LOGGER_WARN("Read nothing, GLE = ", GetLastError(), "-->",
-                      pipeInstances_[index]->ba, "<--");
+      // MAF_LOGGER_WARN("Read nothing, GLE = ",
+      // static_cast<int>(GetLastError()),
+      //                "-->", pipeInstances_[index]->ba, "<--");
       pipeInstances_[index]->ba.clear();
     }
 
@@ -252,14 +253,14 @@ void LocalIPCBufferReceiverImpl::startListening() {
 
 bool LocalIPCBufferReceiverImpl::readOnPipe(size_t index) {
   bool fSuccess = false;
-  auto &incommingBA = pipeInstances_[index]->ba;
+  auto& incommingBA = pipeInstances_[index]->ba;
   size_t bytesRead = 0;
   if (incommingBA.empty())  // read the written bytes count first
   {
     uint32_t totalComingBytes = 0;
     bytesRead = fillbuffer(
         pipeInstances_[index]->hPipeInst, pipeInstances_[index]->oOverlap,
-        reinterpret_cast<char *>(&totalComingBytes), sizeof(totalComingBytes));
+        reinterpret_cast<char*>(&totalComingBytes), sizeof(totalComingBytes));
 
     if (bytesRead == sizeof(totalComingBytes)) {
       incommingBA.resize(totalComingBytes);
@@ -308,7 +309,7 @@ bool connectToNewClient(HANDLE hPipe, LPOVERLAPPED lpo) {
   }
 
   switch (GetLastError()) {
-    // The overlapped connection in progress.
+      // The overlapped connection in progress.
     case ERROR_IO_PENDING:
       fPendingIO = TRUE;
       break;

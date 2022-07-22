@@ -73,7 +73,7 @@ class ServiceProvider : public ServiceProviderIF,
   void onStatusChangeUnregister(const CSMessagePtr &msg);
 
   RequestPtr saveRequestInfo(const CSMessagePtr &msg);
-  RequestPtr pickOutRequestInfo(const CSMessagePtr &msgContent);
+  RequestPtr getRequestInfo(const CSMessagePtr &msgContent, bool remove);
 
   void invalidateAndRemoveAllRequests();
 

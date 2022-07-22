@@ -48,6 +48,7 @@ class Processor final : pattern::Unasignable,
   MAF_EXPORT bool runOnceFor(ExecutionTimeout duration);
   MAF_EXPORT bool runOnceUntil(ExecutionDeadline deadline);
   MAF_EXPORT void stop();
+  MAF_EXPORT void reuse();
   MAF_EXPORT bool stopped() const;
   MAF_EXPORT bool post(Message msg);
   MAF_EXPORT CompleteSignal waitablePost(Message msg);
@@ -77,10 +78,20 @@ class Processor final : pattern::Unasignable,
   MsgConnection connect(EmptyMsgProcessingCallback f);
 
   template <class Msg, typename... Args>
-  bool post(Args &&... args);
+  bool post(Args &&...args);
 
   template <class Msg, typename... Args>
-  CompleteSignal waitablePost(Args &&... args);
+  CompleteSignal waitablePost(Args &&...args);
+
+  template <
+      class Callable,
+      std::enable_if_t<!std::is_same_v<std::invoke_result_t<Callable>, void>,
+                       bool> = true>
+  auto waitableExecute(Callable &&cb) -> std::invoke_result_t<Callable> {
+    std::invoke_result_t<Callable> ret;
+    this->waitableExecute([&] { ret = cb(); }).wait();
+    return ret;
+  }
 
   template <class Msg>
   void disconnect();

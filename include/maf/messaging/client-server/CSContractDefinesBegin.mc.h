@@ -3,6 +3,7 @@
 
 #include <maf/messaging/client-server/CSTypes.h>
 #include <maf/messaging/client-server/cs_param.h>
+#include <maf/utils/cppextension/AggregateCompare.h>
 
 #endif  // CSCONTRACTDEFINESBEGIN_MC_H
 

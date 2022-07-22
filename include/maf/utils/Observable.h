@@ -254,7 +254,7 @@ class BasicObservable_ : public ObservableBasic_<SlotsKeeper_, SubStates_...> {
   auto silentMutable() { return silentStateRef{this}; }
 
   BasicObservable_(SubStates_&&... subStates) {
-    this->keeper()->init(forward_as_tuple(subStates...));
+    this->slotKeeper_->lockee().init(forward_as_tuple(subStates...));
   }
 
   BasicObservable_& operator=(const State& state) {
@@ -369,7 +369,7 @@ class SingleStateObservableBasic_
       default;
 
   SingleStateObservableBasic_(State&& state) {
-    this->keeper()->init(forward<SingleState_>(state));
+    this->slotKeeper_->lockee().init(forward<SingleState_>(state));
   }
 
   SingleStateObservableBasic_& operator=(const State& state) {
@@ -379,6 +379,8 @@ class SingleStateObservableBasic_
 
   void set(const State& state) { this->keeper()->template set<0>(state); }
   State get() const { return this->keeper()->template get<0>(); }
+
+  operator State() const { return this->get(); }
 
   decltype(auto) operator->() const { return immutable(); }
   auto mutable_() { return typename Base_::template SubStateRef<0>{this}; }

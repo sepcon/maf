@@ -100,7 +100,7 @@
   type &get_##name() { return mc_maf_sb_get_member_var_name(name); }
 
 #define mc_maf_sb_declare_member_vars(...) \
- private:                                  \
+ public:                                   \
   mc_maf_for_each(mc_maf_sb_declare_member_vars_impl, __VA_ARGS__)
 
 #define mc_maf_sb_declare_member_vars_impl(parentheses) \

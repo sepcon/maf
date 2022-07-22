@@ -1,5 +1,5 @@
 #pragma once
-
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <maf/logging/Logger.h>
 
@@ -16,12 +16,8 @@ namespace ipc {
 
 class NamedPipeReceiverBase {
  public:
-  NamedPipeReceiverBase() : stopped_(true) {}
-  ~NamedPipeReceiverBase() {
-    if (!stopped_) {
-      stop();
-    }
-  }
+  NamedPipeReceiverBase() {}
+  ~NamedPipeReceiverBase() { stop(); }
   bool init(Address address) {
     myaddr_ = std::move(address);
     pipeName_ = constructPipeName(myaddr_);
@@ -29,20 +25,20 @@ class NamedPipeReceiverBase {
   }
 
   bool start() {
-    if (!running()) {
-      stopped_.store(false, std::memory_order_release);
+    auto expectedRunning = false;
+    if (running_.compare_exchange_strong(expectedRunning, true)) {
       startListening();
     }
     return true;
   }
   bool stop() {
-    stopped_.store(true, std::memory_order_release);
+    running_ = false;
     return false;
   }
 
   void deinit() {}
 
-  bool running() const { return !stopped_.load(std::memory_order_acquire); }
+  bool running() const { return running_; }
 
   const Address &address() const { return myaddr_; }
 
@@ -54,7 +50,7 @@ class NamedPipeReceiverBase {
 
   std::string pipeName_;
   Address myaddr_;
-  std::atomic_bool stopped_;
+  std::atomic_bool running_ = false;
 };
 
 }  // namespace ipc

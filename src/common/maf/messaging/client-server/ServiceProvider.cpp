@@ -66,8 +66,14 @@ ServiceProvider::~ServiceProvider() { ServiceProvider::deinit(); }
 const ServiceID &ServiceProvider::serviceID() const { return sid_; }
 
 ActionCallStatus ServiceProvider::respondToRequest(const CSMessagePtr &csMsg) {
-  if (auto request = pickOutRequestInfo(csMsg)) {
+  RequestPtr request;
+  if (csMsg->operationCode() == OpCode::PartialRequestUpdate) {
+    request = getRequestInfo(csMsg, false);
+  } else {
+    request = getRequestInfo(csMsg, true);
     request->invalidate();
+  }
+  if (request) {
     return sendBackMessageToClient(csMsg);
   } else {
     return ActionCallStatus::FailedUnknown;
@@ -254,8 +260,8 @@ ServiceProvider::RequestPtr ServiceProvider::saveRequestInfo(
   return request;
 }
 
-ServiceProvider::RequestPtr ServiceProvider::pickOutRequestInfo(
-    const CSMessagePtr &msg) {
+ServiceProvider::RequestPtr ServiceProvider::getRequestInfo(
+    const CSMessagePtr &msg, bool remove) {
   RequestPtr request;
   std::lock_guard lock(requestsMap_);
   auto itRequestList = requestsMap_->find(msg->operationID());
@@ -265,8 +271,10 @@ ServiceProvider::RequestPtr ServiceProvider::pickOutRequestInfo(
          ++itRequest) {
       RequestPtr &requestTmp = *itRequest;
       if (requestTmp->getRequestID() == msg->requestID()) {
-        request = std::move(requestTmp);
-        requestList.erase(itRequest);
+        request = requestTmp;
+        if (remove) {
+          requestList.erase(itRequest);
+        }
         break;
       }
     }
@@ -306,7 +314,7 @@ void ServiceProvider::removeRegistersOfAddress(const Address &addr) {
 }
 
 void ServiceProvider::onRequestAborted(const CSMessagePtr &msg) {
-  if (auto request = pickOutRequestInfo(msg)) {
+  if (auto request = getRequestInfo(msg, true)) {
     // Invalidate request then later respond from request itself
     // will not cause any race condition.
     // Must be considered carefully for bug fixing later

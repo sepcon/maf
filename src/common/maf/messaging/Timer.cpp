@@ -1,7 +1,6 @@
 #include <maf/logging/Logger.h>
 #include <maf/messaging/Processor.h>
 #include <maf/messaging/Timer.h>
-#include <maf/utils/CallOnExit.h>
 
 #include <algorithm>
 #include <cassert>
@@ -221,7 +220,10 @@ void TimerMgr::stop(TimerDataPtr record) {
 }
 
 void TimerMgr::onTimerModified() {
-  this_processor::instance()->executeAsync([this] { this->checkAllTimers(); });
+  auto thisProcessorInstance = this_processor::instance();
+  assert(thisProcessorInstance &&
+         "Timer must be triggered in thread of a mesasging::Processor")
+      thisProcessorInstance->executeAsync([this] { this->checkAllTimers(); });
 }
 
 void TimerMgr::onShortestTimerExpired(const TimerDataPtr& record) {

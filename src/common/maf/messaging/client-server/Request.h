@@ -32,6 +32,9 @@ class Request : public RequestIF {
   RequestID getRequestID() const override;
   bool valid() const override;
   ActionCallStatus respond(const CSPayloadIFPtr &answer) override;
+  ActionCallStatus update(const CSPayloadIFPtr &answer) override;
+  ActionCallStatus reply(const CSPayloadIFPtr &answer, OpCode code);
+
   CSPayloadIFPtr getInput() override;
   void onAborted(AbortRequestCallback abortCallback) override;
 };

@@ -34,6 +34,7 @@ PTrait::template getOperationID<Output>(),                \
   RequestT &operator=(const RequestT &) = delete;
 
  public:
+  RequestT() = default;
   RequestT(RequestT &&) = default;
   RequestT &operator=(RequestT &&) = default;
 
@@ -72,32 +73,36 @@ PTrait::template getOperationID<Output>(),                \
     }
   }
 
-  // Similar as function returns <void>
-  ActionCallStatus respond() { return delegate_->respond({}); }
-
-  template <class Output>
-  ActionCallStatus respond(const std::shared_ptr<Output> &answer) {
-    mc_maf_reqt_assert_is_same_opid(Output, Input);
-    mc_maf_reqt_assert_is_output(Output);
-
-    MAF_LOGGER_VERBOSE("Responds to request `", delegate_->getOperationID(),
-                       "`: ", PTrait::template dump(answer));
-
-    return delegate_->respond(PTrait::template translate(answer));
+#define mc_maf_request_define_reply_functions(methodName)                    \
+  ActionCallStatus methodName() { return delegate_->methodName({}); }        \
+                                                                             \
+  template <class Output>                                                    \
+  ActionCallStatus methodName(const std::shared_ptr<Output> &answer) {       \
+    mc_maf_reqt_assert_is_same_opid(Output, Input);                          \
+    mc_maf_reqt_assert_is_output(Output);                                    \
+                                                                             \
+    MAF_LOGGER_VERBOSE(#methodName " to request `",                          \
+                       delegate_->getOperationID(),                          \
+                       "`: ", PTrait::template dump(answer));                \
+                                                                             \
+    return delegate_->methodName(PTrait::template translate(answer));        \
+  }                                                                          \
+                                                                             \
+  template <class Output, typename Arg0, typename... Args,                   \
+            std::enable_if_t<std::is_constructible_v<Output, Arg0, Args...>, \
+                             bool> = true>                                   \
+  ActionCallStatus methodName(Arg0 resultInput0, Args &&... resultInputs) {  \
+    mc_maf_reqt_assert_is_same_opid(Output, Input);                          \
+    mc_maf_reqt_assert_is_output(Output);                                    \
+                                                                             \
+    auto answer =                                                            \
+        std::make_shared<Output>(std::forward<Arg0>(resultInput0),           \
+                                 std::forward<Args>(resultInputs)...);       \
+    return this->methodName(std::move(answer));                              \
   }
 
-  template <class Output, typename Arg0, typename... Args,
-            std::enable_if_t<std::is_constructible_v<Output, Arg0, Args...>,
-                             bool> = true>
-  ActionCallStatus respond(Arg0 resultInput0, Args &&... resultInputs) {
-    mc_maf_reqt_assert_is_same_opid(Output, Input);
-    mc_maf_reqt_assert_is_output(Output);
-
-    auto answer = std::make_shared<Output>(std::forward<Arg0>(resultInput0),
-                                           std::forward<Args>(resultInputs)...);
-    return this->respond(std::move(answer));
-  }
-
+  mc_maf_request_define_reply_functions(respond);
+  mc_maf_request_define_reply_functions(update);
   ActionCallStatus error(const std::shared_ptr<CSError> &err) {
     MAF_LOGGER_ERROR("Respond an error to request: `",
                      delegate_->getOperationID(), "`: ", err->dump());

@@ -32,14 +32,22 @@ bool Request::valid() const {
 }
 
 ActionCallStatus Request::respond(const CSPayloadIFPtr &answer) {
+  return reply(answer, OpCode::Request);
+}
+
+ActionCallStatus Request::update(const CSPayloadIFPtr &answer) {
+  return reply(answer, OpCode::PartialRequestUpdate);
+}
+
+ActionCallStatus Request::reply(const CSPayloadIFPtr &answer, OpCode code) {
   std::unique_lock lock(_mutex);
   if (_valid) {
     // set invalid here to avoid others from sending another reponse
     // while sending the current one is being sent to client
-    _valid = false;
 
     auto replyMsg = std::make_shared<CSMessage>(*_csMsg);
     replyMsg->setPayload(answer);
+    replyMsg->setOperationCode(code);
 
     if (auto stub = _svStub.lock()) {
       // unlock to avoid deadlock when stub tries to invalidate this request
